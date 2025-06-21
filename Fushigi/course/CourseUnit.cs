@@ -218,13 +218,23 @@ namespace Fushigi.course
                 IsClosed = false;
         }
 
+        public void ReverseRailPoints()
+        {
+            List<RailPoint> newPoints = new List<RailPoint>();
+
+            foreach (var p in Points)
+            {
+                newPoints = newPoints.Prepend(p).ToList();
+            }
+
+            Points = newPoints;
+        }
+
         public class RailPoint(BGUnitRail rail, Vector3 position)
         {
             public readonly BGUnitRail mRail = rail;
             public Vector3 Position = position;
         }
-
-
     }
 
     public class TileSubUnit(CourseUnit courseUnit)

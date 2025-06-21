@@ -121,8 +121,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
             Vector3 pos = new(
-                 MathF.Round(posVec.X, MidpointRounding.AwayFromZero),
-                 MathF.Round(posVec.Y, MidpointRounding.AwayFromZero),
+                 MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
+                 MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
                  rail.mCourseUnit.mModelType switch{
                     CourseUnit.ModelType.Solid => 0,
                     CourseUnit.ModelType.SemiSolid => -2,
@@ -207,8 +207,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
             }
             else
             {
-                if (!ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift)
-                    DeselectAll(ctx);
+                /*if (!ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift)
+                    DeselectAll(ctx);*/
             }
             mouseDown = true;
         }
@@ -271,8 +271,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
                     if (!ChildPoints.TryGetValue(rail.Points[i], out RailPoint? childPoint))
                         continue;
 
-                    diff.X = MathF.Round(diff.X, MidpointRounding.AwayFromZero);
-                    diff.Y = MathF.Round(diff.Y, MidpointRounding.AwayFromZero);
+                    diff.X = MathF.Round(diff.X * 2, MidpointRounding.AwayFromZero) / 2;
+                    diff.Y = MathF.Round(diff.Y * 2, MidpointRounding.AwayFromZero) / 2;
                     posVec.Z = rail.Points[i].Position.Z;
 
                     var newPos = childPoint.PreviousPosition + diff;
@@ -307,7 +307,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             bool isSelected = IsSelected(ctx);
 
-            if (ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(ImGuiMouseButton.Left))
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 OnMouseDown(ctx, viewport);
             if (ImGui.IsMouseReleased(0))
                 OnMouseUp(ctx, viewport);
@@ -319,8 +319,6 @@ namespace Fushigi.ui.SceneObjects.bgunit
             OnKeyDown(ctx, viewport);
 
             var lineThickness = viewport.IsHovered(this) ? 3.5f : 2.5f;
-
-
 
             for (int i = 0; i < rail.Points.Count; i++)
             {
@@ -341,7 +339,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 var pos2D = viewport.WorldToScreen(pos);
                 var nextPos2D = viewport.WorldToScreen(nextPos);
 
-                uint line_color = IsValidAngle(pos2D, nextPos2D) ? Color_Default : Color_SlopeError;
+                uint line_color = IsValidAngle(new Vector2(pos.X, pos.Y), new Vector2(nextPos.X, nextPos.Y)) ? Color_Default : Color_SlopeError;
                 if (isSelected && line_color != Color_SlopeError)
                     line_color = Color_SelectionEdit;
 
@@ -429,6 +427,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
             var angleInRadian = MathF.Atan2(dist.Y, dist.X); //angle in radian
             var angle = angleInRadian * (180.0f / (float)Math.PI); //to degrees
 
+            bool isCorrectDist = (MathF.Abs(MathF.Round(dist.X) - dist.X) <= 0.01) && (MathF.Abs(MathF.Round(dist.Y) - dist.Y) <= 0.01);
+
             //TODO improve check and simplify
 
             //The game supports 30 and 45 degree angle variants
@@ -444,7 +444,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 180,-180,
             };
 
-            return validAngles.Contains(MathF.Round(angle));
+            return validAngles.Contains(MathF.Round(angle)) && isCorrectDist;
         }
 
         /// <summary>
@@ -531,7 +531,10 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 if (ctx.IsSelected(point))
                     color = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
 
-                dl.AddCircleFilled(pos2D, viewport.IsHovered(this) ? 6.0f : 4.0f, color);
+                dl.AddCircleFilled(pos2D, 5.0f, color);
+
+                if (viewport.IsHovered(this))
+                    dl.AddCircle(pos2D, 9.0f, color, 10, 1.5f);
 
                 if (HitTest(viewport))
                     isNewHoveredObj = true;

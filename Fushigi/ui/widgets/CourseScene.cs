@@ -2032,6 +2032,9 @@ namespace Fushigi.ui.widgets
                     {
                         var batchAction = editContext.BeginBatchAction();
 
+                        for (int i = mSelectedUnit.mBeltRails.Count - 1; i >= 0; i--)
+                            editContext.DeleteBeltRail(mSelectedUnit, mSelectedUnit.mBeltRails[i]);
+
                         void ProcessRail(BGUnitRail rail)
                         {
                             if (rail.Points.Count <= 1)
@@ -2056,6 +2059,7 @@ namespace Fushigi.ui.widgets
                                         editContext.AddBeltRail(mSelectedUnit, currentBeltRail);
 
                                     currentBeltRail = new BGUnitRail(mSelectedUnit);
+                                    currentBeltRail.IsClosed = false;
                                     currentBeltRail.Points.Add(new BGUnitRail.RailPoint(currentBeltRail, point0));
                                     firstBeltRail ??= currentBeltRail;
                                 }
@@ -2623,8 +2627,31 @@ namespace Fushigi.ui.widgets
                             {
                                 if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
                                 {
+                                    if (ImGui.MenuItem("Select All Rail Points")) {
+                                        foreach (var point in wall.ExternalRail.Points)
+                                        {
+                                            editContext.Select(point);
+                                        }
+                                        foreach (var iRail in wall.InternalRails)
+                                        {
+                                            editContext.Select(iRail);
+                                            foreach (var point in iRail.Points)
+                                            {
+                                                editContext.Select(point);
+                                            }
+                                        }
+                                    }
+
+                                    ImGui.Separator();
+
                                     if (ImGui.MenuItem("Add Internal Rail"))
                                         editContext.AddInternalRail(wall, new BGUnitRail(unit){IsInternal = true});
+
+                                    if (ImGui.MenuItem("Reverse Rail Points"))
+                                        editContext.ReverseBgUnitRailPoints(wall);
+
+                                    if (ImGui.MenuItem("Remove Rail"))
+                                        editContext.DeleteWall(unit, wall);
 
                                     ImGui.EndPopup();
                                 }
@@ -2740,6 +2767,27 @@ namespace Fushigi.ui.widgets
                     !editContext.IsAnySelected<CourseRail.CourseRailPoint>())
                 {
                     rail_node_flags |= ImGuiTreeNodeFlags.Selected;
+
+                    if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
+                    {
+                        if (ImGui.MenuItem("Select All Rail Points"))
+                        {
+                            foreach (var point in rail.mPoints)
+                            {
+                                editContext.Select(point);
+                            }
+                        }
+
+                        ImGui.Separator();
+
+                        if (ImGui.MenuItem("Reverse Rail Points"))
+                            editContext.ReverseRailPoints(rail);
+
+                        if (ImGui.MenuItem("Remove Rail"))
+                            editContext.DeleteRail(rail);
+
+                        ImGui.EndPopup();
+                    }
                 }
 
                 bool expanded = ImGui.TreeNodeEx($"Rail {railHolder.mRails.IndexOf(rail)}", rail_node_flags);

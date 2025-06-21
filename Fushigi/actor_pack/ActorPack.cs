@@ -44,6 +44,7 @@ namespace Fushigi
         public ShapeParamList ShapeParams;
         public BgUnitInfo BgUnitInfo;
         public string ChildActorParamName;
+        public string CalcDistanceParam;
 
         public string Category = "";
 
@@ -134,6 +135,9 @@ namespace Fushigi
                 {
                     // Should look like "Work/ChildActorParam/[...].game__actor__component__ChildActorParam.gyml"
                     this.ChildActorParamName = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
+                } else if (component.Key == "CalcDistanceParam")
+                {
+                    this.CalcDistanceParam = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
                 }
 
                 //Check if the component is present in the pack file.

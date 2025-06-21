@@ -49,7 +49,7 @@ namespace Fushigi.course
             mName = BymlUtil.GetNodeData<string>(actorNode["Name"]);
             mActorPack = ActorPackCache.Load(mPackName);
             mActorChildRef = mActorPack.ChildActorParamName;
-
+            mCalcDistanceParam = mActorPack.CalcDistanceParam;
 
             if (actorNode.ContainsKey("Dynamic"))
             {
@@ -136,6 +136,7 @@ namespace Fushigi.course
             mHash = RandomUtil.GetRandom();
             mActorPack = ActorPackCache.Load(mPackName);
             mActorChildRef = mActorPack.ChildActorParamName;
+            mCalcDistanceParam = mActorPack.CalcDistanceParam;
 
             InitializeDefaultDynamicParams();
         }
@@ -318,6 +319,7 @@ namespace Fushigi.course
         public ulong mHash;
         public PropertyDict mActorParameters = PropertyDict.Empty;
         public PropertyDict mSystemParameters = PropertyDict.Empty;
+        public string mCalcDistanceParam;
 
         public ActorPack mActorPack;
 

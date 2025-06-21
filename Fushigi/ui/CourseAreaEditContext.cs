@@ -250,6 +250,21 @@ namespace Fushigi.ui
                     $"{IconUtil.ICON_PLUS_CIRCLE} Add Internal Rail"));
         }
 
+        public void ReverseBgUnitRailPoints(Wall wall)
+        {
+            wall.ExternalRail.ReverseRailPoints();
+
+            foreach (var r in wall.InternalRails)
+            {
+                r.ReverseRailPoints();
+            }
+        }
+        public void ReverseRailPoints(CourseRail rail)
+        {
+            rail.ReverseRailPoints();
+        }
+
+
         public void DeleteInternalRail(Wall wall, BGUnitRail rail)
         {
             LogDeleting<BGUnitRail>();

@@ -136,6 +136,23 @@ namespace Fushigi.course
             return point is not null;
         }
 
+        public void ReverseRailPoints()
+        {
+            List<CourseRailPoint> newPoints = new List<CourseRailPoint>();
+
+            foreach (var p in mPoints)
+            {
+                newPoints = newPoints.Prepend(p).ToList();
+
+                if (p.mIsCurve)
+                {
+                    p.mControl.mTranslate = 2 * p.mTranslate - p.mControl.mTranslate;
+                }
+            }
+
+            mPoints = newPoints;
+        }
+
         public CourseRailPoint this[ulong hash]
         {
             get
@@ -269,6 +286,7 @@ namespace Fushigi.course
 
             public ulong mHash;
             public Dictionary<string, object> mParameters = new();
+            public System.Numerics.Vector3 mStartingTrans;
             public System.Numerics.Vector3 mTranslate;
             public CourseRailPointControl mControl;
             public bool mIsCurve;
@@ -282,6 +300,7 @@ namespace Fushigi.course
             }
             public CourseRail.CourseRailPoint point;
             public System.Numerics.Vector3 mTranslate;
+            public System.Numerics.Vector3 mStartingTrans;
         }
     }
     public class CourseRailHolder
