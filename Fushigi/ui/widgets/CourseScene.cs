@@ -2650,13 +2650,8 @@ namespace Fushigi.ui.widgets
                                     if (ImGui.MenuItem("Reverse Rail Points"))
                                         editContext.ReverseBgUnitRailPoints(wall);
 
-                                    ImGui.Separator();
-
-                                    if (ImGui.MenuItem("Remove Wall"))
-                                        editContext.WithSuspendUpdateDo(() =>
-                                        {
-                                            editContext.DeleteWall(unit, wall);
-                                        });
+                                    if (ImGui.MenuItem("Remove Rail"))
+                                        editContext.DeleteWall(unit, wall);
 
                                     ImGui.EndPopup();
                                 }
@@ -2765,8 +2760,6 @@ namespace Fushigi.ui.widgets
                     editContext.DeleteRail(rail);
             }
 
-            List<CourseRail> removedRails = new List<CourseRail>();
-
             foreach (CourseRail rail in railHolder.mRails)
             {
                 var rail_node_flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.DefaultOpen;
@@ -2791,7 +2784,7 @@ namespace Fushigi.ui.widgets
                             editContext.ReverseRailPoints(rail);
 
                         if (ImGui.MenuItem("Remove Rail"))
-                            removedRails.Add(rail);
+                            editContext.DeleteRail(rail);
 
                         ImGui.EndPopup();
                     }
@@ -2824,11 +2817,6 @@ namespace Fushigi.ui.widgets
 
                     ImGui.TreePop();
                 }
-            }
-
-            foreach (var rail in removedRails)
-            {
-                editContext.DeleteRail(rail);
             }
         }
 

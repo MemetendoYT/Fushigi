@@ -120,16 +120,35 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 return null;
 
             Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
-            Vector3 pos = new(
-                 MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
-                 MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
-                 rail.mCourseUnit.mModelType switch{
-                    CourseUnit.ModelType.Solid => 0,
-                    CourseUnit.ModelType.SemiSolid => -2,
-                    CourseUnit.ModelType.NoCollision => -4,
-                    CourseUnit.ModelType.Bridge => -2,
-                    _ => 0
-                 });
+            Vector3 pos;
+            if (UserSettings.GetEnableHalfTile())
+            {
+                     pos = new(
+                     MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
+                     MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
+                     rail.mCourseUnit.mModelType switch
+                     {
+                         CourseUnit.ModelType.Solid => 0,
+                         CourseUnit.ModelType.SemiSolid => -2,
+                         CourseUnit.ModelType.NoCollision => -4,
+                         CourseUnit.ModelType.Bridge => -2,
+                         _ => 0
+                     });
+            }
+            else
+            {
+               pos = new(
+                     MathF.Round(posVec.X, MidpointRounding.AwayFromZero),
+                     MathF.Round(posVec.Y, MidpointRounding.AwayFromZero),
+                     rail.mCourseUnit.mModelType switch
+                     {
+                         CourseUnit.ModelType.Solid => 0,
+                         CourseUnit.ModelType.SemiSolid => -2,
+                         CourseUnit.ModelType.NoCollision => -4,
+                         CourseUnit.ModelType.Bridge => -2,
+                         _ => 0
+                     });
+            }
 
             if (rail.Points.Count == 0)
                 return (pos, 0);

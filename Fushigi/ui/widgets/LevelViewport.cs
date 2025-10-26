@@ -1318,10 +1318,18 @@ namespace Fushigi.ui.widgets
 
                         var index = rail.mPoints.IndexOf(selectedPoint);
                         var newPoint = new CourseRail.CourseRailPoint(selectedPoint);
+                        if (UserSettings.GetEnableHalfTile()) {
+                            newPoint.mTranslate = new(
+                                MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
+                                MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
+                                selectedPoint.mTranslate.Z);
+                        }
+                        else {
                         newPoint.mTranslate = new(
-                            MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
-                            MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
+                            MathF.Round(posVec.X, MidpointRounding.AwayFromZero),
+                            MathF.Round(posVec.Y, MidpointRounding.AwayFromZero),
                             selectedPoint.mTranslate.Z);
+                        }
 
                         newPoint.mControl.mTranslate = newPoint.mTranslate + new Vector3(0, 1, 0);
 
@@ -1339,10 +1347,18 @@ namespace Fushigi.ui.widgets
                         Vector3 posVec = this.ScreenToWorld(ImGui.GetMousePos());
 
                         var newPoint = new CourseRail.CourseRailPoint(rail.mType);
-                        newPoint.mTranslate = new(
+                        if (UserSettings.GetEnableHalfTile()) {
+                            newPoint.mTranslate = new(
                             MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
                             MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
                             0);
+                        }
+                        else {
+                        newPoint.mTranslate = new(
+                            MathF.Round(posVec.X, MidpointRounding.AwayFromZero),
+                            MathF.Round(posVec.Y, MidpointRounding.AwayFromZero),
+                            0);
+                        }
 
                         newPoint.mControl.mTranslate = newPoint.mTranslate + new Vector3(0, 1, 0);
 

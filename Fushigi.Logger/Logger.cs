@@ -12,8 +12,8 @@ namespace Fushigi.Logger
         public static void CreateLogger()
         {
             if (IsInitialized) return;
-
-            mOutputStream = new FileStream("output.log", FileMode.Create);
+            
+            mOutputStream = new FileStream("output.log", FileMode.Append, FileAccess.Write, FileShare.ReadWrite);
             mConsoleWriter = new StreamWriter(mOutputStream)
             {
                 AutoFlush = true

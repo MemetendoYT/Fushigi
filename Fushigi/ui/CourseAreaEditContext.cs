@@ -264,6 +264,7 @@ namespace Fushigi.ui
             rail.ReverseRailPoints();
         }
 
+
         public void DeleteInternalRail(Wall wall, BGUnitRail rail)
         {
             LogDeleting<BGUnitRail>();

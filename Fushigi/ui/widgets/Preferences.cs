@@ -27,6 +27,7 @@ namespace Fushigi.ui.widgets
                 var hideDeletingLinkedActorsPopup = UserSettings.HideDeletingLinkedActorsPopup();
                 var useNewCamera = UserSettings.GetUseNewCamera();
                 var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
+                var enableHalfTile = UserSettings.GetEnableHalfTile();
 
                 ImGui.Indent();
 
@@ -125,6 +126,10 @@ namespace Fushigi.ui.widgets
                     UserSettings.SetBackupFreqMinutes(backupFreqMinutes);
 
                 Tooltip.Show("How long between each backup, in minutes.\nBackups are stored wherever Fushigi is installed to.");
+
+                if (ImGui.Checkbox("Enable Half Tile Editing", ref enableHalfTile))
+                    UserSettings.SetEnableHalfTile(enableHalfTile);
+
 
                 ImGui.Unindent();
 

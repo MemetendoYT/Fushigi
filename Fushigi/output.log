@@ -1,0 +1,136 @@
+[Logger]: Initialized logger
+[Program]: Starting Fushigi v1.6.0...
+[Program]: Not running on osx
+[Program]: Loading user settings...
+[Program]: Loading parameter database...
+[Program]: Loading area parameter loader...
+[Program]: Checking for imgui.ini
+[Program]: Creating imgui.ini...
+[Program]: Created!
+[MainWindow]: Loading icons
+[DiscordRPC]: Ready
+[MainWindow]: Initializing Window
+[RomFS]: World001
+[RomFS]: World002
+[RomFS]: World003
+[RomFS]: World004
+[RomFS]: World005
+[RomFS]: World006
+[RomFS]: World007
+[RomFS]: World008
+[RomFS]: World009
+[RomFS]: GetFileBytes() -- Pack/Bootup.Nin_NX_NVN.pack.zs
+[ProgressBarDialog]: Creating task (0%)
+[ProgressBarDialog]: Gathering Actor packs ()
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (0%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[ProgressBarDialog]: Loading Parameters from Actor packs (1%)
+[MainWindow]: Selected course Course003_Course!
+[ProgressBarDialog]: Loading course files ()
+[EnvPalette]: AA_Nettai_Jurin_Yougan_BajiToumei
+[MainWindow]: Selected course Course009_Course!
+[ProgressBarDialog]: Loading course files ()
+[EnvPalette]: AA_Savanna_Sabaku_HareKanki_Sisihunjin
+[MainWindow]: Selected course Course304_Course!
+[ProgressBarDialog]: Loading course files ()
+[EnvPalette]: AA_Common_Toride_Soto_Nettai_Yougan
+[ProgressBarDialog]: Loading other resources (this temporarily freezes the app) ()
+[BfshaFile]: Bfsha SecredUber
+[BfshaFile]: Bfsha SecredUber
+[RomFS]: GetFileBytes() -- Pack/Bootup.Nin_NX_NVN.pack.zs
+[ProgressBarDialog]: Loading models (0%)
+[CourseScene]: Loading DVSavanna
+[CourseScene]: Loaded DVSavanna
+[ProgressBarDialog]: Loading models (5%)
+[CourseScene]: Loading CloudCommonMaruyama
+[CourseScene]: Loaded CloudCommonMaruyama
+[ProgressBarDialog]: Loading models (10%)
+[CourseScene]: Loading MapObjCommonBadge
+[CourseScene]: Loaded MapObjCommonBadge
+[ProgressBarDialog]: Loading models (14%)
+[CourseScene]: Loading MapObjSavanna
+[CourseScene]: Loaded MapObjSavanna
+[ProgressBarDialog]: Loading models (19%)
+[CourseScene]: Loading MapObjCommonColorBox
+[CourseScene]: Loaded MapObjCommonColorBox
+[ProgressBarDialog]: Loading models (24%)
+[CourseScene]: Loading EnemyNokonoko
+[CourseScene]: Loaded EnemyNokonoko
+[ProgressBarDialog]: Loading models (29%)
+[CourseScene]: Loading MapObjKinIseki
+[CourseScene]: Loaded MapObjKinIseki
+[ProgressBarDialog]: Loading models (33%)
+[CourseScene]: Loading ObjectCoin
+[CourseScene]: Loaded ObjectCoin
+[ProgressBarDialog]: Loading models (38%)
+[CourseScene]: Loading ObjectCoinRandom
+[CourseScene]: Loaded ObjectCoinRandom
+[ProgressBarDialog]: Loading models (43%)
+[CourseScene]: Loading ObjectFlowerChibi
+[CourseScene]: Loaded ObjectFlowerChibi
+[ProgressBarDialog]: Loading models (48%)
+[CourseScene]: Loading ObjectCoinRandom10
+[CourseScene]: Loaded ObjectCoinRandom10
+[ProgressBarDialog]: Loading models (52%)
+[CourseScene]: Loading ObjectShabon
+[CourseScene]: Loaded ObjectShabon
+[ProgressBarDialog]: Loading models (57%)
+[CourseScene]: Loading ObjectFlagMiddle
+[CourseScene]: Loaded ObjectFlagMiddle
+[ProgressBarDialog]: Loading models (62%)
+[CourseScene]: Loading ObjectGoalPole
+[CourseScene]: Loaded ObjectGoalPole
+[ProgressBarDialog]: Loading models (67%)
+[CourseScene]: Loading NpcPrince
+[CourseScene]: Loaded NpcPrince
+[ProgressBarDialog]: Loading models (71%)
+[CourseScene]: Loading ItemWonderSeed
+[CourseScene]: Loaded ItemWonderSeed
+[ProgressBarDialog]: Loading models (76%)
+[CourseScene]: Loading NpcCommonerA
+[CourseScene]: Loaded NpcCommonerA
+[ProgressBarDialog]: Loading models (81%)
+[CourseScene]: Loading ObjectGoalToride
+[CourseScene]: Loaded ObjectGoalToride
+[ProgressBarDialog]: Loading models (86%)
+[CourseScene]: Loading MapObjTogeOneDirection
+[CourseScene]: Loaded MapObjTogeOneDirection
+[ProgressBarDialog]: Loading models (90%)
+[CourseScene]: Loading ObjectTalkingFlower
+[CourseScene]: Loaded ObjectTalkingFlower
+[ProgressBarDialog]: Loading models (95%)
+[CourseScene]: Loading ObjectBadgeSignboard
+[CourseScene]: Loaded ObjectBadgeSignboard
+[CourseScene]: Finished loading models
