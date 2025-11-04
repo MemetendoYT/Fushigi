@@ -25,6 +25,7 @@ namespace Fushigi.util
             public bool HideDeletingLinkedActorsPopup;
             public bool UseNewCamera;
             public bool EnableHalfTile;
+            public bool PrivateDRPC;
 
             public Settings()
             {
@@ -130,12 +131,19 @@ namespace Fushigi.util
                 SetBackupFreqMinutes(10);
             return AppSettings.BackupFreqMinutes;
         }
-       
+
         public static void SetEnableHalfTile(bool value)
         {
             AppSettings.EnableHalfTile = value;
             Save();
         }
+        
+        public static void SetPrivateDRPC(bool value)
+        {
+            AppSettings.PrivateDRPC = value;
+            Save();
+        }
+
         public static bool GetRenderCustomModels()
         {
             return AppSettings.RenderCustomModels;
@@ -160,6 +168,12 @@ namespace Fushigi.util
         {
             return AppSettings.EnableHalfTile;
         }
+
+        public static bool GetPrivateDRPC()
+        {
+            return AppSettings.PrivateDRPC;
+        }
+
         public static void AppendModPath(string modname, string path)
         {
             AppSettings.ModPaths.Add(modname, path);

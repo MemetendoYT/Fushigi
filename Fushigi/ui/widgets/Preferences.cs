@@ -28,6 +28,7 @@ namespace Fushigi.ui.widgets
                 var useNewCamera = UserSettings.GetUseNewCamera();
                 var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
                 var enableHalfTile = UserSettings.GetEnableHalfTile();
+                var privateDRPC = UserSettings.GetPrivateDRPC();
 
                 ImGui.Indent();
 
@@ -130,6 +131,10 @@ namespace Fushigi.ui.widgets
                 if (ImGui.Checkbox("Enable Half Tile Editing", ref enableHalfTile))
                     UserSettings.SetEnableHalfTile(enableHalfTile);
 
+                if (ImGui.Checkbox("Hide Activity", ref privateDRPC))
+                    UserSettings.SetPrivateDRPC(privateDRPC);
+
+                Tooltip.Show("Whether or not to hide information about the course in the Discord RPC.\nReload required to work.");
 
                 ImGui.Unindent();
 
