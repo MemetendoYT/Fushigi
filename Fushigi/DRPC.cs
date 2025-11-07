@@ -60,7 +60,7 @@ namespace Fushigi
         public static void SetEditingCourse(string courseID, string courseName, int worldNumber)
         {
             if (UserSettings.GetPrivateDRPC())
-                SetPresence($"Editing a Course", "???", "icon" + 1);
+                SetPresence($"Editing a Course", null, "icon" + 1);
             else
                 SetPresence($"Editing {courseID}", courseName, "icon" + worldNumber);
         }
