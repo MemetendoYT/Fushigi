@@ -333,8 +333,6 @@ namespace Fushigi.ui.widgets
                 foreach (var area in course.GetAreas())
             {
     
-                Console.WriteLine(areaParamSize + " vs " + oldAreaParamSize);
-                Console.WriteLine(courseInfoSize + " vs " + oldCourseInfoSize);
                 if (areaParamSize != oldAreaParamSize || courseInfoSize != oldCourseInfoSize)
                 {
                     CourseAreaEditContext.saveStatus = false;
@@ -973,9 +971,16 @@ namespace Fushigi.ui.widgets
                     {
                         ImGui.InputText("Search", ref mAddActorSearchQuery, 256);
 
-                        var filteredActors = ParamDB.GetActors().ToImmutableList();
-
-                        if (mAddActorSearchQuery != "")
+                    var filteredActors = ImmutableList<string>.Empty;
+                    try
+                    {
+                        filteredActors = ParamDB.GetActors().ToImmutableList();
+                    }
+                    catch
+                    {
+                        return;
+                    }
+                    if (mAddActorSearchQuery != "")
                         {
                             filteredActors = FuzzySharp.Process.ExtractAll(mAddActorSearchQuery, ParamDB.GetActors(), cutoff: 65)
                                 .OrderByDescending(result => result.Score)
