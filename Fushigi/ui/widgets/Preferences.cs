@@ -163,6 +163,9 @@ namespace Fushigi.ui.widgets
 
             Checkbox("Enable RomFS Reload", ref UserSettings.RefAllowRomFSReload, (v) => UserSettings.AllowRomFSReload = v,
                 "When switching to a different modded romfs everything will reload.");
+            
+            Checkbox("Enable Discord Rich Presence", ref UserSettings.RefSetEnableDRPC, (v) => UserSettings.EnableDRPC = v,
+                "Whether or not to enable Discord Rich Presence.\nReload required to work.");
 
             Checkbox("Hide Rich Presence Activity", ref UserSettings.RefSetPrivateDRPC, (v) => UserSettings.PrivateDRPC = v,
                 "Whether or not to hide information about the course in the Discord RPC.\nReload required to work.");

@@ -31,7 +31,7 @@ namespace Fushigi.Bfres.Common
             if (index >= 0 && index < Keys.Count)
                 return Keys.ElementAt(index);
 
-            return null;
+            return "";
         }
 
         public void Read(BinaryReader reader)
@@ -55,7 +55,7 @@ namespace Fushigi.Bfres.Common
             }
 
             for (int j = 1; j < nodes.Count; j++)
-                this.Add(nodes[j].Key, new T());
+                Add(nodes[j].Key!, new T());
         }
 
         protected class Node
@@ -63,8 +63,8 @@ namespace Fushigi.Bfres.Common
             internal uint Reference;
             internal ushort IdxLeft;
             internal ushort IdxRight;
-            internal string Key;
-            internal IResData Value;
+            internal string? Key;
+            internal IResData? Value;
         }
     }
 }

@@ -66,10 +66,10 @@ namespace Fushigi.ui.widgets
         public static bool refreshTranslation = false;
         private ImmutableList<string> filteredActors = ImmutableList<string>.Empty;
         private ImmutableList<string> englishActors = ImmutableList<string>.Empty;
-        private CourseArea areaToFocus = null;
+        private CourseArea? areaToFocus;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
-        public static CourseArea currentArea;
+        public static CourseArea? currentArea;
         // this is a very bad fix bc im waiting
         // to work on jupahe's editor instead of
         // fushigi.
@@ -1021,7 +1021,7 @@ namespace Fushigi.ui.widgets
                     return fs.CanWrite;
                 }
             }
-            catch(IOException e)
+            catch
             {
                 return false;
             }
@@ -3215,7 +3215,7 @@ namespace Fushigi.ui.widgets
         
         //VERY ROUGH BASE
         //TODO, optomize recursion
-        List<CourseActor> topLinks;
+        List<CourseActor> topLinks = [];
         CourseActor? selected;
         private void AreaLocalLinksView(CourseArea area)
         {

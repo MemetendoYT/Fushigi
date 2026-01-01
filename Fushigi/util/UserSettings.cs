@@ -17,10 +17,10 @@ namespace Fushigi.util
 
         struct Settings
         {
-            public string RomFSPath;
-            public string RomFSModPath;
+            public string RomFSPath = string.Empty;
+            public string RomFSModPath = string.Empty;
             public float BackupFreqMinutes = 10;
-            public Dictionary<string, string> ModPaths;
+            public Dictionary<string, string> ModPaths = [];
             public List<string> RecentCourses;
             public bool UseGameShaders;
             public bool RenderCustomModels;
@@ -29,6 +29,7 @@ namespace Fushigi.util
             public bool UseNewCamera;
             public bool EnableHalfTile;
             public bool EnableTranslation;
+            public bool EnableDRPC = true;
             public bool PrivateDRPC;
             public string Theme;
             public int ShaderSettings;
@@ -41,24 +42,13 @@ namespace Fushigi.util
             public Settings()
             {
                 BackupFreqMinutes = 10;
-                RomFSPath = "";
-                ModPaths = [];
-                RomFSModPath = "";
                 RecentCourses = new List<string>(MaxRecents) { };
-                RenderCustomModels = false;
-                UseGameShaders = false;
-                UseAstcTextureCache = false;
-                HideDeletingLinkedActorsPopup = false;
                 UseNewCamera = true;
-                EnableHalfTile = false;
                 EnableTranslation = true;
                 Theme = "Theme";
-                ShaderSettings = 0;
-                romfsReload = false;
                 allowRomfsReload = true;
                 fpsCounter = true;
-                advancedDebugOptions = false;
-                VSync = false;
+                EnableDRPC = true;
             }
         }
 
@@ -196,6 +186,16 @@ namespace Fushigi.util
             {
                 AppSettings.EnableTranslation = value;
                 CourseScene.refreshTranslation = true;
+                Save();
+            }
+        }
+        public static ref bool RefSetEnableDRPC => ref AppSettings.EnableDRPC;
+        public static bool EnableDRPC
+        {
+            get => AppSettings.EnableDRPC;
+            set
+            {
+                AppSettings.EnableDRPC = value;
                 Save();
             }
         }
