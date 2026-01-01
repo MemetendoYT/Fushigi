@@ -35,13 +35,13 @@ namespace Fushigi.course
               loadTemplate = true;
 
                 string phiveDir = Path.Combine(
-                           UserSettings.ModRomFSPath,
+                           UserSettings.GetModRomFSPath(),
                            "Phive",
                            "StaticCompoundBody"
                        );
 
                 string normalDir  = Path.Combine(
-                           UserSettings.RomFSPath,
+                           UserSettings.GetRomFSPath(),
                            "Phive",
                            "StaticCompoundBody"
                        );
@@ -179,7 +179,7 @@ namespace Fushigi.course
         public void Save(RSTB resource_table)
         {
             //Save using the configured mod romfs path
-            Save(resource_table, Path.Combine(UserSettings.ModRomFSPath, "BancMapUnit"), false);
+            Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit"), false);
         }
 
         public void Save(RSTB resource_table, string folder, bool saveTemplate)

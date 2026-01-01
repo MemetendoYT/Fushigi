@@ -12,11 +12,11 @@ namespace Fushigi.gl.Bfres
         {
             if (!Cache.ContainsKey(projectName))
             {
-                var path = Path.Combine(UserSettings.RenderCustomModels ? UserSettings.ModRomFSPath : UserSettings.RomFSPath, "Model", projectName + ".bfres.zs");
+                var path = Path.Combine(UserSettings.GetRenderCustomModels() ? UserSettings.GetModRomFSPath() : UserSettings.GetRomFSPath(), "Model", projectName + ".bfres.zs");
 
                 if (!File.Exists(path))
                 {
-                    path = Path.Combine(UserSettings.RomFSPath, "Model", projectName + ".bfres.zs");
+                    path = Path.Combine(UserSettings.GetRomFSPath(), "Model", projectName + ".bfres.zs");
                 }
 
                 if (File.Exists(path))
@@ -37,11 +37,11 @@ namespace Fushigi.gl.Bfres
         {
             if (!Cache.ContainsKey(projectName))
             {
-                var path = Path.Combine(UserSettings.RenderCustomModels ? UserSettings.ModRomFSPath : UserSettings.RomFSPath, "Model", projectName + ".bfres.zs");
+                var path = Path.Combine(UserSettings.GetRenderCustomModels() ? UserSettings.GetModRomFSPath() : UserSettings.GetRomFSPath(), "Model", projectName + ".bfres.zs");
 
                 if (!File.Exists(path))
                 {
-                    path = Path.Combine(UserSettings.RomFSPath, "Model", projectName + ".bfres.zs");
+                    path = Path.Combine(UserSettings.GetRomFSPath(), "Model", projectName + ".bfres.zs");
                 }
 
                 if (File.Exists(path))

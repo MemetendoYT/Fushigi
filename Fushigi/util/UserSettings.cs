@@ -1,6 +1,5 @@
 ﻿using Fushigi.gl.Bfres;
 using Fushigi.ui;
-using Fushigi.ui.widgets;
 using Newtonsoft.Json;
 
 namespace Fushigi.util
@@ -17,10 +16,10 @@ namespace Fushigi.util
 
         struct Settings
         {
-            public string RomFSPath = string.Empty;
-            public string RomFSModPath = string.Empty;
+            public string RomFSPath;
+            public string RomFSModPath;
             public float BackupFreqMinutes = 10;
-            public Dictionary<string, string> ModPaths = [];
+            public Dictionary<string, string> ModPaths;
             public List<string> RecentCourses;
             public bool UseGameShaders;
             public bool RenderCustomModels;
@@ -29,26 +28,30 @@ namespace Fushigi.util
             public bool UseNewCamera;
             public bool EnableHalfTile;
             public bool EnableTranslation;
-            public bool EnableDRPC = true;
             public bool PrivateDRPC;
             public string Theme;
             public int ShaderSettings;
             public bool romfsReload;
             public bool allowRomfsReload;
-            public bool fpsCounter = true;
-            public bool advancedDebugOptions;
-            public bool VSync;
 
             public Settings()
             {
                 BackupFreqMinutes = 10;
+                RomFSPath = "";
+                ModPaths = [];
+                RomFSModPath = "";
                 RecentCourses = new List<string>(MaxRecents) { };
+                RenderCustomModels = false;
+                UseGameShaders = false;
+                UseAstcTextureCache = false;
+                HideDeletingLinkedActorsPopup = false;
                 UseNewCamera = true;
+                EnableHalfTile = false;
                 EnableTranslation = true;
                 Theme = "Theme";
+                ShaderSettings = 0;
+                romfsReload = false;
                 allowRomfsReload = true;
-                fpsCounter = true;
-                EnableDRPC = true;
             }
         }
 
@@ -80,207 +83,165 @@ namespace Fushigi.util
             File.WriteAllText(SettingsFile, JsonConvert.SerializeObject(AppSettings, Formatting.Indented));
         }
 
-        public static ref bool RefUseGameShaders => ref AppSettings.UseGameShaders;
-        public static bool UseGameShaders
+        public static bool UseGameShaders() => AppSettings.UseGameShaders;
+        public static bool UseAstcTextureCache() => AppSettings.UseAstcTextureCache;
+        public static bool HideDeletingLinkedActorsPopup() => AppSettings.HideDeletingLinkedActorsPopup;
+
+        public static bool RenderCustomModels() => AppSettings.RenderCustomModels;
+
+        public static void SetGameShaders(bool value)
         {
-            get => AppSettings.UseGameShaders;
-            set
-            {
-                AppSettings.UseGameShaders = value;
-                Save();
-            }
+            AppSettings.UseGameShaders = value;
+            Save(); //save setting
         }
-        public static ref bool RefUseAstcTextureCache => ref AppSettings.UseAstcTextureCache;
-        public static bool UseAstcTextureCache
+
+        public static void SetRenderCustomModels(bool value)
         {
-            get => AppSettings.UseAstcTextureCache;
-            set
-            {
-                AppSettings.UseAstcTextureCache = value;
-                Save();
-            }
+            AppSettings.RenderCustomModels = value;
+            Save();
+            BfresCache.Clear();
+
         }
-        public static ref bool RefHideDeletingLinkedActorsPopup => ref AppSettings.HideDeletingLinkedActorsPopup;
-        public static bool HideDeletingLinkedActorsPopup
+
+        public static void SetAstcTextureCache(bool value)
         {
-            get => AppSettings.HideDeletingLinkedActorsPopup;
-            set
-            {
-                AppSettings.HideDeletingLinkedActorsPopup = value;
-                Save();
-            }
+            AppSettings.UseAstcTextureCache = value;
+            Save(); //save setting
         }
-        public static ref bool RefRenderCustomModels => ref AppSettings.RenderCustomModels;
-        public static bool RenderCustomModels
+
+        public static void SetHideDeletingLinkedObjectsPopup(bool value)
         {
-            get => AppSettings.RenderCustomModels;
-            set
-            {
-                AppSettings.RenderCustomModels = value;
-                Save();
-                BfresCache.Clear();
-            }
+            AppSettings.HideDeletingLinkedActorsPopup = value;
+            Save(); //save setting
         }
-        public static ref string RefRomFSPath => ref AppSettings.RomFSPath;
-        public static string RomFSPath
+
+        public static void SetRomFSPath(string path)
         {
-            get => AppSettings.RomFSPath;
-            set
-            {
-                AppSettings.RomFSPath = value;
-                Save();
-            }
+            AppSettings.RomFSPath = path;
+            Save(); //save setting
         }
-        public static ref string RefModRomFSPath => ref AppSettings.RomFSModPath;
-        public static string ModRomFSPath
+
+        public static void SetModRomFSPath(string path)
         {
-            get => AppSettings.RomFSModPath;
-            set
-            {
-                AppSettings.RomFSModPath = value;
-                Save();
-            }
+            AppSettings.RomFSModPath = path;
+            Save(); //save setting
         }
-        public static ref bool RefUseNewCamera => ref AppSettings.UseNewCamera;
-        public static bool UseNewCamera
+
+        public static void SetUseNewCamera(bool newCamera)
         {
-            get => AppSettings.UseNewCamera;
-            set
-            {
-                AppSettings.UseNewCamera = value;
-                Save();
-            }
+            AppSettings.UseNewCamera = newCamera;
+            Save();
         }
-        public static ref float RefBackupFreqMinutes => ref AppSettings.BackupFreqMinutes;
-        public static float BackupFreqMinutes
+
+        public static void SetBackupFreqMinutes(float minutes)
         {
-            get
-            {
-                if (AppSettings.BackupFreqMinutes < 1)
-                    AppSettings.BackupFreqMinutes = 10;
-                return AppSettings.BackupFreqMinutes;
-            }
-            set
-            {
-                if (value < 1)
-                    value = 10;
-                AppSettings.BackupFreqMinutes = value;
-                Save();
-            }
+            AppSettings.BackupFreqMinutes = minutes;
+            Save();
         }
-        public static ref bool RefEnableHalfTile => ref AppSettings.EnableHalfTile;
-        public static bool EnableHalfTile
+
+        public static float GetBackupFreqMinutes()
         {
-            get => AppSettings.EnableHalfTile;
-            set
-            {
-                AppSettings.EnableHalfTile = value;
-                Save();
-            }
+            if (AppSettings.BackupFreqMinutes == 0)
+                SetBackupFreqMinutes(10);
+            return AppSettings.BackupFreqMinutes;
         }
-        public static ref bool RefEnableTranslation => ref AppSettings.EnableTranslation;
-        public static bool EnableTranslation
+
+        public static void SetEnableHalfTile(bool value)
         {
-            get => AppSettings.EnableTranslation;
-            set
-            {
-                AppSettings.EnableTranslation = value;
-                CourseScene.refreshTranslation = true;
-                Save();
-            }
+            AppSettings.EnableHalfTile = value;
+            Save();
         }
-        public static ref bool RefSetEnableDRPC => ref AppSettings.EnableDRPC;
-        public static bool EnableDRPC
+
+        public static void SetEnableTranslation(bool value)
         {
-            get => AppSettings.EnableDRPC;
-            set
-            {
-                AppSettings.EnableDRPC = value;
-                Save();
-            }
+            AppSettings.EnableTranslation = value;
+            Save();
         }
-        public static ref bool RefSetPrivateDRPC => ref AppSettings.PrivateDRPC;
-        public static bool PrivateDRPC
+        public static void SetPrivateDRPC(bool value)
         {
-            get => AppSettings.PrivateDRPC;
-            set
-            {
-                AppSettings.PrivateDRPC = value;
-                Save();
-            }
+            AppSettings.PrivateDRPC = value;
+            Save();
         }
-        public static ref bool RefFPSCounter => ref AppSettings.fpsCounter;
-        public static bool FPSCounter
+
+        public static bool GetRenderCustomModels()
         {
-            get => AppSettings.fpsCounter;
-            set
-            {
-                AppSettings.fpsCounter = value;
-                Save();
-            }
+            return AppSettings.RenderCustomModels;
         }
-        public static ref bool RefAdvancedDebugSettings => ref AppSettings.advancedDebugOptions;
-        public static bool AdvancedDebugSettings
+
+        public static string GetRomFSPath()
         {
-            get => AppSettings.advancedDebugOptions;
-            set
-            {
-                AppSettings.advancedDebugOptions = value;
-                Save();
-            }
+            return AppSettings.RomFSPath;
         }
-        public static ref bool RefVSync => ref AppSettings.VSync;
-        public static bool VSync
+
+        public static string GetModRomFSPath()
         {
-            get => AppSettings.VSync;
-            set
-            {
-                Program.MainWindow.Window.VSync = value;
-                AppSettings.VSync = value;
-                Save();
-            }
+            return AppSettings.RomFSModPath;
         }
-        public static ref string RefTheme => ref AppSettings.Theme;
-        public static string Theme
+
+        public static bool GetUseNewCamera()
         {
-            get => AppSettings.Theme;
-            set
-            {
-                AppSettings.Theme = value;
-                Save();
-            }
+            return AppSettings.UseNewCamera;
         }
-        public static ref int RefShaderSettings => ref AppSettings.ShaderSettings;
-        public static int ShaderSettings
+
+        public static bool GetEnableHalfTile()
         {
-            get => AppSettings.ShaderSettings;
-            set
-            {
-                AppSettings.ShaderSettings = value;
-                Save();
-            }
+            return AppSettings.EnableHalfTile;
         }
-        public static ref bool RefRomFSReload => ref AppSettings.romfsReload;
-        public static bool RomFSReload
+
+        public static bool GetEnableTranslation()
         {
-            get => AppSettings.romfsReload;
-            set => AppSettings.romfsReload = value;
+            return AppSettings.EnableTranslation;
         }
-        public static ref bool RefAllowRomFSReload => ref AppSettings.allowRomfsReload;
-        public static bool AllowRomFSReload
+
+        public static bool GetPrivateDRPC()
         {
-            get => AppSettings.allowRomfsReload;
-            set
-            {
-                AppSettings.allowRomfsReload = value;
-                Save();
-            }
+            return AppSettings.PrivateDRPC;
         }
 
         public static void AppendModPath(string modname, string path)
         {
             AppSettings.ModPaths.Add(modname, path);
         }
+
+        public static string GetTheme()
+        {
+            return AppSettings.Theme ?? "Theme";
+        }
+        
+        public static void SetTheme(string theme)
+        {
+            AppSettings.Theme = theme;
+            Save();
+        }
+        public static int GetShaders()
+        {
+            return AppSettings.ShaderSettings;
+        }
+
+        public static void SetRomfsReload(bool status)
+        {
+            AppSettings.romfsReload = status;
+        }
+        public static bool GetRomfsReload()
+        {
+            return AppSettings.romfsReload;
+        }
+        public static void SetShaders(int selectedShaderSetting)
+        {
+            AppSettings.ShaderSettings = selectedShaderSetting;
+            Save();
+        }
+        public static bool GetAllowRomfsReload()
+        {
+            return AppSettings.allowRomfsReload;
+        }
+        public static void SetAllowRomfsReload(bool value)
+        {
+            AppSettings.allowRomfsReload = value;
+            Save();
+        }
+
+
 
         public static void AppendRecentCourse(string courseName)
         {

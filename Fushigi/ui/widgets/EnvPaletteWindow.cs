@@ -144,7 +144,7 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginCombo("EnvPalette", $"{EnvPalette.Name}", ImGuiComboFlags.HeightLarge))
             {
-                var dir = Path.Combine(UserSettings.RomFSPath, "Gyml", "Gfx", "EnvPaletteParam");
+                var dir = Path.Combine(UserSettings.GetRomFSPath(), "Gyml", "Gfx", "EnvPaletteParam");
                 foreach (var file in Directory.GetFiles(dir))
                 {
                     string name = Path.GetFileName(file).Replace(".game__gfx__EnvPaletteParam.bgyml", "");

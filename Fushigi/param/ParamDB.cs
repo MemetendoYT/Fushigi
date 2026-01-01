@@ -159,8 +159,8 @@ namespace Fushigi.param
             // Use the mod romfs as well. Useful for custom actors
             string[] files_source_rom = RomFS.GetFiles(Path.Combine("Pack", "Actor"));
             string[] files_mod_rom = Array.Empty<string>();
-            if (Directory.Exists(Path.Combine(UserSettings.ModRomFSPath, "Pack", "Actor")))
-                files_mod_rom = Directory.GetFiles(Path.Combine(UserSettings.ModRomFSPath, Path.Combine("Pack", "Actor")));
+            if (Directory.Exists(Path.Combine(UserSettings.GetModRomFSPath(), "Pack", "Actor")))
+                files_mod_rom = Directory.GetFiles(Path.Combine(UserSettings.GetModRomFSPath(), Path.Combine("Pack", "Actor")));
             string[] files = files_mod_rom.Concat(files_source_rom).ToArray();
 
             /* iterate through each file */

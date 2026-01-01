@@ -1,5 +1,4 @@
-﻿using Fushigi.ui.widgets;
-using Fushigi.util;
+﻿using Fushigi.util;
 using Silk.NET.Core;
 using Silk.NET.Core.Contexts;
 using Silk.NET.Input;
@@ -25,7 +24,6 @@ namespace Fushigi.windowing
         public static void CreateWindow(out IWindow window, Vector2D<int>? initialWindowSize = null, Action? onConfigureIO = null)
         {
             var options = WindowOptions.Default;
-            options.VSync = UserSettings.VSync;
             options.Title = $"Fushigi {Program.Version}";
             options.API = new GraphicsAPI(
                 ContextAPI.OpenGL,

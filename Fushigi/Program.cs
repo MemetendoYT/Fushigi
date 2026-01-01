@@ -70,8 +70,7 @@ internal class Program
             Logger.LogMessage("Program", "Created!");
         };
 
-        if (UserSettings.EnableDRPC)
-            DRPC.Initialize();
+        DRPC.Initialize();
 
         MainWindow = new MainWindow();
         WindowManager.Run();

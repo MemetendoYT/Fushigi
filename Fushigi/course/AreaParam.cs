@@ -100,7 +100,7 @@ namespace Fushigi.course
 
         public void Save(RSTB resource_table, string areaName)
         {
-            Save(resource_table, Path.Combine(UserSettings.ModRomFSPath, "Stage", "AreaParam"), areaName, false);
+            Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "AreaParam"), areaName, false);
             CourseScene.oldAreaParamSize = CourseScene.areaParamSize;
             CourseScene.oldCourseInfoSize = CourseScene.courseInfoSize;
         }

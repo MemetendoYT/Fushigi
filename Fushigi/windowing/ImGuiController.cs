@@ -141,7 +141,7 @@ public class ImGuiController : IDisposable
 
         Context = ImGuiNET.ImGui.CreateContext();
         ImGuiNET.ImGui.SetCurrentContext(Context);
-        switch (UserSettings.Theme)
+        switch (UserSettings.GetTheme())
         {
             case "Classic":
                 ImGui.StyleColorsClassic();

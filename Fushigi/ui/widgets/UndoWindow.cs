@@ -37,7 +37,7 @@ namespace Fushigi.ui.widgets
                     var op = context.GetUndoStack().Reverse().ElementAt(i);
                     bool selected = context.GetLastAction() == op;
                         string actorName = op.Name;
-                    if (UserSettings.EnableTranslation)
+                    if (UserSettings.GetEnableTranslation())
                         actorName = Translate.translateHistoryData(op.Name);
                     if (ImGui.Selectable(actorName+"##"+i, selected))
                     {
@@ -52,7 +52,7 @@ namespace Fushigi.ui.widgets
                     var op = context.GetRedoUndoStack().ElementAt(i);
 
                     string actorName = op.Name;
-                    if (UserSettings.EnableTranslation)
+                    if (UserSettings.GetEnableTranslation())
                         actorName = Translate.translateHistoryData(op.Name);
 
                     ImGui.PushStyleColor(ImGuiCol.Text, ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled]);

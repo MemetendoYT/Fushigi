@@ -87,7 +87,7 @@ namespace Fushigi.rstb
                 return;
            
             if (dir == "")
-                dir = Path.Combine(UserSettings.ModRomFSPath, "System", "Resource");
+                dir = Path.Combine(UserSettings.GetModRomFSPath(), "System", "Resource");
             if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
             var mem = new MemoryStream();

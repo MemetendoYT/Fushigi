@@ -69,7 +69,7 @@ namespace Fushigi.course.distance_view
                 //Place via base locator pos + camera
 
                 //Distance between dv locator and camera
-                if (UserSettings.UseNewCamera)
+                if (UserSettings.GetUseNewCamera())
                 {
                     Vector2 distance = new(camera_pos.X - locator_pos.X, camera_pos.Y - locator_pos.Y);
                     Vector2 movement_ratio = new Vector2(1f, 1f) - scroll_config;
