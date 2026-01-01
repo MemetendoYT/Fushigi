@@ -12,11 +12,11 @@ namespace Fushigi.util
         public static string FindContentPath(string path)
         {
             //Check for mod folder, then fall to romfs path
-            string modPath = Path.Combine(UserSettings.GetModRomFSPath(), path);
+            string modPath = Path.Combine(UserSettings.ModRomFSPath, path);
             if (File.Exists(modPath))
                 return modPath;
 
-            return Path.Combine(UserSettings.GetRomFSPath(), path);
+            return Path.Combine(UserSettings.RomFSPath, path);
         }
 
         public static byte[] DecompressFile(string filePath)

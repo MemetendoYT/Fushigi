@@ -1,13 +1,9 @@
-﻿using Fushigi.course;
-using Fushigi.gl;
+﻿using Fushigi.gl;
 using Fushigi.param;
 using Fushigi.ui.modal;
 using Fushigi.util;
 using ImGuiNET;
-using System;
 using System.Numerics;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 
 namespace Fushigi.ui.widgets
 {
@@ -16,17 +12,15 @@ namespace Fushigi.ui.widgets
         static readonly Vector4 errCol = new Vector4(1f, 0, 0, 1);
         static bool romfsTouched = false;
         static bool modRomfsTouched = false;
-        static string curTheme = null;
         private static readonly string[] ShaderDescriptions =
-            {
+        {
             "All Actors",
             "Vanilla Actors Only",
             "Vanilla Actors Except DV",
             "Vanilla Actors Except DV and Tiles",
             "Tilesets Only"
-            };
-        public static void Draw(ref bool continueDisplay, GLTaskScheduler glTaskScheduler,
-     IPopupModalHost modalHost)
+        };
+        public static void Draw(ref bool continueDisplay, GLTaskScheduler glTaskScheduler, IPopupModalHost modalHost)
         {
             ImGui.SetNextWindowSize(new Vector2(700, 300), ImGuiCond.Once);
 
@@ -61,14 +55,7 @@ namespace Fushigi.ui.widgets
 
         private static void DrawBasicSettings(IPopupModalHost modalHost, GLTaskScheduler glTaskScheduler)
         {
-
-            var romfs = UserSettings.GetRomFSPath();
-            var mod = UserSettings.GetModRomFSPath();
-            var enableHalfTile = UserSettings.GetEnableHalfTile();
-            var enableTranslation = UserSettings.GetEnableTranslation();
-            var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
-            curTheme = UserSettings.GetTheme();
-            switch (curTheme)
+            switch (UserSettings.Theme)
             {
                 case "Dark (Default)": ImGui.StyleColorsDark(); break;
                 case "Classic": ImGui.StyleColorsClassic(); break;
@@ -76,113 +63,79 @@ namespace Fushigi.ui.widgets
             }
             ImGui.Indent();
 
-            if (PathSelector.Show(
-                "Wonder Dump Directory",
-                ref romfs,
-                RomFS.IsValidRoot(romfs))
-                )
+            if (PathSelector.Show("Wonder Dump Directory", ref UserSettings.RefRomFSPath, RomFS.IsValidRoot(UserSettings.RomFSPath)))
             {
                 romfsTouched = true;
 
-                UserSettings.SetRomFSPath(romfs);
+                UserSettings.RomFSPath = UserSettings.RefRomFSPath;
 
-                if (!RomFS.IsValidRoot(romfs))
-                {
+                if (!RomFS.IsValidRoot(UserSettings.RomFSPath))
                     return;
-                }
 
                 Task.Run(async () =>
                 {
-                    await ProgressBarDialog.ShowDialogForAsyncAction(modalHost,
-                    $"Preloading Thumbnails",
-                    async (p) =>
+                    await ProgressBarDialog.ShowDialogForAsyncAction(modalHost, $"Preloading Thumbnails", async (p) =>
                     {
-                        await glTaskScheduler.Schedule(gl => RomFS.SetRoot(romfs, gl));
+                        await glTaskScheduler.Schedule(gl => RomFS.SetRoot(UserSettings.RomFSPath, gl));
                     });
 
                     ChildActorParam.Load();
 
                     /* if our parameter database isn't set, set it */
                     if (!ParamDB.sIsInit)
-                    {
                         await MainWindow.LoadParamDBWithProgressBar(modalHost);
-                    }
                 });
 
             }
 
             Tooltip.Show("The game files which are stored under the romfs folder.\nIf you are using v1.0.1 of Super Mario Bros. Wonder, use a RomFS Game Path with v65536 files in it.");
 
-            if (romfsTouched && !RomFS.IsValidRoot(romfs))
-            {
-                ImGui.TextColored(errCol,
-                    "The path you have selected is invalid. Please select a RomFS path that contains your full Wonder dump.");
-            }
+            if (romfsTouched && !RomFS.IsValidRoot(UserSettings.RomFSPath))
+                ImGui.TextColored(errCol, "The path you have selected is invalid. Please select a RomFS path that contains your full Wonder dump.");
 
-            if (PathSelector.Show("Modded Directory", ref mod, !string.IsNullOrEmpty(mod)))
+            if (PathSelector.Show("Modded Directory", ref UserSettings.RefModRomFSPath, !string.IsNullOrEmpty(UserSettings.ModRomFSPath)))
             {
                 modRomfsTouched = true;
 
-                UserSettings.SetModRomFSPath(mod);
-                Console.WriteLine("Mod RomFS Path set to: " + mod);
+                UserSettings.ModRomFSPath = UserSettings.RefModRomFSPath;
+                Console.WriteLine("Mod RomFS Path set to: " + UserSettings.ModRomFSPath);
 
-                UserSettings.SetRomfsReload(true);
-
+                UserSettings.RomFSReload = true;
             }
 
             Tooltip.Show("The save output where to save modified romfs files");
 
-            if (modRomfsTouched && string.IsNullOrEmpty(mod))
+            if (modRomfsTouched && string.IsNullOrEmpty(UserSettings.ModRomFSPath))
+                ImGui.TextColored(errCol, "The path you have selected is invalid. Directory must not be empty.");
+
+            Checkbox("Use Game Shaders", ref UserSettings.RefUseGameShaders, (v) => UserSettings.UseGameShaders = v,
+                "Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
+
+            Checkbox("Enable Half Tile Editing", ref UserSettings.RefEnableHalfTile, (v) => UserSettings.EnableHalfTile = v,
+                "Enable half tile editng for BGUnits, also affects the placement of rails as well.");
+
+            Checkbox("Enable Actor Name Translation", ref UserSettings.RefEnableTranslation, (v) => UserSettings.EnableTranslation = v,
+                "Translates all the actor names to English.");
+
+            InputFloat("Backup Frequency (in minutes)", ref UserSettings.RefBackupFreqMinutes, (v) => UserSettings.BackupFreqMinutes = v,
+                "How long between each backup, in minutes.\nBackups are stored to wherever Fushigi is installed.");
+
+            if (ImGui.BeginCombo("Themes", UserSettings.Theme))
             {
-                ImGui.TextColored(errCol,
-                    "The path you have selected is invalid. Directory must not be empty.");
-            }
-
-            if (ImGui.Checkbox("Use Game Shaders", ref useGameShaders))
-            {
-                UserSettings.SetGameShaders(useGameShaders);
-            }
-
-            Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
-
-            if (ImGui.Checkbox("Enable Half Tile Editing", ref enableHalfTile))
-                UserSettings.SetEnableHalfTile(enableHalfTile);
-
-            Tooltip.Show("Enable half tile editng for BGUnits, also affects the placement of rails as well.");
-
-            if (ImGui.Checkbox("Enable Actor Translation", ref enableTranslation))
-            {
-                UserSettings.SetEnableTranslation(enableTranslation);
-                CourseScene.refreshTranslation = true;
-            }
-
-            Tooltip.Show("Translates all the actor names to English");
-
-            if (ImGui.InputFloat("Backup Frequency (in minutes)", ref backupFreqMinutes))
-                UserSettings.SetBackupFreqMinutes(backupFreqMinutes);
-
-            Tooltip.Show("How long between each backup, in minutes.\nBackups are stored wherever Fushigi is installed to.");
-
-
-            if (ImGui.BeginCombo("Themes", curTheme))
-            {
-                if (ImGui.Selectable("Dark (Default)", curTheme == "Dark (Default)"))
+                if (ImGui.Selectable("Dark (Default)", UserSettings.Theme == "Dark (Default)"))
                 {
                     ImGui.StyleColorsDark();
-                    curTheme = "Dark (Default)";
-                    UserSettings.SetTheme(curTheme);
+                    UserSettings.Theme = "Dark (Default)";
                 }
-                if (ImGui.Selectable("Classic", curTheme == "Classic"))
+                if (ImGui.Selectable("Classic", UserSettings.Theme == "Classic"))
                 {
                     ImGui.StyleColorsClassic();
-                    curTheme = "Classic";
-                    UserSettings.SetTheme(curTheme);
+                    UserSettings.Theme = "Classic";
                 }
-                if (ImGui.Selectable("Light", curTheme == "Light"))
+                if (ImGui.Selectable("Light", UserSettings.Theme == "Light"))
                 {
                     ImGui.StyleColorsLight();
-                    curTheme = "Light";
-                    UserSettings.SetTheme(curTheme);
+                    UserSettings.Theme = "Light";
                 }
                 ImGui.EndCombo();
             }
@@ -192,101 +145,60 @@ namespace Fushigi.ui.widgets
 
         private static void DrawAdvancedSettings(IPopupModalHost modalHost)
         {
-
-            var renderCustomModels = UserSettings.GetRenderCustomModels();
-            var useAstcTextureCache = UserSettings.UseAstcTextureCache();
-            var hideDeletingLinkedActorsPopup = UserSettings.HideDeletingLinkedActorsPopup();
-            var useNewCamera = UserSettings.GetUseNewCamera();
-            var privateDRPC = UserSettings.GetPrivateDRPC();
-            var toggleRomfsReload = UserSettings.GetAllowRomfsReload();
-            var fpsCounter = UserSettings.GetFPSCounter();
-            var advancedDebugSettings = UserSettings.GetAdvancedDebugSettings();
-            var vsync = UserSettings.GetVSync();
-
             ImGui.Indent();
 
             Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
 
-            if (ImGui.Checkbox("Render Models from mod RomFS", ref renderCustomModels))
+            Checkbox("Render Models from mod RomFS", ref UserSettings.RefRenderCustomModels, (v) => UserSettings.RenderCustomModels = v,
+                "Uses the models from the mod directory. WARNING: Rendering of custom models using game shaders is broken.");
+
+            Checkbox("Use Astc Texture Cache", ref UserSettings.RefUseAstcTextureCache, (v) => UserSettings.UseAstcTextureCache = v,
+                "Saves ASTC textures to disk which takes up disk space, but improves loading times and ram usage significantly.");
+
+            Checkbox("Hide Deleting Linked Actors Popup", ref UserSettings.RefHideDeletingLinkedActorsPopup, (v) => UserSettings.UseAstcTextureCache = v,
+                "Hides the warning popup when you delete actors with links.");
+
+            Checkbox("Use New Camera [BETA!]", ref UserSettings.RefUseNewCamera, (v) => UserSettings.UseNewCamera = v,
+                "Uses a new camera system that aims to be more accurate.\nWARNING: in beta and might cause some issues");
+
+            Checkbox("Enable RomFS Reload", ref UserSettings.RefAllowRomFSReload, (v) => UserSettings.AllowRomFSReload = v,
+                "When switching to a different modded romfs everything will reload.");
+
+            Checkbox("Hide Rich Presence Activity", ref UserSettings.RefSetPrivateDRPC, (v) => UserSettings.PrivateDRPC = v,
+                "Whether or not to hide information about the course in the Discord RPC.\nReload required to work.");
+            
+            Checkbox("Show FPS Counter", ref UserSettings.RefFPSCounter, (v) => UserSettings.FPSCounter = v,
+                "Displays an FPS counter on the top-left of the editor viewport.");
+
+            Checkbox("Show Advanced Debug Info", ref UserSettings.RefAdvancedDebugSettings, (v) => UserSettings.AdvancedDebugSettings = v,
+                "Displays debugging information on the top-left of the editor viewport.");
+
+            Checkbox("Enable VSync", ref UserSettings.RefVSync, (v) => UserSettings.VSync = v,
+                "Enable VSync to cap framerate to your monitor's refresh rate,\n or disable to unlimit.");
+
+            if (ImGui.BeginCombo("Shader Settings [EXPERIMENTAL]", ShaderDescriptions[UserSettings.ShaderSettings]))
             {
-                UserSettings.SetRenderCustomModels(renderCustomModels);
-            }
-
-            Tooltip.Show("Uses the models from the mod directory. WARNING: Rendering of custom models using game shaders is broken.");
-
-            if (ImGui.Checkbox("Use Astc Texture Cache", ref useAstcTextureCache))
-            {
-                UserSettings.SetAstcTextureCache(useAstcTextureCache);
-            }
-
-            Tooltip.Show("Saves ASTC textures to disk which takes up disk space, but improves loading times and ram usage significantly.");
-
-            if (ImGui.Checkbox("Hide Deleting Linked Actors Popup", ref hideDeletingLinkedActorsPopup))
-            {
-                UserSettings.SetHideDeletingLinkedObjectsPopup(hideDeletingLinkedActorsPopup);
-            }
-
-            Tooltip.Show("Hides the warning popup when you delete actors with links.");
-
-            if (ImGui.Checkbox("Use New Camera [BETA!]", ref useNewCamera))
-                UserSettings.SetUseNewCamera(useNewCamera);
-
-            Tooltip.Show("Uses a new camera system that aims to be more accurate.\nWARNING: in beta and might cause some issues");
-
-            if (ImGui.Checkbox("Enable ROMFS Reload", ref toggleRomfsReload))
-                UserSettings.SetAllowRomfsReload(toggleRomfsReload);
-
-            Tooltip.Show("When switching to a different modded romfs everything will reload.");
-
-            if (ImGui.Checkbox("Hide Activity", ref privateDRPC))
-                UserSettings.SetPrivateDRPC(privateDRPC);
-
-            Tooltip.Show("Whether or not to hide information about the course in the Discord RPC.\nReload required to work.");
-
-            if (ImGui.Checkbox("Show FPS Counter", ref fpsCounter))
-                UserSettings.SetFPSCounter(fpsCounter);
-
-            Tooltip.Show("Displays an FPS counter on the top-left of the editor viewport.");
-
-            if (ImGui.Checkbox("Show Advanced Debug Info", ref advancedDebugSettings))
-                UserSettings.SetAdvancedDebugSettings(advancedDebugSettings);
-
-            Tooltip.Show("Displays debugging information on the top-left of the editor viewport.");
-
-            if (ImGui.Checkbox("Enable VSync", ref vsync))
-                UserSettings.SetVSync(vsync);
-
-            Tooltip.Show("Enable VSync to cap framerate to your monitor's refresh rate,\n or disable to unlimit.");
-
-
-            int shaderSettings = UserSettings.GetShaders();
-
-            if (ImGui.BeginCombo("Shader Settings [EXPERIMENTAL]", ShaderDescriptions[shaderSettings]))
-            {
-                if (ImGui.Selectable(ShaderDescriptions[0]))
-                {
-                    UserSettings.SetShaders(0);
-                }
-                if (ImGui.Selectable(ShaderDescriptions[1]))
-                {
-                    UserSettings.SetShaders(1);
-                }
-                if (ImGui.Selectable(ShaderDescriptions[2]))
-                {
-                    UserSettings.SetShaders(2);
-                }
-                if (ImGui.Selectable(ShaderDescriptions[3]))
-                {
-                    UserSettings.SetShaders(3);
-                }
-                if (ImGui.Selectable(ShaderDescriptions[4]))
-                {
-                    UserSettings.SetShaders(4);
-                }
+                for (int i = 0; i < 5; i++)
+                    if (ImGui.Selectable(ShaderDescriptions[i]))
+                        UserSettings.ShaderSettings = i;
 
                 ImGui.EndCombo();
             }
             Tooltip.Show("Disable custom shaders on custom actors. NOTE: This only works on new custom actors and not model swaps");
+        }
+
+        private static void Checkbox(string name, ref bool reference, Action<bool> value, string tooltip)
+        {
+            if (ImGui.Checkbox(name, ref reference))
+                value(reference);
+            Tooltip.Show(tooltip);
+        }
+        
+        private static void InputFloat(string name, ref float reference, Action<float> value, string tooltip)
+        {
+            if (ImGui.InputFloat(name, ref reference))
+                value(reference);
+            Tooltip.Show(tooltip);
         }
     }
 }

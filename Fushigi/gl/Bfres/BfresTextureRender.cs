@@ -1,16 +1,7 @@
 ﻿using Fushigi.Bfres;
 using Fushigi.Bfres.Texture;
-using Fushigi.Byml.Serializer;
-using Silk.NET.GLFW;
+using Fushigi.util;
 using Silk.NET.OpenGL;
-using Silk.NET.SDL;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Fushigi.gl.Bfres
 {
@@ -120,14 +111,14 @@ namespace Fushigi.gl.Bfres
                                     var dec = texture.DecodeAstc(surface);
 
                                     //BC7 re encode for texture cache
-                                    if (BfresTextureCache.Enable)
+                                    if (UserSettings.UseAstcTextureCache)
                                         dec = BCEncoder.Encode(dec.ToArray(), (int)this.Width, (int)this.Height);
 
                                     levels.AddRange(dec);
                                 }
                                 var decodedBuffer = levels.ToArray();
 
-                                if (BfresTextureCache.Enable)
+                                if (UserSettings.UseAstcTextureCache)
                                     BfresTextureCache.SaveCache(this, data, decodedBuffer);
 
                                 TextureState = State.Decoded;
@@ -196,7 +187,7 @@ namespace Fushigi.gl.Bfres
                 // TODO - useSrgb argument is a temporary solution for the CourseSelect thumbnails
                 //        should find a more permanent solution for this
 
-                if (BfresTextureCache.Enable) //cache uses BC7
+                if (UserSettings.UseAstcTextureCache) //cache uses BC7
                 {
                     var format = useSrgb && IsSrgb ? SurfaceFormat.BC7_SRGB : SurfaceFormat.BC7_UNORM;
                     var formatInfo = GLFormatHelper.ConvertCompressedFormat(format, true);

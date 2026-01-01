@@ -71,7 +71,7 @@ namespace Fushigi.gl.Bfres
 
         public void Render(GL gl, BfresRender renderer, BfresRender.BfresModel model, System.Numerics.Matrix4x4 transform, Camera camera)
         {
-            if (UserSettings.UseGameShaders() && UserSettings.GetShaders() != 3)
+            if (UserSettings.UseGameShaders && UserSettings.ShaderSettings != 3)
                 this.RenderGameShaders(gl, renderer, model, transform, camera);
             else
                 this.RenderDefault(gl, renderer, model, transform, camera);

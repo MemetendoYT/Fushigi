@@ -250,7 +250,7 @@ namespace Fushigi.ui.widgets
 
         public void DeleteAreaFiles(string areaName)
         {
-            string modRoot = UserSettings.GetModRomFSPath();
+            string modRoot = UserSettings.ModRomFSPath;
             string areaParam = Path.Combine(modRoot, "Stage/AreaParam", $"{areaName}.game__stage__AreaParam.bgyml");
             string phive = Path.Combine(modRoot, "Phive/StaticCompoundBody", $"{areaName}.phive__StaticCompoundBodySourceParam.gyml");
             string bcett = Path.Combine(modRoot, "BancMapUnit", $"{areaName}.bcett.byml.zs");
@@ -272,7 +272,7 @@ namespace Fushigi.ui.widgets
         {
             var cs = new CourseScene(course, glScheduler, popupModalHost);
 
-            //if (UserSettings.GetEnableTranslation()) 
+            //if (UserSettings.EnableTranslation) 
             Translate.LoadEnglishNames();
 
             foreach (var area in course.GetAreas())
@@ -447,7 +447,7 @@ namespace Fushigi.ui.widgets
             //var paletteWindow = new EnvPaletteWindow();
 
             backupTime += deltaSeconds;
-            if (backupTime >= UserSettings.GetBackupFreqMinutes() * 60)
+            if (backupTime >= UserSettings.BackupFreqMinutes * 60)
             {
                 Save(backup: true);
                 backupTime = 0;
@@ -592,12 +592,9 @@ namespace Fushigi.ui.widgets
                             ImGui.SameLine();
 
 
-                            bool useGameShaders = UserSettings.UseGameShaders();
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ADJUST, useGameShaders, icon_size))
-                            {
-                                useGameShaders = !useGameShaders;
-                                UserSettings.SetGameShaders(useGameShaders);
-                            }
+                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ADJUST, UserSettings.UseGameShaders, icon_size))
+                                UserSettings.UseGameShaders = !UserSettings.UseGameShaders;
+
                             ImGui.SetItemTooltip("Use Game Shaders");
 
                             ImGui.SameLine();
@@ -664,9 +661,9 @@ namespace Fushigi.ui.widgets
                                 debugTexts.Add($"X: {Math.Round(worldPos.X, 3)}");
                                 debugTexts.Add($"Y: {Math.Round(worldPos.Y, 3)}");
                             }
-                            if (UserSettings.GetFPSCounter())
+                            if (UserSettings.FPSCounter)
                                 debugTexts.Add($"FPS: {fps}");
-                            if (UserSettings.GetAdvancedDebugSettings())
+                            if (UserSettings.AdvancedDebugSettings)
                             {
                                 debugTexts.Add($"Draw Calls: {RenderStats.NumDrawCalls}");
                                 debugTexts.Add($"Triangles: {RenderStats.NumTriangles}");
@@ -771,7 +768,7 @@ namespace Fushigi.ui.widgets
         
         public void Save(bool backup = false, string backupFolder = "")
         {
-            var rstbPath = Path.Combine(UserSettings.GetRomFSPath(), "System", "Resource");
+            var rstbPath = Path.Combine(UserSettings.RomFSPath, "System", "Resource");
             if (!Directory.Exists(rstbPath))
                     Directory.CreateDirectory(rstbPath);
             string[] sizeTables = Directory.GetFiles(rstbPath, "*.zs");
@@ -819,17 +816,17 @@ namespace Fushigi.ui.widgets
                 else
                 {
                     pathsToWriteTo = course.GetAreas().Select(
-                        a=> Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit", $"{a.GetName()}.bcett.byml.zs")
+                        a=> Path.Combine(UserSettings.ModRomFSPath, "BancMapUnit", $"{a.GetName()}.bcett.byml.zs")
                         ).ToList();
 
                     // Add the Course file for global links
                     pathsToWriteTo.Add(
-                        Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit", $"{course.GetName()}.bcett.byml.zs")
+                        Path.Combine(UserSettings.ModRomFSPath, "BancMapUnit", $"{course.GetName()}.bcett.byml.zs")
                         );
 
                     // Save AreaParam
                     var areaParamSave = course.GetAreas().Select(
-                        a => Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "AreaParam", $"{a.GetName()}.game__stage__AreaParam.bgyml")
+                        a => Path.Combine(UserSettings.ModRomFSPath, "Stage", "AreaParam", $"{a.GetName()}.game__stage__AreaParam.bgyml")
                         ).ToList();
                     
             
@@ -842,12 +839,12 @@ namespace Fushigi.ui.widgets
                     // Save CourseInfo
                    
                     pathsToWriteTo.Add(
-                        Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "CourseInfo", $"{course.GetName()}.game__stage__CourseInfo.bgyml")
+                        Path.Combine(UserSettings.ModRomFSPath, "Stage", "CourseInfo", $"{course.GetName()}.game__stage__CourseInfo.bgyml")
                         );
 
                     //Added Game Update Compatibility
                     pathsToWriteTo.Add(
-                        Path.Combine(UserSettings.GetModRomFSPath(), "System", "Resource", Path.GetFileName(path))
+                        Path.Combine(UserSettings.ModRomFSPath, "System", "Resource", Path.GetFileName(path))
                         );
                 }
 
@@ -868,13 +865,13 @@ namespace Fushigi.ui.widgets
                     {
 
                          string phiveDir = Path.Combine(
-                           UserSettings.GetModRomFSPath(),
+                           UserSettings.ModRomFSPath,
                            "Phive",
                            "StaticCompoundBody"
                        );
 
                 string normalDir  = Path.Combine(
-                           UserSettings.GetRomFSPath(),
+                           UserSettings.RomFSPath,
                            "Phive",
                            "StaticCompoundBody"
                        );
@@ -931,7 +928,7 @@ namespace Fushigi.ui.widgets
                         stageParam.Root = stageParamRoot;
 
                         string outPath = Path.Combine(
-                            UserSettings.GetModRomFSPath(),
+                            UserSettings.ModRomFSPath,
                             "Stage/StageParam",
                             $"{area.GetName()}.game__stage__StageParam.bgyml"
                         );
@@ -970,7 +967,7 @@ namespace Fushigi.ui.widgets
                     if (backup)
                         course.SaveGlobalLinks(resource_table, Path.Combine(backupFolder, "BancMapUnit"));
                     else
-                        course.SaveGlobalLinks(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit"));
+                        course.SaveGlobalLinks(resource_table, Path.Combine(UserSettings.ModRomFSPath, "BancMapUnit"));
                 }
 
                 //Save the CourseInfo file
@@ -979,7 +976,7 @@ namespace Fushigi.ui.widgets
                 if (backup)
                     course.mCourseInfo.Save(resource_table, Path.Combine(backupFolder, "Stage", "CourseInfo"), course.GetName());
                 else
-                    course.mCourseInfo.Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "CourseInfo"), course.GetName());
+                    course.mCourseInfo.Save(resource_table, Path.Combine(UserSettings.ModRomFSPath, "Stage", "CourseInfo"), course.GetName());
 
                 //Save the MapAnalysisInfo file
                 Console.WriteLine($"{(backup ? "Backing up" : "Saving")} map analysis info for {course.GetName()}...");
@@ -987,7 +984,7 @@ namespace Fushigi.ui.widgets
                 if (backup)
                     course.mMapAnalysisInfo.Save(resource_table, Path.Combine(backupFolder, "Stage", "MapAnalysisInfo"), course.GetName());
                 else
-                    course.mMapAnalysisInfo.Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "MapAnalysisInfo"), course.GetName());
+                    course.mMapAnalysisInfo.Save(resource_table, Path.Combine(UserSettings.ModRomFSPath, "Stage", "MapAnalysisInfo"), course.GetName());
 
                 //Save the StageLoadInfo file
                 Console.WriteLine($"{(backup ? "Backing up" : "Saving")} stage load info for {course.GetName()}...");
@@ -995,7 +992,7 @@ namespace Fushigi.ui.widgets
                 if (backup)
                     course.mStageLoadInfo.Save(resource_table, Path.Combine(backupFolder, "Stage", "StageLoadInfo"), course.GetName());
                 else
-                    course.mStageLoadInfo.Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "Stage", "StageLoadInfo"), course.GetName());
+                    course.mStageLoadInfo.Save(resource_table, Path.Combine(UserSettings.ModRomFSPath, "Stage", "StageLoadInfo"), course.GetName());
 
                 //Save resource table
                 if (backup)
@@ -1195,7 +1192,7 @@ namespace Fushigi.ui.widgets
                     {
                         previousWord = mAddActorSearchQuery;
                         refreshTranslation = false;
-                        if(UserSettings.GetEnableTranslation())
+                        if(UserSettings.EnableTranslation)
                             filteredActors = ParamDB.GetEnglishActors(Translate.EnglishNames).ToImmutableList();
                         else
                         {
@@ -1204,7 +1201,7 @@ namespace Fushigi.ui.widgets
 
                             englishActors = ImmutableList<string>.Empty;
 
-                        if (UserSettings.GetEnableTranslation())
+                        if (UserSettings.EnableTranslation)
                             englishActors = ParamDB.GetEnglishActors(Translate.EnglishNames).ToImmutableList();
                             
                         if (mAddActorSearchQuery != "")
@@ -1214,7 +1211,7 @@ namespace Fushigi.ui.widgets
                                   .Select(result => result.Value)
                                   .ToImmutableList();
 
-                            if (UserSettings.GetEnableTranslation())
+                            if (UserSettings.EnableTranslation)
                             {
                                 englishActors = FuzzySharp.Process.ExtractAll(mAddActorSearchQuery, ParamDB.GetEnglishActors(Translate.EnglishNames), cutoff: 70)
                                 .OrderByDescending(result => result.Score)
@@ -1244,13 +1241,13 @@ namespace Fushigi.ui.widgets
                             ImGui.TableSetColumnIndex(0);
                             ImGui.Selectable(actor);
                             jpActor = actor;
-                            if (UserSettings.GetEnableTranslation())
+                            if (UserSettings.EnableTranslation)
                                 jpActor = Translate.reverseTranslate(actor);
 
                             if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
                                 mSelectedActor = jpActor;
 
-                            if (UserSettings.GetEnableTranslation())
+                            if (UserSettings.EnableTranslation)
                             {
                                 ImGui.TableSetColumnIndex(1);
                                 ImGui.BeginDisabled();
@@ -1370,7 +1367,7 @@ namespace Fushigi.ui.widgets
             KeyboardModifier modifier;
             using var tokenSource = new CancellationTokenSource();
             string actorName = mSelectedActor;
-            if (UserSettings.GetEnableTranslation())
+            if (UserSettings.EnableTranslation)
                 actorName = Translate.FetchTranslatedName(actorName);
 
             do
@@ -1785,7 +1782,7 @@ namespace Fushigi.ui.widgets
                         string packName = mSelectedActor.mPackName;
                         string englishName = packName;
 
-                    if (UserSettings.GetEnableTranslation())
+                    if (UserSettings.EnableTranslation)
                         englishName = Translate.FetchTranslatedName(englishName);
                
 
@@ -3254,7 +3251,7 @@ namespace Fushigi.ui.widgets
 
                 string actorName = actor.mPackName;
 
-                if(UserSettings.GetEnableTranslation()) 
+                if(UserSettings.EnableTranslation) 
                     actorName = Translate.FetchTranslatedName(actorName);
 
                 string name = actor.mName;
@@ -3480,7 +3477,7 @@ namespace Fushigi.ui.widgets
                         string actorName = actor.mPackName;
                         string name = actor.mName;
 
-                        if (UserSettings.GetEnableTranslation()) 
+                        if (UserSettings.EnableTranslation) 
                         {
                             actorName = Translate.FetchTranslatedName(actorName);
                         }
@@ -3967,7 +3964,7 @@ namespace Fushigi.ui.widgets
             if (actors.Count() == 1)
                 actionName = "Delete " + actors.ElementAt(0).mPackName;
 
-            if (!UserSettings.HideDeletingLinkedActorsPopup())
+            if (!UserSettings.HideDeletingLinkedActorsPopup)
             {
                 List<string> dstMsgStrs = [];
                 List<string> srcMsgStrs = [];
