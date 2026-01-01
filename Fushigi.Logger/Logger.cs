@@ -49,7 +49,7 @@ namespace Fushigi.Logger
             Environment.Exit(1);
         }
 
-        private static void Log(object msg)
+        private static void LogLine(object msg)
         {
             if (!IsInitialized || mConsoleWriter == null) return;
 
@@ -57,32 +57,43 @@ namespace Fushigi.Logger
             Console.WriteLine(msg);
         }
 
+        private static void LogWrite(object msg)
+        {
+            if (!IsInitialized || mConsoleWriter == null) return;
+
+            mConsoleWriter.Write(msg);
+            Console.Write(msg);
+        }
+
         public static void LogMessage(object from, object msg)
         {
+            Console.ForegroundColor = ConsoleColor.Green;
+            LogWrite($"[{from}]: ");
+
             Console.ForegroundColor = ConsoleColor.White;
-            Log($"[{from}]: {msg}");
+            LogLine($"{msg}");
         }
 
         public static void LogWarning(object from, object msg)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Log($"[WARN] [{from}]: {msg}");
+            LogLine($"[{from}]: {msg}");
             Console.ForegroundColor = ConsoleColor.White;
         }
 
         public static void LogError(object from, object msg)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Log($"[ERROR] [{from}]: {msg}");
+            LogLine($"[{from}]: {msg}");
             Console.ForegroundColor = ConsoleColor.White;
         }
 
         public static void LogError(Exception e)
         {
             if (e.StackTrace == null)
-                Log(e.Message);
+                LogLine(e.Message);
             else
-                Log($"[ERROR] {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
+                LogLine($"[ERROR] {e.GetType().Name}: {e.Message}\n{e.StackTrace}");
         }
     }
 }

@@ -36,10 +36,7 @@ namespace Fushigi
         static void SetPresence(string details, string state, string imageKey)
         {
             if (mClient == null)
-            {
-                Logger.Logger.LogWarning("DiscordRPC", "Tried to set presence with a null client");
                 return;
-            }
 
             mClient.SetPresence(new RichPresence()
             {
@@ -59,8 +56,8 @@ namespace Fushigi
 
         public static void SetEditingCourse(string courseID, string courseName, int worldNumber)
         {
-            if (UserSettings.GetPrivateDRPC())
-                SetPresence($"Editing a Course", null, "icon" + 1);
+            if (UserSettings.PrivateDRPC)
+                SetPresence($"Editing a Course", string.Empty, "icon" + 1);
             else
                 SetPresence($"Editing {courseID}", courseName, "icon" + worldNumber);
         }

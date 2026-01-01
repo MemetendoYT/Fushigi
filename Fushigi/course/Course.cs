@@ -147,7 +147,7 @@ namespace Fushigi.course
 
         public void Save()
         {
-            var rstbPath = Path.Combine(UserSettings.GetRomFSPath(), "System", "Resource");
+            var rstbPath = Path.Combine(UserSettings.RomFSPath, "System", "Resource");
 
             if (!Directory.Exists(rstbPath))
                 Directory.CreateDirectory(rstbPath);
@@ -188,7 +188,7 @@ namespace Fushigi.course
                 resource_table.SetResource(virtualPath, (uint)mem.Length);
 
                 // Write compressed file to mod RomFS
-                string folder = Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit");
+                string folder = Path.Combine(UserSettings.ModRomFSPath, "BancMapUnit");
                 if (!Directory.Exists(folder))
                     Directory.CreateDirectory(folder);
 

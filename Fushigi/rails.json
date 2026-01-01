@@ -1,0 +1,342 @@
+{
+  "BadgeChallengeRailInstanceParam": {
+    "Parent": "RailInstanceParam",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": true,
+        "Type": "Bool"
+      },
+      "IsEnableRailChain": {
+        "InitValue": false,
+        "Type": "Bool"
+      }
+    }
+  },
+  "CoursePointAddPlaceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "UseLargeDummy": {
+        "InitValue": false,
+        "Type": "Bool"
+      }
+    }
+  },
+  "CRingRailInstanceParam": {
+    "Parent": "RailInstanceParam",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "IsEnableRailChain": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "IsClockwise": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "StartEdgeType": {
+        "InitValue": 3,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 3,
+        "Type": "S32"
+      },
+      "WonderVisibilityType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "CycleFrame": {
+        "InitValue": 600,
+        "Type": "S32"
+      },
+      "EasingType": {
+        "InitValue": "Default",
+        "Type": "String"
+      }
+    }
+  },
+  "CRingRailPointInstanceParam": {
+    "Parent": "RailPointInstanceParam",
+    "Parameters": {
+      "SectionSpeed": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "SectionCycleFrame": {
+        "InitValue": 0,
+        "Type": "S32"
+      }
+    }
+  },
+  "NextGoToRailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "StartEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      }
+    }
+  },
+  "NextGoToRailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {}
+  },
+  "RailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "IsEnableRailChain": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "StartEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WonderVisibilityType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "MovableDir": {
+        "InitValue": 0,
+        "Type": "S32"
+      }
+    }
+  },
+  "RailInstanceParam_SwitchONOFF": {
+    "Parent": "null",
+    "Parameters": {
+      "WonderVisibilityType": {
+        "InitValue": 0,
+        "Type": "S32"
+      }
+    }
+  },
+  "RailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "RotateAngle_Degree": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "SectionSpeed": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "RotateType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "RotateDir": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WaitFrame": {
+        "InitValue": 0,
+        "Type": "U32"
+      }
+    }
+  },
+  "ScrollRailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "StartEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WonderVisibilityType": {
+        "InitValue": 0,
+        "Type": "S32"
+      }
+    }
+  },
+  "ScrollRailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "PassingFrame": {
+        "InitValue": -1.0,
+        "Type": "F32"
+      },
+      "RotateAngle_Degree": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "SectionSpeed": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "RotateType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WaitFrame": {
+        "InitValue": 0,
+        "Type": "U32"
+      }
+    }
+  },
+  "SectionFrameRailInstanceParam": {
+    "Parent": "RailInstanceParam",
+    "Parameters": {}
+  },
+  "SectionFrameRailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "RotateAngle_Degree": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "RotateType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "SectionFrame": {
+        "InitValue": 60,
+        "Type": "S32"
+      },
+      "CurveType": {
+        "InitValue": "",
+        "Type": "String"
+      },
+      "PresetCurveType": {
+        "InitValue": "",
+        "Type": "String"
+      },
+      "WaitFrame": {
+        "InitValue": 0,
+        "Type": "U32"
+      }
+    }
+  },
+  "ShabonMobeRailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": false,
+        "Type": "Bool"
+      },
+      "StartEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WonderVisibilityType": {
+        "InitValue": 0,
+        "Type": "S32"
+      }
+    }
+  },
+  "ShabonMoveRailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "PassingFrame": {
+        "InitValue": -1.0,
+        "Type": "F32"
+      },
+      "RotateAngle_Degree": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "SectionSpeed": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "Width": {
+        "InitValue": 27.5,
+        "Type": "F32"
+      },
+      "Height": {
+        "InitValue": 15.5,
+        "Type": "F32"
+      },
+      "RotateType": {
+        "InitValue": 0,
+        "Type": "S32"
+      },
+      "WaitFrame": {
+        "InitValue": 0,
+        "Type": "U32"
+      }
+    }
+  },
+  "UpperEdgeDecoParamArea": {
+    "Parent": "null",
+    "Parameters": {
+      "PlacementAmount": {
+        "InitValue": 0.0,
+        "Type": "F32"
+      },
+      "MaxScale": {
+        "InitValue": 1.0,
+        "Type": "F32"
+      },
+      "MinScale": {
+        "InitValue": 1.0,
+        "Type": "F32"
+      },
+      "TargetDecoActorPath": {
+        "InitValue": "",
+        "Type": "String"
+      }
+    }
+  },
+  "WorldMapRouteInvisibleRailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "StartEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      }
+    }
+  },
+  "WorldMapRouteRailInstanceParam": {
+    "Parent": "null",
+    "Parameters": {
+      "IsEntity": {
+        "InitValue": true,
+        "Type": "Bool"
+      },
+      "StartEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      },
+      "EndEdgeType": {
+        "InitValue": 1,
+        "Type": "S32"
+      }
+    }
+  },
+  "WorldMapRouteRailPointInstanceParam": {
+    "Parent": "null",
+    "Parameters": {}
+  }
+}

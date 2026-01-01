@@ -746,7 +746,7 @@ namespace Fushigi.ui.widgets
             if (hoveredActor != null && mObjectPickingRequest == null && mPositionPickingRequest == null)
             { //prevents tooltip flickering
                 actorName = hoveredActor.mPackName;
-                if (UserSettings.GetEnableTranslation())
+                if (UserSettings.EnableTranslation)
                     actorName = Translate.FetchTranslatedName(actorName);
 
                 ImGui.SetTooltip($"{actorName}\n{hoveredActor.mName}");
@@ -1392,7 +1392,7 @@ namespace Fushigi.ui.widgets
 
                         var index = rail.mPoints.IndexOf(selectedPoint);
                         var newPoint = new CourseRail.CourseRailPoint(selectedPoint);
-                        if (UserSettings.GetEnableHalfTile())
+                        if (UserSettings.EnableHalfTile)
                         {
                             newPoint.mTranslate = new(
                                 MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
@@ -1423,7 +1423,7 @@ namespace Fushigi.ui.widgets
                         Vector3 posVec = this.ScreenToWorld(ImGui.GetMousePos());
 
                         var newPoint = new CourseRail.CourseRailPoint(rail.mType);
-                        if (UserSettings.GetEnableHalfTile())
+                        if (UserSettings.EnableHalfTile)
                         {
                             newPoint.mTranslate = new(
                             MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
@@ -1460,7 +1460,7 @@ namespace Fushigi.ui.widgets
                             Vector3 pos = ScreenToWorld(ImGui.GetMousePos());
 
                             // snapping
-                            if (UserSettings.GetEnableHalfTile())
+                            if (UserSettings.EnableHalfTile)
                             {
                                 pos.X = MathF.Round(pos.X * 2) / 2;
                                 pos.Y = MathF.Round(pos.Y * 2) / 2;
@@ -1539,7 +1539,7 @@ namespace Fushigi.ui.widgets
                             {
                                 Vector3 previewPos = ScreenToWorld(ImGui.GetMousePos());
 
-                                if (UserSettings.GetEnableHalfTile())
+                                if (UserSettings.EnableHalfTile)
                                 {
                                     previewPos.X = MathF.Round(previewPos.X * 2, MidpointRounding.AwayFromZero) / 2;
                                     previewPos.Y = MathF.Round(previewPos.Y * 2, MidpointRounding.AwayFromZero) / 2;

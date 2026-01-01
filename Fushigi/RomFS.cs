@@ -78,11 +78,11 @@ namespace Fushigi
         {
             sCourseEntries.Clear();
 
-            var path = Path.Combine(UserSettings.GetModRomFSPath(), "Mals", "USen.Product.101.sarc.zs");
+            var path = Path.Combine(UserSettings.ModRomFSPath, "Mals", "USen.Product.101.sarc.zs");
 
             if (!File.Exists(path))
             {
-                path = Path.Combine(UserSettings.GetModRomFSPath(), "Mals", "USen.Product.100.sarc.zs");
+                path = Path.Combine(UserSettings.ModRomFSPath, "Mals", "USen.Product.100.sarc.zs");
 
                 if (!File.Exists(path))
                 {
@@ -169,7 +169,7 @@ namespace Fushigi
         public static void CacheCourseThumbnails(GL gl, string world)
         {
             var thumbnailFolder = Path.Combine(GetRoot(), "UI", "Tex", "Thumbnail");
-            var modThumbnailFolder = Path.Combine(UserSettings.GetModRomFSPath(), "UI", "Tex", "Thumbnail");
+            var modThumbnailFolder = Path.Combine(UserSettings.ModRomFSPath, "UI", "Tex", "Thumbnail");
 
             foreach (var course in sCourseEntries[world].courseEntries!.Keys)
             {

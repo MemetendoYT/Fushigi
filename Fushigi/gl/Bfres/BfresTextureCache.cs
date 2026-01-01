@@ -1,26 +1,14 @@
 ﻿using Fushigi.Bfres;
-using Fushigi.Bfres.Texture;
 using Fushigi.util;
-using Silk.NET.GLFW;
-using Silk.NET.OpenGL;
-using Silk.NET.SDL;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Fushigi.gl.Bfres.BfresTextureRender;
 
 namespace Fushigi.gl.Bfres
 {
     public class BfresTextureCache 
     {
-        public static bool Enable = UserSettings.UseAstcTextureCache();
-
         public static bool LoadCache(BfresTextureRender tex, byte[] image_data, uint depthLevel, int mipLevel)
         {
-            if (!Enable) return false;
+            if (!UserSettings.UseAstcTextureCache) return false;
 
             if (!Directory.Exists("TextureCache")) Directory.CreateDirectory("TextureCache");
 
@@ -46,7 +34,7 @@ namespace Fushigi.gl.Bfres
 
         public static void SaveCache(BfresTextureRender tex, byte[] compressed_data, byte[] output)
         {
-            if (!Enable) return;
+            if (!UserSettings.UseAstcTextureCache) return;
 
             var hash = GetHashSHA1(compressed_data);
             string path = Path.Combine("TextureCache", $"{hash}.bin");

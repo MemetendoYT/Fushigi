@@ -117,7 +117,7 @@ namespace Fushigi.gl.Bfres
                     if (this.Skeleton.Bones[mesh.BoneIndex].Name == "Bonecap_Model")
                         continue;
 
-                    if (UserSettings.UseGameShaders())
+                    if (UserSettings.UseGameShaders)
                         mesh.RenderGameShaders(gl, render, this, transform, camera);
                     else
                         mesh.Render(gl, render, this, transform, camera);
@@ -153,28 +153,15 @@ namespace Fushigi.gl.Bfres
                         continue;
 
                     bool shaderSettings = true;
-                    switch (UserSettings.GetShaders())
+                    shaderSettings = UserSettings.ShaderSettings switch
                     {
-                        case 1:
-                            shaderSettings = VanillaActors.Contains(name);
-                            break;
-
-                        case 2:
-                            shaderSettings = VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV");
-                            break;
-
-                        case 3:
-                            shaderSettings = VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV") && !name.StartsWith("Unit");
-                            break;
-                        case 4:
-                            shaderSettings = false;
-                            break;
-                        default:
-                            shaderSettings = true;
-                            break;
-                    }
-
-                    if (UserSettings.UseGameShaders() && shaderSettings)
+                        1 => VanillaActors.Contains(name),
+                        2 => VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV"),
+                        3 => VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV") && !name.StartsWith("Unit"),
+                        4 => false,
+                        _ => true,
+                    };
+                    if (UserSettings.UseGameShaders && shaderSettings)
                         mesh.RenderGameShaders(gl, render, this, transform, camera);
                     else
                         mesh.Render(gl, render, this, transform, camera);

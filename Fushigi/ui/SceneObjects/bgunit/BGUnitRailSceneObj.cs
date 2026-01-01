@@ -124,7 +124,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
             Vector3 pos;
-            if (UserSettings.GetEnableHalfTile())
+            if (UserSettings.EnableHalfTile)
             {
                      pos = new(
                      MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
@@ -292,7 +292,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                     if (!ChildPoints.TryGetValue(rail.Points[i], out RailPoint? childPoint))
                         continue;
                     
-                     if (UserSettings.GetEnableHalfTile())
+                     if (UserSettings.EnableHalfTile)
                     {
                         diff.X = MathF.Round(diff.X * 2, MidpointRounding.AwayFromZero) / 2;
                         diff.Y = MathF.Round(diff.Y * 2, MidpointRounding.AwayFromZero) / 2;

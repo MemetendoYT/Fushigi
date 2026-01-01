@@ -1,0 +1,74 @@
+{
+  "BadgeChallenge": {
+    "Components": [
+      "BadgeChallengeRailInstanceParam",
+      "RailPointInstanceParam"
+    ]
+  },
+  "CRing": {
+    "Components": [
+      "CRingRailInstanceParam",
+      "CRingRailPointInstanceParam"
+    ]
+  },
+  "Default": {
+    "Components": [
+      "RailInstanceParam",
+      "RailPointInstanceParam"
+    ]
+  },
+  "NextGoTo": {
+    "Components": [
+      "NextGoToRailInstanceParam",
+      "NextGoToRailPointInstanceParam"
+    ]
+  },
+  "Scroll": {
+    "Components": [
+      "ScrollRailInstanceParam",
+      "ScrollRailPointInstanceParam"
+    ]
+  },
+  "SectionFrame": {
+    "Components": [
+      "SectionFrameRailInstanceParam",
+      "SectionFrameRailPointInstanceParam"
+    ]
+  },
+  "ShabonMove": {
+    "Components": [
+      "ShabonMobeRailInstanceParam",
+      "ShabonMoveRailPointInstanceParam"
+    ]
+  },
+  "SwitchOFF": {
+    "Components": [
+      "RailInstanceParam_SwitchONOFF",
+      "null"
+    ]
+  },
+  "SwitchON": {
+    "Components": [
+      "RailInstanceParam_SwitchONOFF",
+      "null"
+    ]
+  },
+  "WorldMapRoute": {
+    "Components": [
+      "WorldMapRouteRailInstanceParam",
+      "WorldMapRouteRailPointInstanceParam"
+    ]
+  },
+  "WorldMapRouteInvisible": {
+    "Components": [
+      "WorldMapRouteInvisibleRailInstanceParam",
+      "WorldMapRouteRailPointInstanceParam"
+    ]
+  },
+  "WorldMapRouteXlu": {
+    "Components": [
+      "WorldMapRouteRailInstanceParam",
+      "WorldMapRouteRailPointInstanceParam"
+    ]
+  }
+}

@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Text.Json;
 using static System.Formats.Asn1.AsnWriter;
+using System.Diagnostics;
 
 namespace Fushigi.ui
 {
@@ -36,6 +37,7 @@ namespace Fushigi.ui
         public static bool reloadLevel = false;
         public static bool addNewArea = false;
         public static bool removeCurrentArea = false;
+        public IWindow Window => mWindow;
 
         public MainWindow()
         {
@@ -128,10 +130,9 @@ namespace Fushigi.ui
         }
         public void ReloadRomfs()
         {
-            if (UserSettings.GetRomfsReload() && UserSettings.GetAllowRomfsReload())
+            if (UserSettings.RomFSReload && UserSettings.AllowRomFSReload)
             {
-                string romFSPath = UserSettings.GetRomFSPath();
-                UserSettings.SetRomfsReload(false);
+                string romFSPath = UserSettings.RomFSPath;
                     Task.Run(async () =>
                     {
 
@@ -157,9 +158,9 @@ namespace Fushigi.ui
                         }
                     }).ConfigureAwait(false);
                 }
-              else
-                UserSettings.SetRomfsReload(false);
-              }
+            else
+                UserSettings.RomFSReload = false;
+            }
         public void SetWindowIcon(int id)
         {
             var icon = Icons[id];
@@ -269,7 +270,7 @@ namespace Fushigi.ui
             await WaitTick();
             bool shouldShowPreferenceWindow = true;
             bool shouldShowWelcomeDialog = true;
-            string romFSPath = UserSettings.GetRomFSPath();
+            string romFSPath = UserSettings.RomFSPath;
             if (RomFS.IsValidRoot(romFSPath))
             {
                 await ProgressBarDialog.ShowDialogForAsyncAction(this,
@@ -304,7 +305,7 @@ namespace Fushigi.ui
             ActorIconLoader.Init();
 
             if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
-                !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                !string.IsNullOrEmpty(UserSettings.ModRomFSPath))
             {
                 shouldShowPreferenceWindow = false;
                 shouldShowWelcomeDialog = false;
@@ -387,7 +388,7 @@ namespace Fushigi.ui
                 if (ImGui.BeginMenu("File"))
                 {
                     if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
-                        !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                        !string.IsNullOrEmpty(UserSettings.ModRomFSPath))
                     {
                         if (ImGui.MenuItem("Open Course"))
                         {
@@ -439,7 +440,7 @@ namespace Fushigi.ui
                     if (ImGui.MenuItem("Save") && mSelectedCourseScene != null)
                     {
                         //Ensure the romfs path is set for saving
-                        if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                        if (!string.IsNullOrEmpty(UserSettings.ModRomFSPath))
                             mSelectedCourseScene.Save();
                         else //Else configure the mod path
                         {
@@ -447,7 +448,7 @@ namespace Fushigi.ui
                             if (dlg.ShowDialog("Select the romfs directory to save to."))
                             {
                                 Logger.Logger.LogMessage("MainWindow", $"Setting RomFS path to {dlg.SelectedPath}");
-                                UserSettings.SetModRomFSPath(dlg.SelectedPath);
+                                UserSettings.ModRomFSPath = dlg.SelectedPath;
                                 mSelectedCourseScene.Save();
                             }
                         }
@@ -457,7 +458,7 @@ namespace Fushigi.ui
                         FolderDialog dlg = new FolderDialog();
                         if (dlg.ShowDialog("Select the romfs directory to save to."))
                         {
-                            UserSettings.SetModRomFSPath(dlg.SelectedPath);
+                            UserSettings.ModRomFSPath = dlg.SelectedPath;
                             mSelectedCourseScene.Save();
                         }
                     }
@@ -466,7 +467,7 @@ namespace Fushigi.ui
 
                     if (ImGui.MenuItem("Blank out baked collisions") && mSelectedCourseScene != null)
                     {
-                        string directory = Path.Combine(UserSettings.GetModRomFSPath(), "Phive", "StaticCompoundBody");
+                        string directory = Path.Combine(UserSettings.ModRomFSPath, "Phive", "StaticCompoundBody");
 
                         if (!Directory.Exists(directory))
                             Directory.CreateDirectory(directory);
@@ -581,8 +582,32 @@ namespace Fushigi.ui
             await mSelectedCourseScene.RebuildAreaData(mGLTaskScheduler);
 
         }
+
+        private Stopwatch _timer = Stopwatch.StartNew();
+        private int _frameCount = 0;
+        private double _lastTime = 0;
+        public double _fps = 0;
+
+        public static double FPS => Program.MainWindow._fps;
+
+        void CalculateFrameRate()
+        {
+            _frameCount++;
+            double currentTime = _timer.Elapsed.TotalSeconds;
+            double elapsedTime = currentTime - _lastTime;
+
+            if (elapsedTime >= 1.0)
+            {
+                _fps = _frameCount / elapsedTime;
+                _frameCount = 0;
+                _lastTime = currentTime;                
+            }
+        }
+
         public void Render(GL gl, double delta, ImGuiController controller)
         {
+            CalculateFrameRate();
+
             mGLTaskScheduler.ExecutePending(gl);
 
             /* keep OpenGLs viewport size in sync with the window's size */
@@ -622,7 +647,7 @@ namespace Fushigi.ui
             }
 
             if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
-                !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                !string.IsNullOrEmpty(UserSettings.ModRomFSPath))
             {
                 mSelectedCourseScene?.DrawUI(gl, delta);
             }
