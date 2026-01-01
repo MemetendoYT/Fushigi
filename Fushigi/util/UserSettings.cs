@@ -33,6 +33,9 @@ namespace Fushigi.util
             public int ShaderSettings;
             public bool romfsReload;
             public bool allowRomfsReload;
+            public bool fpsCounter = true;
+            public bool advancedDebugOptions;
+            public bool VSync;
 
             public Settings()
             {
@@ -52,6 +55,9 @@ namespace Fushigi.util
                 ShaderSettings = 0;
                 romfsReload = false;
                 allowRomfsReload = true;
+                fpsCounter = true;
+                advancedDebugOptions = false;
+                VSync = false;
             }
         }
 
@@ -161,6 +167,39 @@ namespace Fushigi.util
         {
             AppSettings.PrivateDRPC = value;
             Save();
+        }
+
+        public static void SetFPSCounter(bool value)
+        {
+            AppSettings.fpsCounter = value;
+            Save();
+        }
+
+        public static bool GetFPSCounter()
+        {
+            return AppSettings.fpsCounter;
+        }
+
+        public static void SetAdvancedDebugSettings(bool value)
+        {
+            AppSettings.advancedDebugOptions = value;
+            Save();
+        }
+
+        public static bool GetAdvancedDebugSettings()
+        {
+            return AppSettings.advancedDebugOptions;
+        }
+
+        public static void SetVSync(bool value)
+        {
+            Program.MainWindow.Window.VSync = value;
+            AppSettings.VSync = value;
+        }
+
+        public static bool GetVSync()
+        {
+            return AppSettings.VSync;
         }
 
         public static bool GetRenderCustomModels()

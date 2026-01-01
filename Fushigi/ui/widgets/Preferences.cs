@@ -64,7 +64,6 @@ namespace Fushigi.ui.widgets
 
             var romfs = UserSettings.GetRomFSPath();
             var mod = UserSettings.GetModRomFSPath();
-            var useGameShaders = UserSettings.UseGameShaders();
             var enableHalfTile = UserSettings.GetEnableHalfTile();
             var enableTranslation = UserSettings.GetEnableTranslation();
             var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
@@ -200,6 +199,9 @@ namespace Fushigi.ui.widgets
             var useNewCamera = UserSettings.GetUseNewCamera();
             var privateDRPC = UserSettings.GetPrivateDRPC();
             var toggleRomfsReload = UserSettings.GetAllowRomfsReload();
+            var fpsCounter = UserSettings.GetFPSCounter();
+            var advancedDebugSettings = UserSettings.GetAdvancedDebugSettings();
+            var vsync = UserSettings.GetVSync();
 
             ImGui.Indent();
 
@@ -240,6 +242,21 @@ namespace Fushigi.ui.widgets
                 UserSettings.SetPrivateDRPC(privateDRPC);
 
             Tooltip.Show("Whether or not to hide information about the course in the Discord RPC.\nReload required to work.");
+
+            if (ImGui.Checkbox("Show FPS Counter", ref fpsCounter))
+                UserSettings.SetFPSCounter(fpsCounter);
+
+            Tooltip.Show("Displays an FPS counter on the top-left of the editor viewport.");
+
+            if (ImGui.Checkbox("Show Advanced Debug Info", ref advancedDebugSettings))
+                UserSettings.SetAdvancedDebugSettings(advancedDebugSettings);
+
+            Tooltip.Show("Displays debugging information on the top-left of the editor viewport.");
+
+            if (ImGui.Checkbox("Enable VSync", ref vsync))
+                UserSettings.SetVSync(vsync);
+
+            Tooltip.Show("Enable VSync to cap framerate to your monitor's refresh rate,\n or disable to unlimit.");
 
 
             int shaderSettings = UserSettings.GetShaders();

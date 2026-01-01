@@ -20,6 +20,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Text.Json;
 using static System.Formats.Asn1.AsnWriter;
+using System.Diagnostics;
 
 namespace Fushigi.ui
 {
@@ -36,6 +37,7 @@ namespace Fushigi.ui
         public static bool reloadLevel = false;
         public static bool addNewArea = false;
         public static bool removeCurrentArea = false;
+        public IWindow Window => mWindow;
 
         public MainWindow()
         {
@@ -581,8 +583,32 @@ namespace Fushigi.ui
             await mSelectedCourseScene.RebuildAreaData(mGLTaskScheduler);
 
         }
+
+        private Stopwatch _timer = Stopwatch.StartNew();
+        private int _frameCount = 0;
+        private double _lastTime = 0;
+        public double _fps = 0;
+
+        public static double FPS => Program.MainWindow._fps;
+
+        void CalculateFrameRate()
+        {
+            _frameCount++;
+            double currentTime = _timer.Elapsed.TotalSeconds;
+            double elapsedTime = currentTime - _lastTime;
+
+            if (elapsedTime >= 1.0)
+            {
+                _fps = _frameCount / elapsedTime;
+                _frameCount = 0;
+                _lastTime = currentTime;                
+            }
+        }
+
         public void Render(GL gl, double delta, ImGuiController controller)
         {
+            CalculateFrameRate();
+
             mGLTaskScheduler.ExecutePending(gl);
 
             /* keep OpenGLs viewport size in sync with the window's size */

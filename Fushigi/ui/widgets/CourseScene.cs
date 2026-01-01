@@ -653,16 +653,29 @@ namespace Fushigi.ui.widgets
                         insideViewport = ImGui.IsMouseHoveringRect(vpMin, vpMax);
 
                         ImGui.SetCursorScreenPos(vpMin + new Vector2(16, 16));
-                        float fps = (float)Math.Round(1.0f / ImGui.GetIO().DeltaTime, 0);
+                        float fps = (float)Math.Round(MainWindow.FPS, 0);
 
-                        if (insideViewport)
                         {
-                            var worldPos = activeViewport.ScreenToWorld(ImGui.GetMousePos());
-                            ImGui.Text($"X: {Math.Round(worldPos.X, 3)}\nY: {Math.Round(worldPos.Y, 3)}\nFPS: {fps}");
-                        }
-                        else
-                        {
-                            ImGui.Text($"X:\nY:\nFPS: {fps}");
+                            List<string> debugTexts = [];
+
+                            if (insideViewport)
+                            {
+                                var worldPos = activeViewport.ScreenToWorld(ImGui.GetMousePos());
+                                debugTexts.Add($"X: {Math.Round(worldPos.X, 3)}");
+                                debugTexts.Add($"Y: {Math.Round(worldPos.Y, 3)}");
+                            }
+                            if (UserSettings.GetFPSCounter())
+                                debugTexts.Add($"FPS: {fps}");
+                            if (UserSettings.GetAdvancedDebugSettings())
+                            {
+                                debugTexts.Add($"Draw Calls: {RenderStats.NumDrawCalls}");
+                                debugTexts.Add($"Triangles: {RenderStats.NumTriangles}");
+                                debugTexts.Add($"Shaders: {RenderStats.NumShaders}");
+                                debugTexts.Add($"Uniforms: {RenderStats.NumUniformBlocks}");
+                                debugTexts.Add($"Textures: {RenderStats.NumTextures}");
+                            }
+
+                            ImGui.Text(string.Join('\n', debugTexts));
                         }
 
                         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
