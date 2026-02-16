@@ -903,38 +903,38 @@ namespace Fushigi.ui.widgets
                            "StaticCompoundBody"
                        );
 
-                string normalDir  = Path.Combine(
-                           UserSettings.GetRomFSPath(),
-                           "Phive",
-                           "StaticCompoundBody"
-                       );
+                        string normalDir  = Path.Combine(
+                                   UserSettings.GetRomFSPath(),
+                                   "Phive",
+                                   "StaticCompoundBody"
+                               );
 
-                if (!Directory.Exists(phiveDir))
-                    Directory.CreateDirectory(phiveDir);
+                        if (!Directory.Exists(phiveDir))
+                            Directory.CreateDirectory(phiveDir);
 
 
-                string phiveFileDir = Path.Combine(
-                    phiveDir,
-                    $"{area.GetName()}.Nin_NX_NVN.bphsc.zs"
-                );
+                        string phiveFileDir = Path.Combine(
+                            phiveDir,
+                            $"{area.GetName()}.Nin_NX_NVN.bphsc.zs"
+                        );
 
-                string phiveNormalDir = Path.Combine(
-                    normalDir,
-                    $"{area.GetName()}.Nin_NX_NVN.bphsc.zs"
-                );
-                bool phiveFound = File.Exists(phiveFileDir) || File.Exists(phiveNormalDir);
+                        string phiveNormalDir = Path.Combine(
+                            normalDir,
+                            $"{area.GetName()}.Nin_NX_NVN.bphsc.zs"
+                        );
+                        bool phiveFound = File.Exists(phiveFileDir) || File.Exists(phiveNormalDir);
 
-                if (!phiveFound)
-                {
-                    File.Copy(
-                        Path.Combine(AppContext.BaseDirectory, "res", "BlankStaticCompoundBody.bphsc.zs"),
-                        phiveFileDir,
-                        overwrite: true
-                    );
-                }
+                        if (!phiveFound)
+                        {
+                            File.Copy(
+                                Path.Combine(AppContext.BaseDirectory, "res", "BlankStaticCompoundBody.bphsc.zs"),
+                                phiveFileDir,
+                                overwrite: true
+                            );
+                        }
 
                         var templateParamFilePath = "res/template.game__stage__StageParam.bgyml";
-                       
+                               
                         Byml.Byml stageParam = new Byml.Byml(
                             new MemoryStream(File.ReadAllBytes(templateParamFilePath))
                         );
@@ -950,14 +950,14 @@ namespace Fushigi.ui.widgets
                         string StaticCompoundBody =
                             $"Work/Phive/StaticCompoundBody/{area.GetName()}.phive__StaticCompoundBodySourceParam.gyml";
 
-                     
+                             
                         components.AddNode(BymlNodeId.String, BymlUtil.CreateNode(AreaParamPath), "AreaParam");
                         components.AddNode(BymlNodeId.String, BymlUtil.CreateNode(Mumap), "Mumap");
                         components.AddNode(BymlNodeId.String, BymlUtil.CreateNode(StaticCompoundBody), "StaticCompoundBodySourceParam");
 
                         stageParamRoot.AddNode(BymlNodeId.Hash, components, "Components");
 
-     
+             
                         stageParam.Root = stageParamRoot;
 
                         string outPath = Path.Combine(
