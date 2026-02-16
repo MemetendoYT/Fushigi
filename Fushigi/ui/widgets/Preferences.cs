@@ -187,8 +187,19 @@ namespace Fushigi.ui.widgets
                 }
                 ImGui.EndCombo();
             }
-
             Tooltip.Show("Change the UI theme.");
+            string gitUsername = UserSettings.GetGitUsername();
+            if (ImGui.InputText("Git Username", ref gitUsername, 128))
+            {
+                UserSettings.SetGitUsername(gitUsername);
+            }
+
+            string gitTokenOrPassword = UserSettings.GetGitPasswordOrToken();
+            if (ImGui.InputText("Git Token", ref gitTokenOrPassword, 128))
+            {
+                UserSettings.SetGitPasswordOrToken(gitTokenOrPassword);
+            }
+
         }
 
         private static void DrawAdvancedSettings(IPopupModalHost modalHost)

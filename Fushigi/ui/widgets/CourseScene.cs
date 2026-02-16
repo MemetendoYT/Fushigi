@@ -1059,7 +1059,6 @@ namespace Fushigi.ui.widgets
                 return false;
             }
         }
-
         private void ActorsPanel()
         {
             ImGui.Begin("Actors");

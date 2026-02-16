@@ -1,6 +1,10 @@
-﻿using Fushigi.gl.Bfres;
+﻿using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
+using Fushigi.gl.Bfres;
 using Fushigi.ui;
 using Newtonsoft.Json;
+using static System.Security.Cryptography.ProtectedData;
 
 namespace Fushigi.util
 {
@@ -35,6 +39,33 @@ namespace Fushigi.util
             public bool allowRomfsReload;
             public bool ClickDuplicate;
             public bool useDPIScale = false;
+            public string GitUsername;
+            [JsonProperty("gitPassword")]
+            private string _gitPw;
+            [JsonIgnore]
+            public string GitPasswordOrToken
+            {
+                get
+                {
+                    if (_gitPw == "")
+                    {
+                        return "";
+                    }
+                    byte[] data = Convert.FromBase64String(_gitPw);
+                    byte[] decrypted = Unprotect(data, null, DataProtectionScope.CurrentUser);
+                    return Encoding.UTF8.GetString(decrypted);
+                }
+                set
+                {
+                    if (value == "")
+                    {
+                        _gitPw = "";
+                    }
+                    byte[] data = Encoding.UTF8.GetBytes(value);
+                    byte[] encrypted = Protect(data, null, DataProtectionScope.CurrentUser);
+                    _gitPw = Convert.ToBase64String(encrypted);
+                }
+            }
 
             public Settings()
             {
@@ -56,6 +87,8 @@ namespace Fushigi.util
                 allowRomfsReload = true;
                 ClickDuplicate = false;
                 useDPIScale = false;
+                GitUsername = "Fushigi User";
+                _gitPw = "";
             }
         }
 
@@ -264,6 +297,15 @@ namespace Fushigi.util
             AppSettings.useDPIScale = value;
             Save();
         }
+        public static string GetGitUsername() => AppSettings.GitUsername;
+
+        public static void SetGitUsername(string value)
+        {
+            AppSettings.GitUsername = value;
+        }
+
+        public static string GetGitPasswordOrToken() => AppSettings.GitPasswordOrToken;
+        public static void SetGitPasswordOrToken(string value) => AppSettings.GitPasswordOrToken = value;
 
         public static void AppendRecentCourse(string courseName)
         {

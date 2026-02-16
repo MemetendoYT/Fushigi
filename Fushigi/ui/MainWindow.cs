@@ -647,6 +647,49 @@ namespace Fushigi.ui
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.BeginMenu("Git"))
+                {
+                    GitRepository repository = GitRepository.GetInstance(UserSettings.GetModRomFSPath());
+                    if (repository.IsValid())
+                    {
+                        if (ImGui.MenuItem("Update Project"))
+                        {
+                            
+                        }
+
+                        if (ImGui.MenuItem("Pull"))
+                        {
+                            
+                        }
+                        if (ImGui.MenuItem("Fetch"))
+                        {
+                            repository.Fetch();
+                        }
+
+                        if (ImGui.MenuItem("Push"))
+                        {
+                            
+                        }
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Manage Remotes"))
+                        {
+                            RemotesDialog dialog = new RemotesDialog();
+                            dialog.Show(mModalHost, repository.Remotes).ContinueWith(t =>
+                            {
+                                repository.Remotes = t.Result;
+                            },TaskScheduler.Default);
+                        }
+                    }
+                    else
+                    {
+                        if (ImGui.MenuItem("Init"))
+                        {
+                            repository.Init();
+                        }
+                    }
+                    ImGui.EndMenu();
+                }
+
                 /* end entire menu bar */
                 ImGui.EndMenuBar();
             }
