@@ -30,7 +30,7 @@ public class GitRepository
     {
         get
         {
-            if (IsValid())
+            if (_repo != null)
             {
                 Dictionary<string, string> remotes = new Dictionary<string, string>();
 
@@ -38,17 +38,21 @@ public class GitRepository
                 {
                     remotes.Add(remote.Name, remote.Url);
                 }
+                
+                return remotes;
             }
 
             return new Dictionary<string, string>();
         }
         set
         {
-            if (IsValid())
+            if (_repo != null)
             {
-                foreach (Remote remote in _repo.Network.Remotes)
+                Logger.Logger.LogDebug("Git Repository","Updating remotes");
+                var names = _repo.Network.Remotes.Select(r => r.Name).ToList();
+                foreach (var name in names)
                 {
-                    _repo.Network.Remotes.Remove(remote.Name);
+                    _repo.Network.Remotes.Remove(name);
                 }
 
                 foreach (KeyValuePair<string, string> remote in value)
@@ -104,8 +108,9 @@ public class GitRepository
         return false;
     }
 
-    public string? Commit(string message, string authorName, string authorEmail)
+    public string? Commit(string message, string authorName, string email = "")
     {
+        string authorEmail = (email != "") ? email : $"{authorName}@fushigi.com";
         if (_repo == null)
         {
             return "";
@@ -153,17 +158,17 @@ public class GitRepository
         return true;
     }
 
-    public bool Fetch(string remoteName = "origin", string? username = null, string? passwordOrToken = null)
+    public Task<bool> Fetch(string remoteName = "origin", string? username = null, string? passwordOrToken = null)
     {
         if (_repo == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         Remote? remote = _repo.Network.Remotes[remoteName];
         if (remote == null)
         {
-            return false;
+            return Task.FromResult(false);
         }
 
         FetchOptions options = new();
@@ -176,6 +181,39 @@ public class GitRepository
         
         Commands.Fetch(_repo, remote.Name, remote.FetchRefSpecs.Select(x => x.Specification),options, logMessage:null);
 
-        return true;
+        return Task.FromResult(true);
+    }
+    
+    public Task<bool> Push(string remoteName = "origin", string? username = null, string? passwordOrToken = null)
+    {
+        if (_repo == null)
+        {
+            return Task.FromResult(false);
+        }
+        
+        var branch = _repo.Head;
+        if (branch == null)
+            throw new InvalidOperationException("HEAD is Detached or not a Branch");
+
+        Remote? remote = _repo.Network.Remotes[remoteName];
+        if (remote == null)
+        {
+            return Task.FromResult(false);
+        }
+
+        PushOptions options = new();
+        
+        if (!string.IsNullOrEmpty(username) && !string.IsNullOrEmpty(passwordOrToken))
+        {
+            options.CredentialsProvider = (_url, _user, _types) => 
+                new UsernamePasswordCredentials { Username = username, Password = passwordOrToken };
+        }
+        
+        var refspec = $"{branch.CanonicalName}:{branch.UpstreamBranchCanonicalName ?? $"refs/heads/{branch.FriendlyName}"}";
+        
+        
+        _repo.Network.Push(remote, refspec, options);
+
+        return Task.FromResult(true);
     }
 }

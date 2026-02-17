@@ -34,16 +34,21 @@ public class RemotesDialog : IPopupModal<RemotesDialog.RemotesResult>
         
         (bool wasClosed, RemotesResult result) result =
             await host.ShowPopUp(this, "Git Remotes", ImGuiWindowFlags.None, new Vector2(300,450));
-
         if (result.wasClosed)
         {
             return initialRemotes;
         }
-
         Dictionary<string, string> newRemotes = new Dictionary<string, string>();
-        foreach (RemoteEntry e in result.result.Remotes)
+        if (result.result.Remotes.Count != 0)
         {
-            newRemotes[e.name] = e.url;
+            foreach (RemoteEntry e in result.result.Remotes)
+            {
+                newRemotes[e.name] = e.url;
+            }
+        }
+        else
+        {
+            newRemotes = initialRemotes;
         }
 
         return newRemotes;
@@ -70,6 +75,7 @@ public class RemotesDialog : IPopupModal<RemotesDialog.RemotesResult>
             if (ImGui.Button("Remove##remotesToolbar") && removeEnabled)
             {
                 data.RemoveAt(selectedRow);
+                selectedRow = -1;
             }
             if (!removeEnabled) { ImGui.EndDisabled(); }
             
@@ -87,7 +93,8 @@ public class RemotesDialog : IPopupModal<RemotesDialog.RemotesResult>
             ImGui.Button("Down##remotesToolbar");
             ImGui.EndTable();
         }
-        if (ImGui.BeginTable("data",2,ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY))
+        bool selectedAny = false;
+        if (ImGui.BeginTable("data",2,ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY | ImGuiTableFlags.RowBg, new Vector2(-1,ImGui.GetContentRegionAvail().Y-64)))
         {
             ImGui.TableSetupColumn("Name");
             ImGui.TableSetupColumn("Url");
@@ -95,10 +102,31 @@ public class RemotesDialog : IPopupModal<RemotesDialog.RemotesResult>
 
             for (int i = 0; i < data.Count; i++)
             {
+                bool selected = selectedRow == i;
+                
                 ImGui.TableNextRow();
+                
+                if (selected)
+                {
+                    Vector4 vector4;
+                    Vector4 def = new(0.16f, 0.29f, 0.48f, 0.54f);
+                    unsafe
+                    {
+                        Vector4* col = ImGui.GetStyleColorVec4(ImGuiCol.FrameBg);
+                        vector4 = (col != null) ? *col : def;
+                    }
+                    uint u32Col = ImGui.ColorConvertFloat4ToU32(vector4);
+                    
+                    Logger.Logger.LogDebug("Remotes Dialog", $"Color is: ${u32Col}");
+
+                    ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0,u32Col);
+                }
+                
                 ImGui.TableSetColumnIndex(0);
                 RemoteEntry entry = data[i];
                 string oldName = entry.name;
+                ImGui.PushStyleColor(ImGuiCol.FrameBg,Vector4.Zero);
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
                 if (ImGui.InputText($"##remotesDataTableName${i}", ref entry.name, 128))
                 {
                     foreach (RemoteEntry other in data)
@@ -110,11 +138,33 @@ public class RemotesDialog : IPopupModal<RemotesDialog.RemotesResult>
                         }
                     }
                 }
+                if (ImGui.IsItemActive())
+                {
+                    selectedRow = i;
+                    selectedAny = true;
+                }
                 ImGui.TableNextColumn();
+                ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
                 ImGui.InputText($"##remotesDataTableUrl${i}",ref entry.url,128);
+                if (ImGui.IsItemActive())
+                {
+                    selectedRow = i;
+                    selectedAny = true;
+                }
                 data[i] = entry;
+                ImGui.PopStyleColor();
+            }
+
+            if (!selectedAny)
+            {
+                selectedRow = -1;
             }
             ImGui.EndTable();
+        }
+
+        if (ImGui.Button("Ok##remotesToolbar"))
+        {
+            promise.SetResult(new RemotesResult {Remotes = data});
         }
     }
 }

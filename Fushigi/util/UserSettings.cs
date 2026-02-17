@@ -40,15 +40,20 @@ namespace Fushigi.util
             public bool ClickDuplicate;
             public bool useDPIScale = false;
             public string GitUsername;
-            [JsonProperty("gitPassword")]
+
+            [JsonProperty("gitPassword")] 
             private string _gitPw;
             [JsonIgnore]
             public string GitPasswordOrToken
             {
                 get
                 {
-                    if (_gitPw == "")
+                    if (string.IsNullOrEmpty(_gitPw))
                     {
+                        if (_gitPw == null)
+                        {
+                            _gitPw = "";
+                        }
                         return "";
                     }
                     byte[] data = Convert.FromBase64String(_gitPw);
@@ -57,7 +62,7 @@ namespace Fushigi.util
                 }
                 set
                 {
-                    if (value == "")
+                    if (string.IsNullOrEmpty(value))
                     {
                         _gitPw = "";
                     }
@@ -66,6 +71,8 @@ namespace Fushigi.util
                     _gitPw = Convert.ToBase64String(encrypted);
                 }
             }
+
+            public string GitEmail;
 
             public Settings()
             {
@@ -88,6 +95,7 @@ namespace Fushigi.util
                 ClickDuplicate = false;
                 useDPIScale = false;
                 GitUsername = "Fushigi User";
+                GitEmail = "";
                 _gitPw = "";
             }
         }
@@ -101,6 +109,8 @@ namespace Fushigi.util
                 {
                     AppSettings = JsonConvert.DeserializeObject<Settings>(File.ReadAllText(SettingsFile));
                     AppSettings.RecentCourses = AppSettings.RecentCourses ?? new List<string>();
+                    AppSettings.GitEmail = AppSettings.GitEmail ?? "";
+                    AppSettings.GitUsername = AppSettings.GitUsername ?? "";
                 }
                 catch (Exception e)
                 {
@@ -298,13 +308,19 @@ namespace Fushigi.util
             Save();
         }
         public static string GetGitUsername() => AppSettings.GitUsername;
+        public static string GetGitEmail() => AppSettings.GitEmail;
 
         public static void SetGitUsername(string value)
         {
             AppSettings.GitUsername = value;
         }
+        public static void SetGitEmail(string gitEmail)
+        {
+            AppSettings.GitEmail = gitEmail;
+        }
 
         public static string GetGitPasswordOrToken() => AppSettings.GitPasswordOrToken;
+        
         public static void SetGitPasswordOrToken(string value) => AppSettings.GitPasswordOrToken = value;
 
         public static void AppendRecentCourse(string courseName)
@@ -338,5 +354,7 @@ namespace Fushigi.util
 
             return AppSettings.RecentCourses.Last();
         }
+
+
     }
 }

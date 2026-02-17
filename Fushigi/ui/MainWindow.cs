@@ -663,12 +663,12 @@ namespace Fushigi.ui
                         }
                         if (ImGui.MenuItem("Fetch"))
                         {
-                            repository.Fetch();
+                            repository.Fetch(username: UserSettings.GetGitUsername(), passwordOrToken: UserSettings.GetGitPasswordOrToken());
                         }
 
                         if (ImGui.MenuItem("Push"))
                         {
-                            
+                            repository.Push(username: UserSettings.GetGitUsername(), passwordOrToken: UserSettings.GetGitPasswordOrToken());
                         }
                         ImGui.Separator();
                         if (ImGui.MenuItem("Manage Remotes"))
@@ -678,6 +678,14 @@ namespace Fushigi.ui
                             {
                                 repository.Remotes = t.Result;
                             },TaskScheduler.Default);
+                        }
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("New Commit"))
+                        {
+                            CreateCommitDialog dialog = new CreateCommitDialog();
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+                            dialog.Show(mModalHost);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
                         }
                     }
                     else

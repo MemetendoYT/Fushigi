@@ -28,7 +28,7 @@ namespace Fushigi.ui.widgets
         public static void Draw(ref bool continueDisplay, GLTaskScheduler glTaskScheduler,
      IPopupModalHost modalHost)
         {
-            ImGui.SetNextWindowSize(new Vector2(700 * MainWindow.dpiScale, 300 * MainWindow.dpiScale), ImGuiCond.Once);
+            ImGui.SetNextWindowSize(new Vector2(700 * MainWindow.dpiScale, 450 * MainWindow.dpiScale), ImGuiCond.Once);
 
             if (ImGui.Begin("Fushigi Settings", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse))
             {
@@ -193,12 +193,20 @@ namespace Fushigi.ui.widgets
             {
                 UserSettings.SetGitUsername(gitUsername);
             }
+            
+            string gitEmail = UserSettings.GetGitEmail();
+            if (ImGui.InputText("Git Email", ref gitEmail, 128))
+            {
+                UserSettings.SetGitEmail(gitEmail);
+            }
 
             string gitTokenOrPassword = UserSettings.GetGitPasswordOrToken();
-            if (ImGui.InputText("Git Token", ref gitTokenOrPassword, 128))
+            if (ImGui.InputText("Git Token", ref gitTokenOrPassword, 128, ImGuiInputTextFlags.Password))
             {
                 UserSettings.SetGitPasswordOrToken(gitTokenOrPassword);
             }
+            // I Suppose it would be possible to add a GitHub OAuth system here, like a Button for GitHub OAuth
+            // But im not gonna do that rn.
 
         }
 
