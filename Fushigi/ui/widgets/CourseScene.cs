@@ -814,7 +814,7 @@ namespace Fushigi.ui.widgets
                 List<string> pathsToWriteTo;
                 DateTime now = DateTime.Now;
                 if (backupFolder == "")
-                    backupFolder = Directory.GetCurrentDirectory() + $"/backups/{now.Year}-{now.Month}-{now.Day}_{now.Hour}-{now.Minute}-{now.Second}/";
+                    backupFolder = UserSettings.SettingsDir + $"/backups/{now.Year}-{now.Month}-{now.Day}_{now.Hour}-{now.Minute}-{now.Second}/";
                 if (backup)
                 {
                     Directory.CreateDirectory(backupFolder);
