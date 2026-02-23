@@ -17,6 +17,12 @@ internal class Program
 
     private static void Main(string[] args)
     {
+        if (args.Contains("-d"))
+        {
+            int index = args.ToList().IndexOf("-d");
+            bool isDebug = args[index + 1] == "true";
+            Logger.IsDebugMode = isDebug;
+        }
         if (TestForNET8())
         {
             Console.ForegroundColor = ConsoleColor.Green;
