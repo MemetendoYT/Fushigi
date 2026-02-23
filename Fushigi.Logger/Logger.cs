@@ -8,6 +8,7 @@ namespace Fushigi.Logger
 
         private static FileStream? mOutputStream;
         private static StreamWriter? mConsoleWriter;
+        public static bool IsDebugMode = false;
 
         public static void CreateLogger()
         {
