@@ -89,6 +89,17 @@ namespace Fushigi.ui
             where T : class
             => mSelectedObjects.OfType<T>();
 
+        public int GetObjectCountOfType<T>()
+           where T : class
+           => mSelectedObjects.OfType<T>().Count();
+
+        public int GetObjectCount()
+            => mSelectedObjects.Count();
+
+        public object? GetFirstObject() 
+            => mSelectedObjects.FirstOrDefault();
+
+
         //For Undo Window
         public IEnumerable<IRevertable> GetUndoStack() => mUndoHandler.GetUndoStack();
 

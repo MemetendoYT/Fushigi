@@ -34,6 +34,9 @@ namespace Fushigi.course
         Camera
     }
 
+
+
+
     public class CourseActor
     {
         public CourseActor(BymlHashTable actorNode)

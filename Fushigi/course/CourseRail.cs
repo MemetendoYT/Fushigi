@@ -198,7 +198,7 @@ namespace Fushigi.course
 
                 if (p.mIsCurve)
                 {
-                    p.mControl.mTranslate = 2 * p.mTranslate - p.mControl.mTranslate;
+                    p.mControl.mTranslation = 2 * p.mTranslation - p.mControl.mTranslation;
                 }
             }
 
@@ -228,8 +228,8 @@ namespace Fushigi.course
             public CourseRailPoint(string type, CourseRail rail)
             {
                 this.mHash = RandomUtil.GetRandom();
-                this.mTranslate = new System.Numerics.Vector3();
-                this.mControl = new(this, mTranslate);
+                this.mTranslation = new System.Numerics.Vector3();
+                this.mControl = new(this, mTranslation);
                 this.mParent = rail;
 
                 IDictionary<string, ParamDB.ComponentParam> comp;
@@ -250,8 +250,8 @@ namespace Fushigi.course
             public CourseRailPoint(CourseRailPoint point, CourseRail rail)
             {
                 this.mHash = RandomUtil.GetRandom();
-                this.mTranslate = point.mTranslate;
-                this.mControl = new(this, point.mControl.mTranslate);
+                this.mTranslation = point.mTranslation;
+                this.mControl = new(this, point.mControl.mTranslation);
                 this.mParent = rail;
                 foreach (var param in point.mParameters)
                     this.mParameters.Add(param.Key, param.Value);
@@ -260,8 +260,8 @@ namespace Fushigi.course
             public CourseRailPoint(BymlHashTable node, string pointParam, CourseRail rail)
             {
                 mHash = BymlUtil.GetNodeData<ulong>(node["Hash"]);
-                mTranslate = BymlUtil.GetVector3FromArray(node["Translate"] as BymlArrayNode);
-                mControl = new(this, mTranslate);
+                mTranslation = BymlUtil.GetVector3FromArray(node["Translate"] as BymlArrayNode);
+                mControl = new(this, mTranslation);
                 mParent = rail;
                 IDictionary<string, ParamDB.ComponentParam> comp;
                 if (ParamDB.TryGetRailPointComponent(pointParam, out var componentName))
@@ -283,7 +283,7 @@ namespace Fushigi.course
 
                 if (node.ContainsKey("Control1"))
                 {
-                    mControl.mTranslate = BymlUtil.GetVector3FromArray(node["Control1"] as BymlArrayNode);
+                    mControl.mTranslation = BymlUtil.GetVector3FromArray(node["Control1"] as BymlArrayNode);
                     mIsCurve = true;
                 }
 
@@ -331,17 +331,17 @@ namespace Fushigi.course
                 if (mIsCurve)
                 {
                     BymlArrayNode controlNode = new(3);
-                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslate.X));
-                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslate.Y));
-                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslate.Z));
+                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslation.X));
+                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslation.Y));
+                    controlNode.AddNodeToArray(BymlUtil.CreateNode(mControl.mTranslation.Z));
 
                     tbl.AddNode(BymlNodeId.Array, controlNode, "Control1");
                 }
 
                 BymlArrayNode translateNode = new(3);
-                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslate.X));
-                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslate.Y));
-                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslate.Z));
+                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslation.X));
+                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslation.Y));
+                translateNode.AddNodeToArray(BymlUtil.CreateNode(mTranslation.Z));
 
                 tbl.AddNode(BymlNodeId.Array, translateNode, "Translate");
 
@@ -351,7 +351,7 @@ namespace Fushigi.course
             public ulong mHash;
             public Dictionary<string, object> mParameters = new();
             public System.Numerics.Vector3 mStartingTrans;
-            public System.Numerics.Vector3 mTranslate;
+            public System.Numerics.Vector3 mTranslation;
             public CourseRailPointControl mControl;
             public CourseRail mParent;
             public bool mIsCurve;
@@ -361,10 +361,10 @@ namespace Fushigi.course
             public CourseRailPointControl(CourseRail.CourseRailPoint point, System.Numerics.Vector3 pos)
             {
                 this.point = point;
-                this.mTranslate = pos;
+                this.mTranslation = pos;
             }
             public CourseRail.CourseRailPoint point;
-            public System.Numerics.Vector3 mTranslate;
+            public System.Numerics.Vector3 mTranslation;
             public System.Numerics.Vector3 mStartingTrans;
         }
     }

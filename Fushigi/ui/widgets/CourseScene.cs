@@ -863,10 +863,10 @@ namespace Fushigi.ui.widgets
 
                         bool viewportWindowHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.None);
 
-                        if (placingActor || (leftClickStartedInsideViewport && viewportWindowHovered))
-                        {
-                            viewport.InteractionWithFocus_TooltipOnly();
-                        }
+                        //if (placingActor || (leftClickStartedInsideViewport && viewportWindowHovered))
+                        //{
+                        //    viewport.InteractionWithFocus_TooltipOnly();
+                        //}
 
                         AreaParameters(area.mAreaParams);
 
@@ -1325,13 +1325,13 @@ namespace Fushigi.ui.widgets
                     hashMapPoint[oldHashPoint] = newHashPoint;
 
                     point.mHash = newHashPoint;
-                    point.mTranslate.X += placement.X;
-                    point.mTranslate.Y += placement.Y;
+                    point.mTranslation.X += placement.X;
+                    point.mTranslation.Y += placement.Y;
 
                     if (point.mIsCurve)
                     {
-                        point.mControl.mTranslate.X += placement.X;
-                        point.mControl.mTranslate.Y += placement.Y;
+                        point.mControl.mTranslation.X += placement.X;
+                        point.mControl.mTranslation.Y += placement.Y;
                     }
                 }
             }
@@ -3218,7 +3218,7 @@ namespace Fushigi.ui.widgets
 
                         ImGui.TableNextColumn();
 
-                        ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslate, 0.25f);
+                        ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslation, 0.25f);
 
                         ImGui.TableNextColumn();
                         ImGui.AlignTextToFramePadding();
@@ -3237,7 +3237,7 @@ namespace Fushigi.ui.widgets
                         ImGui.BeginDisabled(!mSelectedRailPoint.mIsCurve);
 
                         ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-                        ImGui.DragFloat3("##Control", ref mSelectedRailPoint.mControl.mTranslate, 0.25f);
+                        ImGui.DragFloat3("##Control", ref mSelectedRailPoint.mControl.mTranslation, 0.25f);
                         //if (mSelectedRailPoint.mControl.mTranslate != mSelectedRailPoint.mControl.mStartingTrans && !ImGui.IsMouseDragging(ImGuiMouseButton.Left) && mSelectedRailPoint.mIsCurve)
                         //{
                         //    editContext.CommitAction(new PropertyFieldsSetUndo(
