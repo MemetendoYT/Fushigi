@@ -94,6 +94,7 @@ namespace Fushigi.ui.widgets
         public string previousWord = "";
         public static bool refreshTranslation = false;
         private List<string> filteredActors = new();
+        private List<string> translatedActors = new();
         private CourseArea areaToFocus = null;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
@@ -1462,6 +1463,7 @@ namespace Fushigi.ui.widgets
             if (prevSearch != mActorSearchAll)
             {
                 filteredActors.Clear();
+                translatedActors.Clear();
                 prevSearch = mActorSearchAll;
 
                 foreach (var actor in ParamDB.GetActors())
@@ -1473,15 +1475,47 @@ namespace Fushigi.ui.widgets
                     if (isSearch && !HasText)
                         continue;
 
-                    filteredActors.Add(actorEnglish);
+                    filteredActors.Add(actor);
+                    translatedActors.Add(actorEnglish);
                 }
-                Console.WriteLine("running");
             }
 
-            foreach (string actor in filteredActors)
+            ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
+            string enActor = "";
+            if (ImGui.BeginTable("##ActorsAndLayers", 2,
+                ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
             {
-                ImGui.Text(actor);
+                int i = 0;
+                foreach (string actor in filteredActors)
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    if (UserSettings.GetEnableTranslation())
+                    {
+                        enActor = translatedActors[i];
+                        ImGui.Selectable(enActor);
+                    }
+                    else
+                        ImGui.Selectable(actor);
+
+
+                    if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+                        mSelectedActor = enActor;
+                    if (UserSettings.GetEnableTranslation())
+                    {
+                        ImGui.TableSetColumnIndex(1);
+                        ImGui.BeginDisabled();
+                        ImGui.Text(actor);
+                        ImGui.EndDisabled();
+                    }
+                    i++;
+                }
+
+                ImGui.EndTable();
             }
+
+            ImGui.EndChild();
+
         }
 
 
@@ -3087,6 +3121,7 @@ namespace Fushigi.ui.widgets
                         ImGui.TableNextColumn();
 
                         ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslation, 0.25f);
+
 
                         ImGui.TableNextColumn();
                         ImGui.AlignTextToFramePadding();

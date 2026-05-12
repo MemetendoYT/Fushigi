@@ -771,6 +771,7 @@ namespace Fushigi.ui.widgets
 
                    RenderActor(actor, actor.mActorPack.ModelInfoRef);
                    RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
+
                 }
             }
             //Reset back to defaults
@@ -1036,6 +1037,7 @@ namespace Fushigi.ui.widgets
             const float pointSize = 8.0f;
             foreach (CourseActor actor in mArea.GetActors())
             {
+
                 Vector3 min = new(-.5f);
                 Vector3 max = new(.5f);
                 Vector3 off = new(0f);
