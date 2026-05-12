@@ -29,6 +29,7 @@ using System.ComponentModel;
 using System.Numerics;
 using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
+using System.Runtime.Remoting;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -503,6 +504,8 @@ namespace Fushigi.ui.widgets
                 currentArea = selectedArea;
                 MainWindow.reloadLevel = true;
             }
+
+            mEditContext = areaScenes[selectedArea].EditContext;
 
             UndoHistoryPanel();
 
@@ -1952,27 +1955,21 @@ namespace Fushigi.ui.widgets
 
             ImGui.End();
         }
-
-        private void SelectionParameterPanel()
+        private void SelectedCursor()
         {
-            var editContext = areaScenes[selectedArea].EditContext;
-
-            bool status = ImGui.Begin("Selection Parameters", ImGuiWindowFlags.AlwaysVerticalScrollbar);
-            if (!editContext.IsAnySelected<FushigiCursor>() && activeViewport.cursor != null)
+            if (!mEditContext.IsAnySelected<FushigiCursor>() && activeViewport.cursor != null)
             {
                 var cursor = activeViewport.cursor;
                 cursor.delta = 0;
             }
-            if (editContext.IsAnySelected<FushigiCursor>())
+            if (mEditContext.IsAnySelected<FushigiCursor>())
             {
 
                 var cursor = activeViewport.cursor;
 
 
                 if (ImGui.IsKeyPressed(ImGuiKey.Delete))
-                {
                     activeViewport.cursor = null;
-                }
 
                 if (cursor == null)
                     return;
@@ -1982,18 +1979,19 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Dummy(new Vector2(0, 10));
 
-                if (editContext.GetSelectedObjects<CourseActor>().ToList().Count == 1)
+                //if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count == 1)
+                if(true)
                 {
-                    CourseActor pickActor = editContext.GetSelectedObjects<CourseActor>().ToArray()[0];
+                    CourseActor pickActor = null;
                     //Credits to https://github.com/aurelionshole/aurelionshole.github.io for ActorRing code
+
+                    //CourseActor pickActor = mEditContext.GetSelectedObjects<CourseActor>().ToArray()[0];
                     ImGui.Text("Actor Ring Generator");
                     ImGui.Separator();
 
                     ImGui.Text("Points:");
                     if (ImGui.InputInt($"##Count", ref count, 1))
-                    {
                         count = Math.Clamp(count, 1, 360);
-                    }
 
                     ImGui.Text("Offset:");
                     ImGui.InputFloat($"##Offset", ref offset, 1);
@@ -2004,29 +2002,30 @@ namespace Fushigi.ui.widgets
                     ImGui.Dummy(new Vector2(0, 10));
                     ImGui.Checkbox("Rotate Actors", ref doRotate);
 
-                    if (count != 0)
+                    if (count == 0)
                     {
-                        //CourseActor pickActor = null;
-                        //if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
-                        //{
-                        //    ImGui.SetWindowFocus(selectedArea.GetName());
-                        //    Task.Run(async () =>
-                        //    {
-                        //        var (pickedActor, _) = await PickActor();
-                        //        if (pickedActor is null)
-                        //            return;
+                        if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
+                        {
+                            ImGui.SetWindowFocus(selectedArea.GetName());
+                            Task.Run(async () =>
+                            {
+                                var (pickedActor, _) = await PickActor();
+                                if (pickedActor is null)
+                                    return;
 
-                        //        pickActor = pickedActor;
-                        //        Console.WriteLine(pickActor);
-                        //    });
-                        //}
-                        //ImGui.SetItemTooltip("Replace");
+                                pickActor = pickedActor;
+                                Console.WriteLine(pickActor);
+                            });
+                        }
+                    } else if (count != 0)
+                    {
+                        ImGui.SetItemTooltip("Replace");
 
                         float ringAngle = 360 / count;
                         float angle = offset % ringAngle;
                         if (ImGui.Button("Create Actors"))
                         {
-                            var batchAction = editContext.BeginBatchAction();
+                            var batchAction = mEditContext.BeginBatchAction();
                             CourseActor newActor = null;
                             for (int i = 0; i < count; i++)
                             {
@@ -2043,14 +2042,15 @@ namespace Fushigi.ui.widgets
                                 } while (selectedArea.GetActors().Any(x => x.mName == $"{newActor.mPackName}{j}"));
                                 newActor.mName = $"{newActor.mPackName}{j}";
 
-                                editContext.AddActor(newActor);
+                                mEditContext.AddActor(newActor);
                                 angle = (angle + ringAngle) % 360f;
                             }
                             batchAction.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Placed Actor Ring");
                         }
                     }
                 }
-                if (editContext.GetSelectedObjects<CourseActor>().ToList().Count >= 1)
+
+                if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count >= 1)
                 {
                     ImGui.Dummy(new Vector2(0, 50));
                     bool run = false;
@@ -2064,13 +2064,10 @@ namespace Fushigi.ui.widgets
                     if (ImGui.InputText("##Pivot", ref pivotText, 32))
                     {
                         if (pivotText == "")
-                        {
                             cursor.delta = 0;
-                        }
                         else if (float.TryParse(pivotText, out float value))
-                        {
                             cursor.delta = value;
-                        }
+  
                         run = true;
                     }
 
@@ -2078,7 +2075,7 @@ namespace Fushigi.ui.widgets
                     {
                         float deltaAngle = cursor.delta - previousDelta;
                         activeViewport.applyRotation = true;
-                        activeViewport.pivotedActors = editContext.GetSelectedObjects<CourseActor>().ToArray();
+                        activeViewport.pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
                         foreach (CourseActor actor in activeViewport.pivotedActors)
                         {
                             actor.mRotation = actor.mStartingRot;
@@ -2095,7 +2092,16 @@ namespace Fushigi.ui.widgets
                     }
                 }
             }
-            else if (editContext.IsSingleObjectSelected(out CourseActor? mSelectedActor) || startedPicker)
+        }
+        private void SelectionParameterPanel()
+        {
+            var editContext = areaScenes[selectedArea].EditContext;
+
+            bool status = ImGui.Begin("Selection Parameters", ImGuiWindowFlags.AlwaysVerticalScrollbar);
+
+            
+            SelectedCursor();
+            if (editContext.IsSingleObjectSelected(out CourseActor? mSelectedActor) || startedPicker)
             {
                 if (mSelectedActor == null && startedPicker)
                 {
@@ -3036,6 +3042,21 @@ namespace Fushigi.ui.widgets
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
+
+                        ImGui.Text("Rail Type"); ImGui.TableNextColumn();
+                        if (ImGui.BeginCombo("##Edit Rail Type", mSelectedRail.mType))
+                        {
+                            foreach (string type in RailTypes)
+                            {
+                                ImGui.Selectable(type);
+
+                                if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(0))
+                                    mSelectedRail.mType = type;
+                            }
+
+                            ImGui.EndCombo();
+                        }
+                        ImGui.TableNextColumn();
                         ImGui.Text("Hash"); ImGui.TableNextColumn();
                         string hash = mSelectedRail.mHash.ToString();
                         if (ImGui.InputText("##Hash", ref hash, 256, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue))
@@ -3290,8 +3311,25 @@ namespace Fushigi.ui.widgets
                     batch.Commit($"{IconUtil.ICON_CLIPBOARD_CHECK} Paste {total} Link{(total == 1 ? "" : "s")}");
                 }
                 ImGui.SetItemTooltip("Paste Source Links");
-                string text = "Multiple Actors Selected";
 
+                ImGui.Text("Layer");
+                ImGui.TableNextColumn();
+                ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+
+                if (ImGui.BeginCombo("##Dropdown", "Select Layer"))
+                {
+                    foreach (var layer in mLayersVisibility.Keys.ToArray().ToImmutableList())
+                    {
+                        if (ImGui.Selectable(layer))
+                        {
+                            //item is selected
+                            //Console.WriteLine("Changing " + mSelectedActor.mName + "'s layer from " + mSelectedActor.mLayer + " to " + layer + ".");
+                            foreach (var actor in actors)
+                                actor.mLayer = layer;
+                        }
+                    }
+                }
+                string text = "Multiple Actors Selected";
                 var windowWidth = ImGui.GetWindowSize().X;
                 var textWidth = ImGui.CalcTextSize(text).X;
 
@@ -3949,6 +3987,8 @@ namespace Fushigi.ui.widgets
         private Dictionary<ulong, ulong> hashMapActors = new();
         private string mActorSearchAll = "";
         private string prevSearch;
+        private CourseAreaEditContext ctx;
+        private CourseAreaEditContext mEditContext;
 
         private void PrefabsView()
         {
