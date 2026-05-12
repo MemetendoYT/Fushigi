@@ -348,9 +348,15 @@ namespace Fushigi.ui.widgets
         // Handle Translation for all objects 
         public bool IsTransformableSelected()
         {
-            return mEditContext.IsAnySelected<CourseActor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPoint>() || mEditContext.IsAnySelected<FushigiCursor>();
+            return mEditContext.IsAnySelected<CourseActor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPoint>() ||
+                   mEditContext.IsAnySelected<FushigiCursor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPointControl>();
         }
 
+
+        public bool IsNonTransformableSelected()
+        {
+            return mEditContext.IsAnySelected<BGUnitRail.RailPoint>();
+        }
         public void HandleTranslation(object obj, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             switch (obj)
@@ -361,6 +367,9 @@ namespace Fushigi.ui.widgets
                 case CourseRail.CourseRailPoint:
                     HandleCourseRailPointTranslation(StartingTrans, CurrentTrans);
                         break;
+                case CourseRail.CourseRailPointControl:
+                    HandleCourseRailPointControlTranslation(StartingTrans, CurrentTrans);
+                    break;
                 case FushigiCursor:
                     HandleCursorTranslation(StartingTrans, CurrentTrans);
                     break;
@@ -371,15 +380,24 @@ namespace Fushigi.ui.widgets
             switch (obj)
             {
                 case CourseActor actor:
-                    CommitTranslation(actor, "CourseActor");
+                    CommitTranslation(actor);
                     actor.mStartingTrans = actor.mTranslation;
                     break;
                 case CourseRail.CourseRailPoint point:
-                    CommitTranslation(point, "CourseRailPoint");
+                    if(point.mIsCurve)
+                    //{
+                    //    var batch = mEditContext.BeginBatchAction();
+                    //}
+
+                    CommitTranslation(point.mControl);
+                    CommitTranslation(point);
                     break;
-                //case FushigiCursor:
-                //    ApplyCursorTranslation(StartingTrans, CurrentTrans);
-                //    break;
+                case CourseRail.CourseRailPointControl point:
+                    CommitTranslation(point);
+                    break;
+                    //case FushigiCursor:
+                    //    ApplyCursorTranslation(StartingTrans, CurrentTrans);
+                    //    break;
             }
         }
 
@@ -410,6 +428,16 @@ namespace Fushigi.ui.widgets
             }
         }
 
+        public void HandleCourseRailPointControlTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
+        {
+            foreach (CourseRail.CourseRailPointControl p in mEditContext.GetSelectedObjects<CourseRail.CourseRailPointControl>())
+            {
+                Vector3 relativePos = p.mStartingTrans - StartingTrans;
+                p.mTranslation.X = CurrentTrans.X + relativePos.X;
+                p.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+            }
+        }
+
         public void HandleCursorTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             if (mEditContext.IsAnySelected<FushigiCursor>())
@@ -420,13 +448,21 @@ namespace Fushigi.ui.widgets
             }
         }
 
-        public void CommitTranslation(object obj, string objectType)
+        public void CommitTranslation(object obj)
         {
             string label = "";
-            if (objectType == "CourseActor")
-                label = obj.GetFieldValue("mPackName").ToString();
-            else
-                label = "Rail Point";
+            switch (obj)
+            {
+                case CourseActor actor:
+                    label = obj.GetFieldValue("mPackName").ToString();
+                    break;
+                case CourseRail.CourseRailPoint point:
+                    label = "Rail Point";
+                    break;
+                case CourseRail.CourseRailPointControl point:
+                    label = "Rail Point Control";
+                    break;
+            }
 
             mEditContext.CommitAction(new PropertyFieldsSetUndo(
                  obj,
@@ -1304,21 +1340,18 @@ namespace Fushigi.ui.widgets
                         Vector2 pnt = new(pos2D.X, pos2D.Y);
                         bool isHovered = (ImGui.GetMousePos() - pnt).Length() < 10.0f;
 
-
                         if (isHovered)
                             mHoveredObject = point;
 
-
                         bool selected = false;
+
                         if (closestSelected != null)
                         {
                             if (point == closestSelected)
                                 selected = true;
                         }
                         else
-                        {
                             selected = mEditContext.IsSelected(point) || mEditContext.IsSelected(point.mControl);
-                        }
 
                         if (selected)
                         {
@@ -1337,15 +1370,11 @@ namespace Fushigi.ui.widgets
                             foreach (var point in railPoints)
                             {
                                 if (rail.mPoints.Contains(point))
-                                {
                                     deleteList.Add((rail, point));
-                                }
                             }
                         }
                         else
-                        {
                             mEditContext.DeleteRailPoint(rail, selectedPoint);
-                        }
                     }
 
                     bool add_point = ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(0) && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>();
@@ -1387,9 +1416,6 @@ namespace Fushigi.ui.widgets
                 foreach (CourseRail rail in mArea.mRailHolder.mRails)
                 {
 
-                    if (rail.mPoints.Count == 0)
-                        continue;
-
                     bool selected = mEditContext.IsSelected(rail);
 
                     if (selected && rail.mPoints.Count == 0 && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift)
@@ -1405,6 +1431,9 @@ namespace Fushigi.ui.widgets
 
                         continue;
                     }
+
+                    if (rail.mPoints.Count == 0)
+                        continue;
 
                     var rail_color = selected ? ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) : color;
 
@@ -1533,14 +1562,15 @@ namespace Fushigi.ui.widgets
 
             newPoint.mControl.mTranslation = newPoint.mTranslation + new Vector3(0, 1, 0);
 
-            if (index != -1)
-            {
-                if (rail.mPoints.Count - 1 == index)
-                    mEditContext.AddRailPoint(rail, newPoint);
-                else
-                {
-                    (float distance, int index) min = (float.PositiveInfinity, -1);
 
+            if (rail.mPoints.Count - 1 == index || index == -1)
+                mEditContext.AddRailPoint(rail, newPoint);
+            else
+            {
+                (float distance, int index) min = (float.PositiveInfinity, -1);
+
+                if (index != 0)
+                {
                     for (int i = 0; i < rail.mPoints.Count - 1; i++)
                     {
                         var pointA = rail.mPoints[i].mTranslation;
@@ -1562,14 +1592,16 @@ namespace Fushigi.ui.widgets
 
                         if (distance <= min.distance)
                             min = (distance, i + 1);
+
                     }
-
-                    mEditContext.InsertRailPoint(rail, newPoint, min.index);
-
                 }
+                else
+                    min.index = 0;
+
+                mEditContext.InsertRailPoint(rail, newPoint, min.index);
             }
-            else
-                mEditContext.AddRailPoint(rail, newPoint);
+            
+
 
             this.mEditContext.DeselectAll();
             this.mEditContext.Select(newPoint);
@@ -2189,7 +2221,7 @@ namespace Fushigi.ui.widgets
                 {
                     mMultiSelecting = false;
                 }
-                else if (mMultiSelectStartPos != null && !ImGui.IsWindowHovered())
+                else if (mMultiSelectStartPos != null && !ImGui.IsWindowHovered() && !IsNonTransformableSelected())
                 {
                     mMultiSelectCurrentPos = ImGui.GetMousePos();
                     mMultiSelecting = true;
@@ -2260,7 +2292,16 @@ namespace Fushigi.ui.widgets
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} Objects");
                 }
                 else
-                    ApplyTranslation(mEditContext.GetFirstObject());
+                {
+                    if (mEditContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint point) && point.mIsCurve) {
+                        var batch = mEditContext.BeginBatchAction();
+                        ApplyTranslation(point);
+                        ApplyTranslation(point.mControl);
+                        batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move Rail Point");
+                    }
+                    else       
+                        ApplyTranslation(mEditContext.GetFirstObject());
+                }
 
                 DoTranslateObjects = false;
             }
@@ -2319,7 +2360,7 @@ namespace Fushigi.ui.widgets
                 if (pivotedActors.Length == 1)
                 {
                     CommitRotation(pivotedActors[0]);
-                    CommitTranslation(pivotedActors[0], "CourseActor");
+                    CommitTranslation(pivotedActors[0]);
                 }
                 else
                 {
@@ -2328,7 +2369,7 @@ namespace Fushigi.ui.widgets
                     foreach (var actor in pivotedActors)
                     {
                         CommitRotation(actor);
-                        CommitTranslation(actor, "CourseActor");
+                        CommitTranslation(actor);
                     }
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Pivoted {pivotedActors.Count()} Actors");
                 }

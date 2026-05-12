@@ -93,8 +93,7 @@ namespace Fushigi.ui.widgets
         public static Dictionary<string, List<ulong>> mCopiedLinks = [];
         public string previousWord = "";
         public static bool refreshTranslation = false;
-        private ImmutableList<string> filteredActors = ImmutableList<string>.Empty;
-        private ImmutableList<string> englishActors = ImmutableList<string>.Empty;
+        private List<string> filteredActors = new();
         private CourseArea areaToFocus = null;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
@@ -210,7 +209,7 @@ namespace Fushigi.ui.widgets
         public static readonly Regex NumberRegex = new(@"\d+");
 
         public static List<string> layerSortTypes = [
-            "DvScreen",
+             "DvScreen",
              "DvNear",
              "DecoAreaFront",
              "PlayArea",
@@ -1437,185 +1436,54 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginTabItem("Add Actor"))
             {
-                string jpActor = "";
-                if (mSelectedActor == null)
-                {
 
-                    ImGui.InputText("Search", ref mAddActorSearchQuery, 256);
-
-                    if (previousWord != mAddActorSearchQuery || previousWord == "" || refreshTranslation)
-                    {
-                        previousWord = mAddActorSearchQuery;
-                        refreshTranslation = false;
-                        if (UserSettings.GetEnableTranslation())
-                            filteredActors = ParamDB.GetEnglishActors(Translate.EnglishNames).ToImmutableList();
-                        else
-                        {
-                            filteredActors = ParamDB.GetActors().ToImmutableList();
-                        }
-
-                        englishActors = ImmutableList<string>.Empty;
-
-                        if (UserSettings.GetEnableTranslation())
-                            englishActors = ParamDB.GetEnglishActors(Translate.EnglishNames).ToImmutableList();
-
-                        if (mAddActorSearchQuery != "")
-                        {
-                            filteredActors = FuzzySharp.Process.ExtractAll(mAddActorSearchQuery, ParamDB.GetActors(), cutoff: 70)
-                              .OrderByDescending(result => result.Score)
-                              .Select(result => result.Value)
-                              .ToImmutableList();
-
-                            if (UserSettings.GetEnableTranslation())
-                            {
-                                englishActors = FuzzySharp.Process.ExtractAll(mAddActorSearchQuery, ParamDB.GetEnglishActors(Translate.EnglishNames), cutoff: 70)
-                                .OrderByDescending(result => result.Score)
-                                .Select(result => result.Value)
-                                .ToImmutableList();
-
-                                var translated = new List<string>();
-
-                                foreach (var actor in filteredActors)
-                                {
-                                    translated.Add(Translate.FetchTranslatedName(actor));
-                                }
-
-                                filteredActors = translated.Concat(englishActors).Distinct().ToImmutableList();
-                            }
-                        }
-                    }
-
-                    ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
-
-                    if (ImGui.BeginTable("##ActorsAndLayers", 2,
-                        ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        foreach (var actor in filteredActors)
-                        {
-                            ImGui.TableNextRow();
-                            ImGui.TableSetColumnIndex(0);
-                            ImGui.Selectable(actor);
-                            jpActor = actor;
-                            if (UserSettings.GetEnableTranslation())
-                                jpActor = Translate.reverseTranslate(actor);
-
-                            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
-                                mSelectedActor = jpActor;
-
-                            if (UserSettings.GetEnableTranslation())
-                            {
-                                ImGui.TableSetColumnIndex(1);
-                                ImGui.BeginDisabled();
-                                ImGui.Text(jpActor);
-                                ImGui.EndDisabled();
-                            }
-                        }
-
-                        ImGui.EndTable();
-                    }
-
-                    ImGui.EndChild();
-                }
-                else if (mSelectedLayer == null)
-                {
-                    // Your original layer selection UI in Add Actor tab
-                    ImGui.InputText("Search", ref mAddLayerSearchQuery, 256);
-
-                    var fileteredLayers = mLayersVisibility.Keys.ToArray().ToImmutableList();
-
-                    if (mAddLayerSearchQuery != "")
-                    {
-                        fileteredLayers = FuzzySharp.Process.ExtractAll(mAddLayerSearchQuery, [.. mLayersVisibility.Keys], cutoff: 65)
-                         .OrderByDescending(result => result.Score)
-                         .Select(result => result.Value)
-                         .ToImmutableList();
-                    }
-
-                    if (ImGui.BeginListBox("Select the layer you want to add the actor to.", ImGui.GetContentRegionAvail()))
-                    {
-                        foreach (string layer in fileteredLayers)
-                        {
-                            ImGui.Selectable(layer);
-
-                            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
-                                mSelectedLayer = layer;
-                        }
-
-                        ImGui.EndListBox();
-                    }
-                }
-                else
-                    AddSelectedActorWithLayer();
-
+                ActorSearch();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("Add Layer"))
-            {
-                if (mSelectedLayer == null)
-                {
-                    const int MaxLayerCount = 10;
-                    int layerCount = 0;
-
-                    ImGui.InputText("Search", ref mAddLayerSearchQuery, 256);
-
-                    string[] Layers = LayerTypes
-                        .Except(mLayersVisibility.Keys)
-                        .ToArray();
-                    var fileteredLayers = Layers.ToImmutableList();
-
-                    if (mAddLayerSearchQuery != "")
-                    {
-                        fileteredLayers = FuzzySharp.Process.ExtractAll(mAddLayerSearchQuery, Layers, cutoff: 65)
-                            .OrderByDescending(result => result.Score)
-                            .Select(result => result.Value)
-                            .ToImmutableList();
-                    }
-
-                    if (ImGui.BeginListBox("Select the layer you want to add the actor to.", ImGui.GetContentRegionAvail()))
-                    {
-                        for (var i = 0; i < fileteredLayers.Count; i++)
-                        {
-                            var layer = fileteredLayers[i];
-                            layerCount = mLayersVisibility.Keys
-                                .Count(x => x.StartsWith(layer) && NumberRegex.IsMatch(x.AsSpan(layer.Length..)));
-                            if (layer == "PlayArea" || layer == "DecoArea")
-                                layer += $" ({layerCount}/{MaxLayerCount})";
-
-                            ImGui.BeginDisabled(layerCount == MaxLayerCount);
-
-                            ImGui.Selectable(layer);
-
-                            if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
-                            {
-                                mSelectedLayer = fileteredLayers[i];
-                            }
-
-                            ImGui.EndDisabled();
-                        }
-
-                        ImGui.EndListBox();
-                    }
-                }
-                else if (mSelectedActor == null)
-                {
-                    AddSelectedLayer();
-                }
-                else
-                    AddSelectedActorWithLayer();
-
-                ImGui.EndTabItem();
-            }
             if (ImGui.BeginTabItem("Add Prefab"))
             {
                 PrefabsView();
                 ImGui.EndTabItem();
             }
+
             ImGui.EndTabItem();
             ImGui.EndTabBar();
 
             ImGui.End();
         }
+
+        private void ActorSearch()
+        {
+            ImGui.InputText("##ActorSearch", ref mActorSearchAll, 0x100);
+
+            bool isSearch = !string.IsNullOrWhiteSpace(mActorSearchAll);
+
+            if (prevSearch != mActorSearchAll)
+            {
+                filteredActors.Clear();
+                prevSearch = mActorSearchAll;
+
+                foreach (var actor in ParamDB.GetActors())
+                {
+                    var actorEnglish = Translate.FetchTranslatedName(actor);
+                    bool HasText = actor.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0 || 
+                                   actorEnglish.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (isSearch && !HasText)
+                        continue;
+
+                    filteredActors.Add(actorEnglish);
+                }
+                Console.WriteLine("running");
+            }
+
+            foreach (string actor in filteredActors)
+            {
+                ImGui.Text(actor);
+            }
+        }
+
 
         private async Task AddSelectedActorWithLayer()
         {
@@ -4044,6 +3912,8 @@ namespace Fushigi.ui.widgets
         private BymlArrayNode actorsArray;
         private CourseActorHolder prefabActors;
         private Dictionary<ulong, ulong> hashMapActors = new();
+        private string mActorSearchAll = "";
+        private string prevSearch;
 
         private void PrefabsView()
         {
