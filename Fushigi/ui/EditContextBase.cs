@@ -99,6 +99,10 @@ namespace Fushigi.ui
         public object? GetFirstObject() 
             => mSelectedObjects.FirstOrDefault();
 
+        public T? GetFirstObjectOfType<T>()
+            where T : class
+            => mSelectedObjects.OfType<T>().FirstOrDefault();
+
 
         //For Undo Window
         public IEnumerable<IRevertable> GetUndoStack() => mUndoHandler.GetUndoStack();

@@ -28,6 +28,7 @@ namespace Fushigi.ui.widgets
         void Draw2D(CourseAreaEditContext editContext, LevelViewport viewport, ImDrawListPtr dl, ref bool isNewHoveredObj);
     }
 
+    #region Selection Logic
     interface IViewportSelectable
     {
         void OnSelect(CourseAreaEditContext editContext);
@@ -36,9 +37,8 @@ namespace Fushigi.ui.widgets
         public static void DefaultSelect(CourseAreaEditContext ctx, object selectable)
         {
             if (ImGui.GetIO().KeyShift || ImGui.GetIO().KeyCtrl)
-            {
                 ctx.Select(selectable);
-            }
+
             else if (!ctx.IsSelected(selectable))
             {
                 ctx.WithSuspendUpdateDo(() =>
@@ -47,6 +47,7 @@ namespace Fushigi.ui.widgets
                     ctx.Select(selectable);
                 });
             }
+
             foreach (CourseActor act in ctx.GetSelectedObjects<CourseActor>())
             {
                 act.mStartingTrans = act.mTranslation;
@@ -57,23 +58,17 @@ namespace Fushigi.ui.widgets
             {
                 point.mStartingTrans = point.mTranslation;
                 if (point.mIsCurve)
-                {
                     point.mControl.mStartingTrans = point.mControl.mTranslation;
-                }
             }
 
             foreach (CourseRail.CourseRailPointControl point in ctx.GetSelectedObjects<CourseRail.CourseRailPointControl>())
-            {
                 point.mStartingTrans = point.mTranslation;
-            }
 
             foreach (FushigiCursor cursor in ctx.GetSelectedObjects<FushigiCursor>())
-            {
                 cursor.mStartingTrans = cursor.mTranslate;
-            }
         }
     }
-
+    #endregion
     [Flags]
     enum KeyboardModifier
     {
@@ -1854,8 +1849,9 @@ namespace Fushigi.ui.widgets
                 if (mHoveredObject is CourseActor && !dragRelease)
                 {
                     if (ImGui.IsKeyDown(ImGuiKey.LeftShift) &&
-                        prevSelectVersion == mEditContext.SelectionVersion)
+                        prevSelectVersion == mEditContext.SelectionVersion || CourseScene.bypassSelection)
                     {
+                        CourseScene.bypassSelection = false;
                         mEditContext.Deselect(mHoveredObject!);
                     }
                     else if (!ImGui.IsKeyDown(ImGuiKey.LeftShift))

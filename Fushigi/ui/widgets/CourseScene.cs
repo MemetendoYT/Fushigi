@@ -63,6 +63,7 @@ namespace Fushigi.ui.widgets
         private bool runGlobalPicker;
         private bool runGlobal;
         private CourseAreaEditContext pendingEditContext;
+        public static bool bypassSelection;
         private string startingArea;
         (object? courseObj, FullPropertyCapture capture)
            propertyCapture = (null,
@@ -1956,17 +1957,8 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
         private void SelectedCursor()
-        {
-            if (!mEditContext.IsAnySelected<FushigiCursor>() && activeViewport.cursor != null)
-            {
+        {     
                 var cursor = activeViewport.cursor;
-                cursor.delta = 0;
-            }
-            if (mEditContext.IsAnySelected<FushigiCursor>())
-            {
-
-                var cursor = activeViewport.cursor;
-
 
                 if (ImGui.IsKeyPressed(ImGuiKey.Delete))
                     activeViewport.cursor = null;
@@ -1980,9 +1972,8 @@ namespace Fushigi.ui.widgets
                 ImGui.Dummy(new Vector2(0, 10));
 
                 //if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count == 1)
-                if(true)
+                if (true)
                 {
-                    CourseActor pickActor = null;
                     //Credits to https://github.com/aurelionshole/aurelionshole.github.io for ActorRing code
 
                     //CourseActor pickActor = mEditContext.GetSelectedObjects<CourseActor>().ToArray()[0];
@@ -2001,23 +1992,39 @@ namespace Fushigi.ui.widgets
 
                     ImGui.Dummy(new Vector2(0, 10));
                     ImGui.Checkbox("Rotate Actors", ref doRotate);
-
-                    if (count == 0)
+             
+                    if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
                     {
-                        if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
+                        ImGui.SetWindowFocus(selectedArea.GetName());
+                        Task.Run(async () =>
                         {
-                            ImGui.SetWindowFocus(selectedArea.GetName());
-                            Task.Run(async () =>
-                            {
-                                var (pickedActor, _) = await PickActor();
-                                if (pickedActor is null)
-                                    return;
+                            bypassSelection = true;
+                            var (pickedActor, _) = await PickActor();
+                            if (pickedActor is null)
+                                return;
 
-                                pickActor = pickedActor;
-                                Console.WriteLine(pickActor);
-                            });
-                        }
-                    } else if (count != 0)
+                            pickActor = pickedActor;
+                            Console.WriteLine(pickActor);
+                        });
+                    }
+
+
+                    ImGui.SameLine();
+                    if (mEditContext.GetObjectCountOfType<CourseActor>() == 1)
+                    pickActor = mEditContext.GetFirstObjectOfType<CourseActor>();
+
+
+                var pickActorText = "Select an actor";
+
+                    if(pickActor != null)
+                    {
+                        pickActorText = pickActor.mPackName;
+                    }
+
+                        ImGui.InputText("##Area Hash", ref pickActorText, 256, ImGuiInputTextFlags.ReadOnly);
+
+ 
+                    if (count != 0 && pickActor != null)
                     {
                         ImGui.SetItemTooltip("Replace");
 
@@ -2092,15 +2099,25 @@ namespace Fushigi.ui.widgets
                     }
                 }
             }
-        }
+        
         private void SelectionParameterPanel()
         {
             var editContext = areaScenes[selectedArea].EditContext;
 
             bool status = ImGui.Begin("Selection Parameters", ImGuiWindowFlags.AlwaysVerticalScrollbar);
 
-            
-            SelectedCursor();
+            if (!mEditContext.IsAnySelected<FushigiCursor>() && activeViewport.cursor != null)
+            {
+                var cursor = activeViewport.cursor;
+                cursor.delta = 0;
+                pickActor = null;
+            }
+
+            if (mEditContext.IsAnySelected<FushigiCursor>())
+                SelectedCursor();
+            else
+                NoneSelected();
+
             if (editContext.IsSingleObjectSelected(out CourseActor? mSelectedActor) || startedPicker)
             {
                 if (mSelectedActor == null && startedPicker)
@@ -3342,24 +3359,6 @@ namespace Fushigi.ui.widgets
                 ImGui.Text(text);
                 ImGui.EndDisabled();
             }
-            else
-            {
-                ImGui.AlignTextToFramePadding();
-
-                string text = "No item selected";
-
-                var windowWidth = ImGui.GetWindowSize().X;
-                var textWidth = ImGui.CalcTextSize(text).X;
-
-                var windowHight = ImGui.GetWindowSize().Y;
-                var textHeight = ImGui.CalcTextSize(text).Y;
-
-                ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
-                ImGui.SetCursorPosY((windowHight - textHeight) * 0.5f);
-                ImGui.BeginDisabled();
-                ImGui.Text(text);
-                ImGui.EndDisabled();
-            }
 
             if (status)
             {
@@ -3367,6 +3366,24 @@ namespace Fushigi.ui.widgets
             }
         }
 
+        private static void NoneSelected()
+        {
+            ImGui.AlignTextToFramePadding();
+
+            string text = "No item selected";
+
+            var windowWidth = ImGui.GetWindowSize().X;
+            var textWidth = ImGui.CalcTextSize(text).X;
+
+            var windowHight = ImGui.GetWindowSize().Y;
+            var textHeight = ImGui.CalcTextSize(text).Y;
+
+            ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
+            ImGui.SetCursorPosY((windowHight - textHeight) * 0.5f);
+            ImGui.BeginDisabled();
+            ImGui.Text(text);
+            ImGui.EndDisabled();
+        }
         private static void AreaParameters(AreaParam area)
         {
             ParamHolder areaParams = ParamLoader.GetHolder("AreaParam");
@@ -3989,6 +4006,7 @@ namespace Fushigi.ui.widgets
         private string prevSearch;
         private CourseAreaEditContext ctx;
         private CourseAreaEditContext mEditContext;
+        private CourseActor pickActor;
 
         private void PrefabsView()
         {
