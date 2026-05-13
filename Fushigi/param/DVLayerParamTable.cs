@@ -42,6 +42,7 @@ namespace Fushigi.param
                     BymlUtil.GetNodeData<float>(v["X"]),
                     BymlUtil.GetNodeData<float>(v["Y"])));
             }
+            //Layers["DvScreen"] = new Vector2(1, 1);
         }
     }
 }

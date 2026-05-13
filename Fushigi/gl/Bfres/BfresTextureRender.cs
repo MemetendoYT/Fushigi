@@ -209,7 +209,6 @@ namespace Fushigi.gl.Bfres
 
                     var formatInfo = GLFormatHelper.ConvertPixelFormat(format);
                     GLTextureDataLoader.LoadImage(_gl, this.Target, Width, Height, ArrayCount, formatInfo, Decoder.Result, 0);
-
                     this.InternalFormat = formatInfo.InternalFormat;
                     this.PixelType = formatInfo.Type;
                     this.PixelFormat = formatInfo.Format;

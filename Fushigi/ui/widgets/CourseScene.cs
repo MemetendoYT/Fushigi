@@ -1,12 +1,10 @@
 ﻿using Fasterflect;
+using Fushigi.Bfres;
 using Fushigi.Byml;
 using Fushigi.course;
 using Fushigi.env;
 using Fushigi.gl;
 using Fushigi.gl.Bfres;
-using Fushigi.gl.Bfres.AreaData;
-using Fushigi.Logger;
-using Fushigi.Msbt;
 using Fushigi.param;
 using Fushigi.rstb;
 using Fushigi.SARC;
@@ -15,29 +13,15 @@ using Fushigi.ui.modal;
 using Fushigi.ui.SceneObjects;
 using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
-using Fushigi.ui.widgets;
 using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
-using Silk.NET.GLFW;
 using Silk.NET.OpenGL;
-using Silk.NET.SDL;
-using System;
 using System.Collections;
 using System.Collections.Immutable;
-using System.ComponentModel;
 using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
 using System.Runtime.CompilerServices;
-using System.Runtime.Remoting;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.Json;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using ZstdSharp.Unsafe;
 using static Fushigi.course.CourseComment;
-using static System.Net.Mime.MediaTypeNames;
 using NumVec = System.Numerics.Vector3;
 
 
@@ -45,6 +29,7 @@ namespace Fushigi.ui.widgets
 {
     class CourseScene
     {
+        #region Variables
         readonly Dictionary<CourseArea, LevelViewport> viewports = [];
         readonly Dictionary<CourseArea, object?> lastSavedAction = new();
         readonly Dictionary<CourseArea, CourseAreaScene> areaScenes = [];
@@ -110,6 +95,26 @@ namespace Fushigi.ui.widgets
         private float offset = 0;
         private float radius = 0;
         private bool doRotate = true;
+        List<CourseActor> topLinks;
+        CourseActor? selected;
+        private CourseActor? storedGlobalActor;
+        public static bool killPicker;
+        private CancellationTokenSource globalPickToken;
+        private bool isPickingSecondArea;
+        private string secondPickArea;
+        private bool startedPicker;
+        public static bool pickingComplete;
+        private LevelViewport oldViewport;
+        private bool reverseGlobalLink;
+        private float previousDelta;
+        private BymlArrayNode actorsArray;
+        private CourseActorHolder prefabActors;
+        private Dictionary<ulong, ulong> hashMapActors = new();
+        private string mActorSearchAll = "";
+        private string prevSearch;
+        private CourseAreaEditContext ctx;
+        private CourseAreaEditContext mEditContext;
+        private CourseActor pickActor;
 
         string mActorSearchText = "";
 
@@ -221,7 +226,7 @@ namespace Fushigi.ui.widgets
              "DvMiddle",
              "DvFar"
         ];
-
+        #endregion
         public class LayerSorter : IComparer<string>
         {
             private static readonly Regex NumberRegex = new Regex(@"\d+$");
@@ -430,7 +435,7 @@ namespace Fushigi.ui.widgets
             //All resource files to load
             resourceFiles = resourceFiles.Distinct().Where(x => !string.IsNullOrEmpty(x)).ToList();
             //Unload any unused resources in the cache
-
+            //BfresTextureRender.clearTextures();
             List<string> removed = [];
             foreach (var bfres in BfresCache.Cache)
             {
@@ -458,6 +463,8 @@ namespace Fushigi.ui.widgets
             }
             Logger.Logger.LogMessage("CourseScene", $"Finished loading models");
         }
+
+
 
         public void PreventFurtherRendering()
         {
@@ -571,18 +578,7 @@ namespace Fushigi.ui.widgets
             if (showGlobalLinkWindow)
                 DrawGlobalLinksPanel(ref showGlobalLinkWindow, mPopupModalHost, gLink, linkNumb);
 
-            //if (LevelViewport.mLayers.Length > 0)
-            //{
-            //    foreach (var layer in LevelViewport.mLayers)
-            //    {
-            //        mSelectedLayer = layer;
-            //        AddLayerFromFile();
-            //        LevelViewport.mLayers = [];
-            //    }
-            //}
-
             ulong selectionVersionBefore = areaScenes[selectedArea].EditContext.SelectionVersion;
-
 
             bool status = ImGui.Begin("Viewports", ImGuiWindowFlags.NoNav);
 
@@ -653,174 +649,8 @@ namespace Fushigi.ui.widgets
 
                         envPaletteWindow.Load(gl, area.mAreaParams, area.mInitEnvPalette);
 
-                        ImGui.BeginChild(
-                             "ViewportContent",
-                             ImGui.GetContentRegionAvail(),
-                             ImGuiChildFlags.None,
-                             ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
-                         );
-
-
-                        if (ImGui.BeginChild("viewport_menu_bar", new Vector2(ImGui.GetWindowWidth(), 30 * MainWindow.dpiScale)))
-                        {
-                            Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
-
-                            ImGui.PushStyleColor(ImGuiCol.Button, 0);
-
-                            if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
-                                showCourseSettings = true;
-                            ImGui.SetItemTooltip("Edit Course Settings");
-
-                            ImGui.SameLine();
-
-                            if (ImGui.Button(IconUtil.ICON_FILE_IMPORT, icon_size))
-                                showAreaSettings = true;
-                            ImGui.SetItemTooltip("Edit Area Settings");
-
-                            ImGui.SameLine();
-                            ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1.0f), "|");
-                            ImGui.SameLine();
-
-                            if (ImGui.Button(viewport.PlayAnimations ? IconUtil.ICON_STOP : IconUtil.ICON_PLAY, icon_size))
-                                viewport.PlayAnimations = !viewport.PlayAnimations;
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_BORDER_ALL, viewport.ShowGrid, icon_size))
-                                viewport.ShowGrid = !viewport.ShowGrid;
-
-                            ImGui.SameLine();
-
-                            string current_palette = area.mInitEnvPalette == null ? "" : area.mInitEnvPalette.Name;
-
-                            void SelectPalette(string name, string palette)
-                            {
-                                if (string.IsNullOrEmpty(palette))
-                                    return;
-
-                                palette = palette.Replace("Work/Gyml/Gfx/EnvPaletteParam/", "");
-                                palette = palette.Replace(".game__gfx__EnvPaletteParam.gyml", "");
-
-                                bool selected = current_palette == name;
-                                if (ImGui.Selectable($"{name} : {palette}", selected))
-                                    viewport.EnvironmentData.TransitionEnvPalette(current_palette, palette);
-
-                                if (selected)
-                                    ImGui.SetItemDefaultFocus();
-                            }
-
-
-                            if (showAreaSettings)
-                                AreaSettings.Draw(ref showAreaSettings, mPopupModalHost, area.mAreaParams, viewport);
-
-                            if (showCourseSettings)
-                                CourseSettings.Draw(ref showCourseSettings, mPopupModalHost, course.mCourseInfo, course.mMapAnalysisInfo, course.mStageLoadInfo);
-
-                            var flags = ImGuiComboFlags.NoArrowButton | ImGuiComboFlags.WidthFitPreview;
-                            if (ImGui.BeginCombo($"##EnvPalette", $"{IconUtil.ICON_PALETTE}", flags))
-                            {
-                                SelectPalette($"Default Palette", area.mAreaParams.EnvPaletteSetting.InitPaletteBaseName);
-
-                                if (area.mAreaParams.EnvPaletteSetting.WonderPaletteList != null)
-                                    foreach (var palette in area.mAreaParams.EnvPaletteSetting.WonderPaletteList)
-                                        SelectPalette($"Wonder Palette", palette);
-
-                                if (area.mAreaParams.EnvPaletteSetting.TransPaletteList != null)
-                                    foreach (var palette in area.mAreaParams.EnvPaletteSetting.TransPaletteList)
-                                        SelectPalette($"Transition Palette", palette);
-
-                                if (area.mAreaParams.EnvPaletteSetting.EventPaletteList != null)
-                                    foreach (var palette in area.mAreaParams.EnvPaletteSetting.EventPaletteList)
-                                        SelectPalette($"Event Palette", palette);
-
-                                ImGui.EndCombo();
-                            }
-
-                            ImGui.SameLine();
-
-
-                            bool useGameShaders = UserSettings.UseGameShaders();
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ADJUST, useGameShaders, icon_size))
-                            {
-                                useGameShaders = !useGameShaders;
-                                UserSettings.SetGameShaders(useGameShaders);
-                            }
-                            ImGui.SetItemTooltip("Use Game Shaders");
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_CAMERA, viewport.ScreenshotMode, icon_size))
-                                viewport.ScreenshotMode = !viewport.ScreenshotMode;
-                            ImGui.SetItemTooltip("Screenshot Mode");
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_IMAGE, viewport.ShowBackground, icon_size))
-                            {
-                                viewport.ShowBackground = !viewport.ShowBackground;
-                                foreach (var layer in mLayersVisibility.Keys)
-                                    if (BackgroundLayerTypes.Contains(layer))
-                                        mLayersVisibility[layer] = viewport.ShowBackground;
-                            }
-                            ImGui.SetItemTooltip("Hide/Show Background Layers");
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ICONS, viewport.ShowActors, icon_size))
-                            {
-                                viewport.ShowActors = !viewport.ShowActors;
-                                foreach (var layer in mLayersVisibility.Keys)
-                                    if (!BackgroundLayerTypes.Contains(layer))
-                                        mLayersVisibility[layer] = viewport.ShowActors;
-                            }
-                            ImGui.SetItemTooltip("Hide/Show Foreground Actors");
-
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_LONG_ARROW_ALT_UP, viewport.ShowRails, icon_size))
-                            {
-                                viewport.ShowRails = !viewport.ShowRails;
-                            }
-                            ImGui.SetItemTooltip("Hide/Show Rails");
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SYNC, true, icon_size))
-                            {
-                                BfresCache.Clear();
-                            }
-                            ImGui.SetItemTooltip("Reload Models");
-
-                            ImGui.SameLine();
-
-                            if (ImguiHelper.DrawTextToggle(IconUtil.ICON_PAINT_BRUSH, true, icon_size))
-                            {
-                                showPaletteWindow = true;
-                                hasOpened = true;
-                            }
-
-                            ImGui.SetItemTooltip("Palette Editor [Experimental]");
-
-                            ImGui.SameLine();
-
-                            if (ImGui.Button(IconUtil.ICON_LIST, icon_size))
-                                showTalkingFlower = true;
-                            ImGui.SetItemTooltip("View Talking Flower Voice Lines");
-
-                            ImGui.SameLine();
-
-                            //if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SQUARE, true, icon_size))
-                            //{
-                            //    showCollisionWindow = true;
-                            //}
-
-                            //ImGui.SetItemTooltip("Collision Editor [Experimental]");
-
-                            ImGui.PopStyleColor(1);
-                            ImGui.EndChild();
-                        }
-
+                        ViewportMenuBar(area, viewport);
+                       
                         var io = ImGui.GetIO();
 
                         bool viewportActive = ImGui.IsWindowFocused(ImGuiFocusedFlags.ChildWindows);
@@ -835,14 +665,13 @@ namespace Fushigi.ui.widgets
 
                         var drawPos = ImGui.GetCursorScreenPos();
                         ImGui.SetCursorScreenPos(drawPos);
+
                         viewport.Draw(size, deltaSeconds, mLayersVisibility);
                         viewport.vpMin = ImGui.GetItemRectMin();
                         viewport.vpMax = ImGui.GetItemRectMax();
                         insideViewport = ImGui.IsMouseHoveringRect(viewport.vpMin, viewport.vpMax);
                         viewport.DrawOverlay();
                         viewport.DrawComments();
-
-
 
                         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                         {
@@ -867,11 +696,6 @@ namespace Fushigi.ui.widgets
 
                         bool viewportWindowHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.None);
 
-                        //if (placingActor || (leftClickStartedInsideViewport && viewportWindowHovered))
-                        //{
-                        //    viewport.InteractionWithFocus_TooltipOnly();
-                        //}
-
                         AreaParameters(area.mAreaParams);
 
                         ImGui.EndChild();     // End ViewportContent
@@ -887,6 +711,7 @@ namespace Fushigi.ui.widgets
 
                 ImGui.EndTabBar();
             }
+
 
             if (lastCreatedViewports != viewports)
             {
@@ -910,6 +735,177 @@ namespace Fushigi.ui.widgets
                 ImGui.End();
         }
 
+        public void ViewportMenuBar(CourseArea area, LevelViewport viewport)
+        {
+            ImGui.BeginChild(
+                            "ViewportContent",
+                            ImGui.GetContentRegionAvail(),
+                            ImGuiChildFlags.None,
+                            ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse
+                            );
+
+
+            if (ImGui.BeginChild("viewport_menu_bar", new Vector2(ImGui.GetWindowWidth(), 30 * MainWindow.dpiScale)))
+            {
+                Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
+
+                ImGui.PushStyleColor(ImGuiCol.Button, 0);
+
+                if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
+                    showCourseSettings = true;
+                ImGui.SetItemTooltip("Edit Course Settings");
+
+                ImGui.SameLine();
+
+                if (ImGui.Button(IconUtil.ICON_FILE_IMPORT, icon_size))
+                    showAreaSettings = true;
+                ImGui.SetItemTooltip("Edit Area Settings");
+
+                ImGui.SameLine();
+                ImGui.TextColored(new Vector4(0.5f, 0.5f, 0.5f, 1.0f), "|");
+                ImGui.SameLine();
+
+                if (ImGui.Button(viewport.PlayAnimations ? IconUtil.ICON_STOP : IconUtil.ICON_PLAY, icon_size))
+                    viewport.PlayAnimations = !viewport.PlayAnimations;
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_BORDER_ALL, viewport.ShowGrid, icon_size))
+                    viewport.ShowGrid = !viewport.ShowGrid;
+
+                ImGui.SameLine();
+
+                string current_palette = area.mInitEnvPalette == null ? "" : area.mInitEnvPalette.Name;
+
+                void SelectPalette(string name, string palette)
+                {
+                    if (string.IsNullOrEmpty(palette))
+                        return;
+
+                    palette = palette.Replace("Work/Gyml/Gfx/EnvPaletteParam/", "");
+                    palette = palette.Replace(".game__gfx__EnvPaletteParam.gyml", "");
+
+                    bool selected = current_palette == name;
+                    if (ImGui.Selectable($"{name} : {palette}", selected))
+                        viewport.EnvironmentData.TransitionEnvPalette(current_palette, palette);
+
+                    if (selected)
+                        ImGui.SetItemDefaultFocus();
+                }
+
+
+                if (showAreaSettings)
+                    AreaSettings.Draw(ref showAreaSettings, mPopupModalHost, area.mAreaParams, viewport);
+
+                if (showCourseSettings)
+                    CourseSettings.Draw(ref showCourseSettings, mPopupModalHost, course.mCourseInfo, course.mMapAnalysisInfo, course.mStageLoadInfo);
+
+                var flags = ImGuiComboFlags.NoArrowButton | ImGuiComboFlags.WidthFitPreview;
+                if (ImGui.BeginCombo($"##EnvPalette", $"{IconUtil.ICON_PALETTE}", flags))
+                {
+                    SelectPalette($"Default Palette", area.mAreaParams.EnvPaletteSetting.InitPaletteBaseName);
+
+                    if (area.mAreaParams.EnvPaletteSetting.WonderPaletteList != null)
+                        foreach (var palette in area.mAreaParams.EnvPaletteSetting.WonderPaletteList)
+                            SelectPalette($"Wonder Palette", palette);
+
+                    if (area.mAreaParams.EnvPaletteSetting.TransPaletteList != null)
+                        foreach (var palette in area.mAreaParams.EnvPaletteSetting.TransPaletteList)
+                            SelectPalette($"Transition Palette", palette);
+
+                    if (area.mAreaParams.EnvPaletteSetting.EventPaletteList != null)
+                        foreach (var palette in area.mAreaParams.EnvPaletteSetting.EventPaletteList)
+                            SelectPalette($"Event Palette", palette);
+
+                    ImGui.EndCombo();
+                }
+
+                ImGui.SameLine();
+
+
+                bool useGameShaders = UserSettings.UseGameShaders();
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ADJUST, useGameShaders, icon_size))
+                {
+                    useGameShaders = !useGameShaders;
+                    UserSettings.SetGameShaders(useGameShaders);
+                }
+                ImGui.SetItemTooltip("Use Game Shaders");
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_CAMERA, viewport.ScreenshotMode, icon_size))
+                    viewport.ScreenshotMode = !viewport.ScreenshotMode;
+                ImGui.SetItemTooltip("Screenshot Mode");
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_IMAGE, viewport.ShowBackground, icon_size))
+                {
+                    viewport.ShowBackground = !viewport.ShowBackground;
+                    foreach (var layer in mLayersVisibility.Keys)
+                        if (BackgroundLayerTypes.Contains(layer))
+                            mLayersVisibility[layer] = viewport.ShowBackground;
+                }
+                ImGui.SetItemTooltip("Hide/Show Background Layers");
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_ICONS, viewport.ShowActors, icon_size))
+                {
+                    viewport.ShowActors = !viewport.ShowActors;
+                    foreach (var layer in mLayersVisibility.Keys)
+                        if (!BackgroundLayerTypes.Contains(layer))
+                            mLayersVisibility[layer] = viewport.ShowActors;
+                }
+                ImGui.SetItemTooltip("Hide/Show Foreground Actors");
+
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_LONG_ARROW_ALT_UP, viewport.ShowRails, icon_size))
+                {
+                    viewport.ShowRails = !viewport.ShowRails;
+                }
+                ImGui.SetItemTooltip("Hide/Show Rails");
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SYNC, true, icon_size))
+                {
+                    BfresCache.Clear();
+                }
+                ImGui.SetItemTooltip("Reload Models");
+
+                ImGui.SameLine();
+
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_PAINT_BRUSH, true, icon_size))
+                {
+                    showPaletteWindow = true;
+                    hasOpened = true;
+                }
+
+                ImGui.SetItemTooltip("Palette Editor [Experimental]");
+
+                ImGui.SameLine();
+
+                if (ImGui.Button(IconUtil.ICON_LIST, icon_size))
+                    showTalkingFlower = true;
+                ImGui.SetItemTooltip("View Talking Flower Voice Lines");
+
+                ImGui.SameLine();
+
+                //if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SQUARE, true, icon_size))
+                //{
+                //    showCollisionWindow = true;
+                //}
+
+                //ImGui.SetItemTooltip("Collision Editor [Experimental]");
+
+                ImGui.PopStyleColor(1);
+                ImGui.EndChild();
+            }
+
+        }
         void UpdateDRPC()
         {
             string sCourseID = course.GetName().Split("_")[0].Replace("Course", "");
@@ -1218,34 +1214,13 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
 
-        private void CommentsPanel()
-        {
-            ImGui.Begin("Comments");
-
-            //if (ImGui.Button("Delete Actor"))
-            //{
-            //    var ctx = areaScenes[selectedArea].EditContext;
-            //    var actors = ctx.GetSelectedObjects<CourseActor>().ToList();
-
-            //    if (actors.Count > 0)
-            //        _ = DeleteObjectsWithWarningPrompt(actors,
-            //            ctx, "Delete actors");
-            //}
-
-
-            CourseCommentHolder commentsArray = selectedArea.mCommentHolder;
-
-            CommentsView(commentsArray);
-
-            ImGui.End();
-        }
 
         private string? mSelectedActor;
         public static string? mSelectedLayer;
         private string mAddActorSearchQuery = "";
         private string mAddLayerSearchQuery = "";
 
-
+        #region Prefabs
         public List<CourseActor> CreatePrefab(NumVec location, string prefab, string prefabFolder)
         {
             var areaHash = selectedArea.mRootHash;
@@ -1411,28 +1386,122 @@ namespace Fushigi.ui.widgets
 
                 string prefabPath = Path.Combine(directory, $"{prefab}.bcett.byml.zs");
                 byte[] levelBytes = FileUtil.DecompressFile(prefabPath);
+
                 var byml = new Byml.Byml(new MemoryStream(levelBytes));
                 BymlHashTable? root = byml.Root as BymlHashTable;
                 if (root.ContainsKey("Rails"))
                 {
                     var prefabRails = CreatePrefabRail(posVec, prefab, directory);
-                    foreach (var rail in prefabRails)
-                    {
-                        //var i = 0;
-                        //do
-                        //{
-                        //    i++;
-                        //} while (area.GetActors().Any(x => x.mName == $"{actor.mPackName}{i}"));
-                        //actor.mName = $"{actor.mPackName}{i}";
-                        //mSelectedLayer = actor.mLayer;
+                    foreach (var rail in prefabRails)           
                         ctx.AddRail(rail);
-                        //AddLayerFromFile();
-                    }
                 }
                 batch.Commit($"{IconUtil.ICON_PASTE} Added {prefab} Prefab");
             }
 
         }
+
+        private void PrefabsView()
+        {
+            string appDataPath = Path.Combine(UserSettings.SettingsDir, "prefabs");
+            string resPath = "res/prefabs";
+            string[] resPrefab = Directory.GetFiles(resPath, "*.bcett*");
+
+            if (ImGui.BeginTabBar("PrefabTabs"))
+            {
+                if (ImGui.BeginTabItem("User Prefabs"))
+                {
+                    if (Directory.Exists(appDataPath))
+                    {
+                        string[] files = Directory.GetFiles(appDataPath, "*.bcett*");
+                        prefabList(files, true, appDataPath);
+                    }
+                    ImGui.EndTabItem();
+                }
+
+                if (ImGui.BeginTabItem("Default Prefabs"))
+                {
+                    prefabList(resPrefab, false, resPath);
+                    ImGui.EndTabItem();
+                }
+
+                ImGui.EndTabBar();
+            }
+        }
+
+        public void prefabList(string[] files, bool canDelete, string directory)
+        {
+            ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
+            float rowHeight = ImGui.GetFrameHeight();
+            float deleteButtonWidth = rowHeight * 1.6f;
+
+            if (directory.Contains("AppData") && files.Length == 0)
+            {
+                ImGui.Text("You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ");
+            }
+            foreach (string file in files)
+            {
+
+                string prefab = Path.GetFileName(file).Split(".bcett")[0];
+
+                ImGui.PushID(prefab);
+
+                float fullWidth = ImGui.GetContentRegionAvail().X;
+                float nameWidth = fullWidth - deleteButtonWidth - 8;
+
+                ImGui.BeginGroup();
+                ImGui.PushItemWidth(nameWidth);
+
+                if (ImGui.Selectable(prefab, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
+                {
+                    LoadPrefab(prefab, directory);
+                }
+
+                ImGui.PopItemWidth();
+                ImGui.EndGroup();
+
+                ImGui.SameLine();
+
+                Vector2 deletePos = ImGui.GetCursorScreenPos();
+                bool clicked = ImGui.InvisibleButton("##delete", new Vector2(deleteButtonWidth, rowHeight));
+
+                if (canDelete)
+                {
+                    string deleteIcon = IconUtil.ICON_TRASH_ALT;
+                    Vector2 iconSize = ImGui.CalcTextSize(deleteIcon);
+                    Vector2 iconPos = deletePos + new Vector2(
+                        (deleteButtonWidth - iconSize.X) * 0.5f,
+                        (rowHeight - iconSize.Y) * 0.5f
+                    );
+
+
+                    uint color = ImGui.GetColorU32(ImGuiCol.Text);
+                    if (!ImGui.IsItemHovered())
+                        color = (color & 0xFFFFFF) | ((uint)((color >> 24) * 0.5f) << 24);
+
+                    ImGui.GetWindowDrawList().AddText(iconPos, color, deleteIcon);
+                    ImGui.SetItemTooltip("Delete Prefab");
+
+                    if (clicked)
+                    {
+                        DeletePrefabPopup(file);
+                    }
+
+                    ImGui.PopID();
+                }
+            }
+            ImGui.EndChild();
+        }
+        public async Task DeletePrefabPopup(string file)
+        {
+            var result = await RemoveAreaConfirmationDialog.ShowDialog(MainWindow.mModalHost, "Remove Prefab", "Do you want to remove this prefab?\nThis action cannot be undone!");
+
+            if (result == RemoveAreaConfirmationDialog.DialogResult.Yes)
+            {
+                File.Delete(file);
+            }
+
+        }
+        #endregion
         private void SelectActorAndLayerPanel()
         {
             ImGui.Begin("Actors and Layers");
@@ -1458,6 +1527,7 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
 
+        #region Add Actor
         private void ActorSearch()
         {
             ImGui.InputText("##ActorSearch", ref mActorSearchAll, 0x100);
@@ -1579,7 +1649,101 @@ namespace Fushigi.ui.widgets
             mSelectedActor = null;
             mSelectedLayer = null;
         }
+        #endregion
 
+        #region Comments 
+
+        private void CommentsView(CourseCommentHolder commentHolder)
+        {
+            if (commentHolder.mComments.Count == 0)
+            {
+                ImGui.Text("No comments found");
+                return;
+            }
+
+            CourseComment commentToDelete = null;
+            float rowHeight = ImGui.GetFrameHeight();
+            float deleteButtonWidth = rowHeight * 1.6f;
+
+            int commentVal = 0;
+            int i = 0;
+            var ctx = areaScenes[selectedArea].EditContext;
+            foreach (CourseComment comment in commentHolder.mComments)
+            {
+                i++;
+                string commentNum = $"Comment {i}";
+
+                ImGui.PushID(commentNum);
+
+                float fullWidth = ImGui.GetContentRegionAvail().X;
+                float nameWidth = fullWidth - deleteButtonWidth - 8;
+
+                ImGui.BeginGroup();
+                ImGui.PushItemWidth(nameWidth);
+
+                if (ImGui.Selectable(commentNum, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
+                {
+                    ctx.Select(comment);
+                    activeViewport.FrameSelectedComment(comment);
+                }
+
+                ImGui.PopItemWidth();
+                ImGui.EndGroup();
+
+                ImGui.SameLine();
+
+                Vector2 deletePos = ImGui.GetCursorScreenPos();
+                bool clicked = ImGui.InvisibleButton("##delete", new Vector2(deleteButtonWidth, rowHeight));
+
+                string deleteIcon = IconUtil.ICON_TRASH_ALT;
+                Vector2 iconSize = ImGui.CalcTextSize(deleteIcon);
+                Vector2 iconPos = deletePos + new Vector2(
+                    (deleteButtonWidth - iconSize.X) * 0.5f,
+                    (rowHeight - iconSize.Y) * 0.5f
+                );
+
+                uint color = ImGui.GetColorU32(ImGuiCol.Text);
+                if (!ImGui.IsItemHovered())
+                    color = (color & 0xFFFFFF) | ((uint)((color >> 24) * 0.5f) << 24);
+
+                ImGui.GetWindowDrawList().AddText(iconPos, color, deleteIcon);
+                ImGui.SetItemTooltip("Remove Comment");
+
+                if (clicked)
+                {
+                    commentToDelete = comment;
+                    commentVal = i;
+                }
+                ImGui.PopID();
+            }
+
+            if (commentToDelete != null)
+            {
+                ctx.RemoveComment(commentToDelete, commentVal);
+                commentToDelete = null;
+            }
+        }
+        private void CommentsPanel()
+        {
+            ImGui.Begin("Comments");
+
+            //if (ImGui.Button("Delete Actor"))
+            //{
+            //    var ctx = areaScenes[selectedArea].EditContext;
+            //    var actors = ctx.GetSelectedObjects<CourseActor>().ToList();
+
+            //    if (actors.Count > 0)
+            //        _ = DeleteObjectsWithWarningPrompt(actors,
+            //            ctx, "Delete actors");
+            //}
+
+
+            CourseCommentHolder commentsArray = selectedArea.mCommentHolder;
+
+            CommentsView(commentsArray);
+
+            ImGui.End();
+        }
         private async Task AddComment()
         {
             var viewport = activeViewport;
@@ -1613,6 +1777,7 @@ namespace Fushigi.ui.widgets
             mSelectedLayer = null;
         }
 
+        #endregion
         private async Task AddSelectedLayer()
         {
             var ctx = areaScenes[selectedArea].EditContext;
@@ -1639,7 +1804,6 @@ namespace Fushigi.ui.widgets
 
             mSelectedLayer = null;
         }
-
 
         private void AddLayerFromFile()
         {
@@ -1680,6 +1844,191 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
 
+        #region Links
+
+        void DrawGlobalLinksPanel(ref bool continueDisplay, IPopupModalHost modalHost, CourseLink link, int linkNumb)
+        {
+            ImGui.SetNextWindowSize(new Vector2(550 * MainWindow.dpiScale, 250 * MainWindow.dpiScale), ImGuiCond.Once);
+
+            ImGui.Begin("Global Links Panel", ref continueDisplay, ImGuiWindowFlags.NoCollapse);
+
+            ImGui.AlignTextToFramePadding();
+            mSelectedGlobalLink = link;
+            if (mSelectedGlobalLink != null)
+                ImGui.Text("Link " + linkNumb);
+            else
+                continueDisplay = false;
+
+            if (ImGui.Button("Delete Link") || ImGui.IsKeyPressed(ImGuiKey.Delete))
+            {
+                course.RemoveGlobalLink(mSelectedGlobalLink);
+                mSelectedGlobalLink = null;
+                continueDisplay = false;
+            }
+
+            if (mSelectedGlobalLink != null)
+            {
+                ImGui.Separator();
+
+                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Source Hash"); ImGui.TableNextColumn();
+
+                        if (LevelViewport.setGlobalSrc)
+                        {
+                            mSelectedGlobalLink.mSource = LevelViewport.globalHash;
+                            LevelViewport.setGlobalSrc = false;
+                        }
+                        string srcHash = mSelectedGlobalLink.mSource.ToString();
+                        if (ImGui.InputText("##Source Hash", ref srcHash, 256, ImGuiInputTextFlags.CharsDecimal))
+                        {
+                            mSelectedGlobalLink.mSource = ulong.TryParse(srcHash, out var v) ? v : 0;
+
+                        }
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text("Destination Hash"); ImGui.TableNextColumn();
+
+                        if (LevelViewport.setGlobalDst)
+                        {
+                            mSelectedGlobalLink.mDest = LevelViewport.globalHash;
+                            LevelViewport.setGlobalDst = false;
+                        }
+                        string destHash = mSelectedGlobalLink.mDest.ToString();
+
+                        if (ImGui.InputText("##Dest Hash", ref destHash, 256, ImGuiInputTextFlags.CharsDecimal))
+                        {
+                            mSelectedGlobalLink.mDest = ulong.TryParse(destHash, out var v) ? v : 0;
+                        }
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text("Link Type"); ImGui.TableNextColumn();
+
+                        List<string> types = mLinkTypes.ToList();
+                        int idx = types.IndexOf(mSelectedGlobalLink.mLinkName);
+                        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
+                        if (ImGui.Combo("##Link Type", ref idx, mLinkTypes, mLinkTypes.Length))
+                        {
+                            mSelectedGlobalLink.mLinkName = mLinkTypes[idx];
+                        }
+
+                        ImGui.EndTable();
+                    }
+                }
+            }
+            ImGui.End();
+        }
+
+
+        private void RecursiveLinkFind(CourseArea area, CourseLinkHolder links,
+            CourseAreaEditContext editContext, float em, IEnumerable<CourseActor> linkList,
+            Hashtable parentActors)
+        {
+            foreach (CourseActor actor in linkList)
+            {
+                var destLinks = links.GetDestHashesFromSrc(actor.mHash);
+                ImGui.TableNextRow();
+
+                string actorName = actor.mPackName;
+
+                if (UserSettings.GetEnableTranslation())
+                    actorName = Translate.FetchTranslatedName(actorName);
+
+                string name = actor.mName;
+
+                ulong actorHash = actor.mHash;
+                bool isSelected = editContext.IsSelected(actor);
+
+                ImGui.TableSetColumnIndex(1);
+                ImGui.TextDisabled(name);
+
+                bool expanded = false;
+                bool isVisible = true;
+                float margin = 1.5f * em;
+                float headerHeight = 1.4f * em;
+                Vector2 cp = ImGui.GetCursorScreenPos();
+                ImGui.TableSetColumnIndex(0);
+
+                ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags.FramePadding | ImGuiTreeNodeFlags.OpenOnArrow;
+
+                if (isSelected)
+                    node_flags |= ImGuiTreeNodeFlags.Selected;
+
+                if (!parentActors.ContainsValue(actor) && destLinks.Count > 0)
+                    expanded = ImGui.TreeNodeEx($"{actorHash}", node_flags, actorName);
+                else
+                    expanded = ImGui.Selectable(actorName, isSelected);
+
+                if (ImGui.IsItemClicked())
+                {
+                    activeViewport.SelectedActor(actor);
+                }
+
+                if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+                {
+                    activeViewport.FrameSelectedActor(actor);
+                    selected ??= actor;
+                }
+                if (parentActors.Count == 0 && selected == actor)
+                {
+                    ImGui.SetScrollHereY();
+                    selected = null;
+                }
+
+                ImGui.BeginDisabled(!isVisible);
+
+                UpdateWonderVisibility(actor, destLinks, area);
+
+                if (expanded)
+                {
+                    if (!parentActors.ContainsValue(actor) && destLinks.Count > 0)
+                    {
+                        foreach (var link in destLinks)
+                        {
+                            if (ImGui.TreeNodeEx($"{link.Key}##{actorHash}", ImGuiTreeNodeFlags.FramePadding, link.Key))
+                            {
+                                var parents = new Hashtable(parentActors);
+                                parents[actorHash] = actor;
+                                var reLinks = area.GetActors().Where(x => link.Value.Contains(x.mHash));
+                                RecursiveLinkFind(area, links, editContext, em, reLinks, parents);
+                                ImGui.TreePop();
+                            }
+                        }
+                        ImGui.TreePop();
+                    }
+                }
+
+                ImGui.EndDisabled();
+            }
+            parentActors.Clear();
+        }
+
+        private void AreaLocalLinksView(CourseArea area)
+        {
+            var links = area.mLinkHolder;
+            var editContext = areaScenes[selectedArea].EditContext;
+
+            float em = ImGui.GetFrameHeight();
+            var wcMin = ImGui.GetCursorScreenPos() + new Vector2(0, ImGui.GetScrollY());
+            var wcMax = wcMin + ImGui.GetContentRegionAvail();
+
+            topLinks = area.GetActors()
+                .Where(x => links.mLinks.Any(y => y.mSource == x.mHash)).ToList();
+            if (ImGui.BeginTable("##Links", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+            {
+                CourseActor? selected = null;
+                RecursiveLinkFind(area, links, editContext, em, topLinks, []);
+                ImGui.EndTable();
+            }
+
+            ImGui.PopClipRect();
+
+            ImGui.EndChild();
+        }
         private void GlobalLinksPanel()
         {
             if (!Course.IsOneAreaCourse || course.GetAreaCount() > 1)
@@ -1708,7 +2057,6 @@ namespace Fushigi.ui.widgets
 
         }
 
-
         private void LocalLinksPanel()
         {
             ImGui.Begin("Local Links");
@@ -1720,97 +2068,30 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
 
-        private void RailLinksPanel()
+        private void CourseGlobalLinksView(CourseLinkHolder linkHolder)
         {
-            ImGui.Begin("Actor to Rail Links");
+            var editContext = areaScenes[selectedArea].EditContext;
 
-            var ctx = areaScenes[selectedArea].EditContext;
-            var rails = selectedArea.mRailHolder.mRails;
-            var actors = selectedArea.mActorHolder.mActors;
-            var railLinks = selectedArea.mRailLinksHolder.mLinks;
-
-            if (ImGui.BeginTable("actorRails", 4, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+            for (int i = 0; i < linkHolder.mLinks.Count; i++)
             {
-                ImGui.TableSetupColumn("Actor-Hash");
-                ImGui.TableSetupColumn("Rail");
-                ImGui.TableSetupColumn("Point");
-                ImGui.TableHeadersRow();
+                CourseLink link = linkHolder.mLinks[i];
 
-                for (int i = 0; i < railLinks.Count; i++)
+                ImGui.Selectable($"Link {i}", editContext.IsSelected(link));
+
+                if (ImGui.IsItemHovered() &&
+                    ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
                 {
-                    ImGui.PushID(i);
-                    ImGui.TableNextRow();
-                    ImGui.TableSetColumnIndex(0);
-                    CourseActorToRailLink link = railLinks[i];
+                    editContext.DeselectAll();
+                    editContext.Select(link);
 
-                    string hash = link.mSourceActor.ToString();
-                    int actorIndex = actors.FindIndex(x => x.mHash == link.mSourceActor);
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                    if (ImGui.InputText("##actor", ref hash, 100) &&
-                        ulong.TryParse(hash, out ulong hashInt))
-                        link.mSourceActor = hashInt;
-                    if (actorIndex == -1)
-                    {
-                        ImGui.SameLine();
-                        ImGui.TextDisabled("Invalid");
-                    }
-                    ImGui.TableNextColumn();
-                    int railIndex = rails.FindIndex(x => x.mHash == link.mDestRail);
-                    ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                    if (ImGui.BeginCombo("##rail", railIndex >= 0 ? ("rail " + railIndex) : "None"))
-                    {
-                        for (int iRail = 0; iRail < rails.Count; iRail++)
-                        {
-                            if (ImGui.Selectable("Rail " + iRail, railIndex == iRail))
-                                link.mDestRail = rails[iRail].mHash;
-                        }
-                        ImGui.EndCombo();
-                    }
-                    if (railIndex == -1)
-                    {
-                        ImGui.SameLine();
-                        ImGui.TextDisabled("Invalid");
-                    }
-                    ImGui.TableNextColumn();
-                    if (railIndex >= 0 && rails[railIndex].mPoints.Count > 0)
-                    {
-                        int pointIndex = rails[railIndex].mPoints.FindIndex(x => x.mHash == link.mDestPoint);
-
-                        if (pointIndex == -1)
-                            pointIndex = 0;
-
-                        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                        if (ImGui.InputInt("##railpoint", ref pointIndex))
-                            pointIndex = Math.Clamp(pointIndex, 0, rails[railIndex].mPoints.Count - 1);
-
-                        link.mDestPoint = rails[railIndex].mPoints[pointIndex].mHash;
-                    }
-
-                    ImGui.TableNextColumn();
-                    if (ImGui.Button("Delete", new Vector2(ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ScrollbarSize, 0)))
-                    {
-                        ctx.DeleteRailLink(link);
-                        i--;
-                    }
-
-                    ImGui.PopID();
+                    showGlobalLinkWindow = true;
+                    linkNumb = i;
+                    gLink = link;
                 }
-
-                ImGui.EndTable();
             }
-
-            float width = ImGui.GetItemRectMax().X - ImGui.GetCursorScreenPos().X;
-
-            ImGui.Dummy(new Vector2(0, ImGui.GetFrameHeight() * 0.5f));
-
-            if (ImGui.Button("Add", new Vector2(width, ImGui.GetFrameHeight() * 1.5f)))
-            {
-                ctx.AddRailLink(new CourseActorToRailLink("Reference"));
-            }
-
-            ImGui.End();
         }
 
+        #endregion
         private void SimultaneousGroupPanel()
         {
             ImGui.Begin("Simultaneous Groups");
@@ -1958,148 +2239,136 @@ namespace Fushigi.ui.widgets
         }
         private void SelectedCursor()
         {     
-                var cursor = activeViewport.cursor;
+            var cursor = activeViewport.cursor;
 
-                if (ImGui.IsKeyPressed(ImGuiKey.Delete))
-                    activeViewport.cursor = null;
+            if (ImGui.IsKeyPressed(ImGuiKey.Delete))
+                activeViewport.cursor = null;
 
-                if (cursor == null)
-                    return;
+            if (cursor == null)
+                return;
 
-                ImGui.Text("Select both an actor along with the cursor.");
-                ImGui.Text("You can also press 'R' to pivot.");
+            ImGui.Text("Select both an actor along with the cursor.");
+            ImGui.Text("You can also press 'R' to pivot.");
 
-                ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Dummy(new Vector2(0, 10));
 
-                //if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count == 1)
-                if (true)
+            ImGui.Text("Actor Ring Generator");
+            ImGui.Separator();
+
+            if (mEditContext.GetObjectCountOfType<CourseActor>() == 1)
+                pickActor = mEditContext.GetFirstObjectOfType<CourseActor>();
+
+            var pickActorText = "Select an actor";
+
+            ImGui.Text("Select Actor:");
+            if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
+            {
+                Task.Run(async () =>
                 {
-                    //Credits to https://github.com/aurelionshole/aurelionshole.github.io for ActorRing code
+                    pickActor = await ActorPicker();
+                });
+            }
 
-                    //CourseActor pickActor = mEditContext.GetSelectedObjects<CourseActor>().ToArray()[0];
-                    ImGui.Text("Actor Ring Generator");
-                    ImGui.Separator();
+            ImGui.SameLine();
 
-                    ImGui.Text("Points:");
-                    if (ImGui.InputInt($"##Count", ref count, 1))
-                        count = Math.Clamp(count, 1, 360);
+            if (pickActor != null)
+                pickActorText = pickActor.mPackName;
 
-                    ImGui.Text("Offset:");
-                    ImGui.InputFloat($"##Offset", ref offset, 1);
+            ImGui.InputText("##Ring Actor", ref pickActorText, 256, ImGuiInputTextFlags.ReadOnly);
 
-                    ImGui.Text("Radius:");
-                    ImGui.InputFloat($"##Radius", ref radius, 1);
+            //Credits to https://github.com/aurelionshole/aurelionshole.github.io for Actor Ring code
 
-                    ImGui.Dummy(new Vector2(0, 10));
-                    ImGui.Checkbox("Rotate Actors", ref doRotate);
-             
-                    if (ImGui.Button(IconUtil.ICON_EYE_DROPPER))
-                    {
-                        ImGui.SetWindowFocus(selectedArea.GetName());
-                        Task.Run(async () =>
-                        {
-                            bypassSelection = true;
-                            var (pickedActor, _) = await PickActor();
-                            if (pickedActor is null)
-                                return;
+            ImGui.Text("Points:");
+            if (ImGui.InputInt($"##Count", ref count, 1))
+                count = Math.Clamp(count, 1, 360);
 
-                            pickActor = pickedActor;
-                            Console.WriteLine(pickActor);
-                        });
-                    }
+            ImGui.Text("Offset:");
+            ImGui.InputFloat($"##Offset", ref offset, 1);
 
+            ImGui.Text("Radius:");
+            ImGui.InputFloat($"##Radius", ref radius, 1);
 
-                    ImGui.SameLine();
-                    if (mEditContext.GetObjectCountOfType<CourseActor>() == 1)
-                    pickActor = mEditContext.GetFirstObjectOfType<CourseActor>();
-
-
-                var pickActorText = "Select an actor";
-
-                    if(pickActor != null)
-                    {
-                        pickActorText = pickActor.mPackName;
-                    }
-
-                        ImGui.InputText("##Area Hash", ref pickActorText, 256, ImGuiInputTextFlags.ReadOnly);
-
- 
-                    if (count != 0 && pickActor != null)
-                    {
-                        ImGui.SetItemTooltip("Replace");
-
-                        float ringAngle = 360 / count;
-                        float angle = offset % ringAngle;
-                        if (ImGui.Button("Create Actors"))
-                        {
-                            var batchAction = mEditContext.BeginBatchAction();
-                            CourseActor newActor = null;
-                            for (int i = 0; i < count; i++)
-                            {
-                                newActor = new CourseActor(pickActor.mPackName, selectedArea.mRootHash, pickActor.mLayer);
-                                newActor.mTranslation.X = (float)(cursor.mTranslate.X - radius * Math.Sin(angle * (Math.PI / 180)));
-                                newActor.mTranslation.Y = (float)(cursor.mTranslate.Y + radius * Math.Cos(angle * (Math.PI / 180)));
-                                if (doRotate)
-                                    newActor.mRotation.Z = angle * (MathF.PI / 180f);
-
-                                var j = 0;
-                                do
-                                {
-                                    j++;
-                                } while (selectedArea.GetActors().Any(x => x.mName == $"{newActor.mPackName}{j}"));
-                                newActor.mName = $"{newActor.mPackName}{j}";
-
-                                mEditContext.AddActor(newActor);
-                                angle = (angle + ringAngle) % 360f;
-                            }
-                            batchAction.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Placed Actor Ring");
-                        }
-                    }
-                }
-
-                if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count >= 1)
+            ImGui.Dummy(new Vector2(0, 10));
+            ImGui.Checkbox("Rotate Actors", ref doRotate);
+            
+            if (count != 0 && pickActor != null)
+            {
+                float ringAngle = 360 / count;
+                float angle = offset % ringAngle;
+                if (ImGui.Button("Create Actors"))
                 {
-                    ImGui.Dummy(new Vector2(0, 50));
-                    bool run = false;
-
-                    string pivotText = cursor.delta.ToString();
-
-                    ImGui.Text("Pivot Actors");
-                    ImGui.Separator();
-
-                    ImGui.Text("Pivot Angle: Enter angle in degrees");
-                    if (ImGui.InputText("##Pivot", ref pivotText, 32))
+                    var batchAction = mEditContext.BeginBatchAction();
+                    CourseActor newActor = null;
+                    for (int i = 0; i < count; i++)
                     {
-                        if (pivotText == "")
-                            cursor.delta = 0;
-                        else if (float.TryParse(pivotText, out float value))
-                            cursor.delta = value;
-  
-                        run = true;
-                    }
+                        newActor = new CourseActor(pickActor.mPackName, selectedArea.mRootHash, pickActor.mLayer);
+                        newActor.mTranslation.X = (float)(cursor.mTranslate.X - radius * Math.Sin(angle * (Math.PI / 180)));
+                        newActor.mTranslation.Y = (float)(cursor.mTranslate.Y + radius * Math.Cos(angle * (Math.PI / 180)));
 
-                    if (previousDelta != cursor.delta && run)
-                    {
-                        float deltaAngle = cursor.delta - previousDelta;
-                        activeViewport.applyRotation = true;
-                        activeViewport.pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
-                        foreach (CourseActor actor in activeViewport.pivotedActors)
+                        if (doRotate)
+                            newActor.mRotation.Z = angle * (MathF.PI / 180f);
+
+                        var j = 0;
+                        do
                         {
-                            actor.mRotation = actor.mStartingRot;
-                            actor.mTranslation = actor.mStartingTrans;
+                            j++;
+                        } while (selectedArea.GetActors().Any(x => x.mName == $"{newActor.mPackName}{j}"));
 
-                            Vector2 delta = ImGui.GetIO().MouseDelta;
-                            System.Numerics.Vector3 cursorTrans = cursor.mTranslate;
-                            actor.mRotation.Z += cursor.delta * (MathF.PI / 180f);
-                            actor.mTranslation = cursorTrans + System.Numerics.Vector3.Transform(actor.mTranslation - cursorTrans, Matrix4x4.CreateRotationZ(cursor.delta * (MathF.PI / 180f)));
-                            float angle = cursor.delta * (MathF.PI / 180f);
-                        }
-                        previousDelta = cursor.delta;
-                        return;
+                        newActor.mName = $"{newActor.mPackName}{j}";
+
+                        mEditContext.AddActor(newActor);
+                        angle = (angle + ringAngle) % 360f;
                     }
+                    batchAction.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Placed Actor Ring");
                 }
             }
-        
+
+            if (mEditContext.GetSelectedObjects<CourseActor>().ToList().Count >= 1)
+            {
+                ImGui.Dummy(new Vector2(0, 50));
+                bool run = false;
+
+                string pivotText = cursor.delta.ToString();
+
+                ImGui.Text("Pivot Actors");
+                ImGui.Separator();
+
+                ImGui.Text("Pivot Angle: Enter angle in degrees");
+                if (ImGui.InputText("##Pivot", ref pivotText, 32))
+                {
+                    if (pivotText == "")
+                        cursor.delta = 0;
+                    else if (float.TryParse(pivotText, out float value))
+                        cursor.delta = value;
+  
+                    run = true;
+                }
+
+                if (previousDelta != cursor.delta && run)
+                {
+                    float deltaAngle = cursor.delta - previousDelta;
+                    activeViewport.applyRotation = true;
+                    activeViewport.pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
+                    foreach (CourseActor actor in activeViewport.pivotedActors)
+                    {
+                        actor.mRotation = actor.mStartingRot;
+                        actor.mTranslation = actor.mStartingTrans;
+
+                        Vector2 delta = ImGui.GetIO().MouseDelta;
+                        System.Numerics.Vector3 cursorTrans = cursor.mTranslate;
+                        actor.mRotation.Z += cursor.delta * (MathF.PI / 180f);
+                        actor.mTranslation = cursorTrans + System.Numerics.Vector3.Transform(actor.mTranslation - 
+                                             cursorTrans, Matrix4x4.CreateRotationZ(cursor.delta * (MathF.PI / 180f)));
+                        float angle = cursor.delta * (MathF.PI / 180f);
+                    }
+                    previousDelta = cursor.delta;
+                    return;
+                }
+            }
+        }
+
+
+        #region Selection Parameters
         private void SelectionParameterPanel()
         {
             var editContext = areaScenes[selectedArea].EditContext;
@@ -2115,11 +2384,500 @@ namespace Fushigi.ui.widgets
 
             if (mEditContext.IsAnySelected<FushigiCursor>())
                 SelectedCursor();
+            else if (editContext.IsSingleObjectSelected(out CourseActor? mSelectedActor) || startedPicker)
+                SelectedActor(mSelectedActor);
+            else if (editContext.IsSingleObjectSelected(out CourseUnit? mSelectedUnit))
+                SelectedUnit(mSelectedUnit);
+            else if (editContext.IsSingleObjectSelected(out CourseRail? mSelectedRail))
+                SelectedRail(mSelectedRail);
+            else if (editContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint? mSelectedRailPoint) ||
+                     editContext.IsSingleObjectSelected(out CourseRail.CourseRailPointControl? mSelectedRailPointCont))
+                SelectedRailPoint(mSelectedRailPoint);
+            else if (editContext.GetObjectCountOfType<CourseActor>() > 1)
+                SelectedMultiple();
             else
                 NoneSelected();
 
-            if (editContext.IsSingleObjectSelected(out CourseActor? mSelectedActor) || startedPicker)
+            if (status)
+                ImGui.End();
+        }
+
+        private void SelectedMultiple()
+        {
+            var actors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
+            ImGui.AlignTextToFramePadding();
+            ImGui.SameLine();
+            if (ImGui.Button($"Paste Source Links") && mCopiedLinks.Count > 0)
             {
+                var total = 0;
+                var batch = mEditContext.BeginBatchAction();
+                foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
+                {
+                    for (int i = 0; i < hashArray.Count; i++)
+                    {
+                        var link = new CourseLink(linkName)
+                        {
+                            mSource = 0,
+                            mDest = 0
+                        };
+                        if (actors.Length > 1)
+                        {
+                            foreach (CourseActor actor in actors)
+                            {
+                                link = new CourseLink(linkName)
+                                {
+                                    mSource = actor.mHash,
+                                    mDest = hashArray[i]
+                                };
+                                if (!selectedArea.mLinkHolder.mLinks.Contains(link))
+                                {
+                                    mEditContext.AddLink(link);
+                                    total++;
+                                }
+                            }
+                        }
+                        if (!selectedArea.mLinkHolder.mLinks.Contains(link))
+                        {
+                            mEditContext.AddLink(link);
+                            total++;
+                        }
+                    }
+                }
+                batch.Commit($"{IconUtil.ICON_PASTE} Paste {total} Link{(total == 1 ? "" : "s")}");
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button($"Paste Destination Links") && mCopiedLinks.Count > 0)
+            {
+                var total = 0;
+                var batch = mEditContext.BeginBatchAction();
+                foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
+                {
+                    for (int i = 0; i < hashArray.Count; i++)
+                    {
+                        var link = new CourseLink(linkName)
+                        {
+                            mSource = 0,
+                            mDest = 0
+                        };
+                        if (actors.Length > 1)
+                        {
+                            foreach (CourseActor actor in actors)
+                            {
+                                link = new CourseLink(linkName)
+                                {
+                                    mSource = hashArray[i],
+                                    mDest = actor.mHash
+                                };
+                                if (!selectedArea.mLinkHolder.mLinks.Contains(link))
+                                {
+                                    mEditContext.AddLink(link);
+                                    total++;
+                                }
+                            }
+                        }
+                        if (!selectedArea.mLinkHolder.mLinks.Contains(link))
+                        {
+                            mEditContext.AddLink(link);
+                            total++;
+                        }
+                    }
+                }
+                batch.Commit($"{IconUtil.ICON_CLIPBOARD_CHECK} Paste {total} Link{(total == 1 ? "" : "s")}");
+            }
+            ImGui.SetItemTooltip("Paste Source Links");
+
+            ImGui.Text("Layer");
+            ImGui.TableNextColumn();
+            ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+
+            if (ImGui.BeginCombo("##Dropdown", "Select Layer"))
+            {
+                foreach (var layer in mLayersVisibility.Keys.ToArray().ToImmutableList())
+                {
+                    if (ImGui.Selectable(layer))
+                    {
+                        //item is selected
+                        //Console.WriteLine("Changing " + mSelectedActor.mName + "'s layer from " + mSelectedActor.mLayer + " to " + layer + ".");
+                        foreach (var actor in actors)
+                            actor.mLayer = layer;
+                    }
+                }
+            }
+            string text = "Multiple Actors Selected";
+            var windowWidth = ImGui.GetWindowSize().X;
+            var textWidth = ImGui.CalcTextSize(text).X;
+
+            var windowHight = ImGui.GetWindowSize().Y;
+            var textHeight = ImGui.CalcTextSize(text).Y;
+
+            ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
+            ImGui.SetCursorPosY((windowHight - textHeight) * 0.5f);
+            ImGui.BeginDisabled();
+            ImGui.Text(text);
+            ImGui.EndDisabled();
+        }
+        private void SelectedRailPoint(CourseRail.CourseRailPoint mSelectedRailPoint)
+        {
+            if (mEditContext.IsSingleObjectSelected(out CourseRail.CourseRailPointControl? cont))
+                mSelectedRailPoint ??= cont.point;
+            ImGui.AlignTextToFramePadding();
+
+            CourseRailHolder railArray = selectedArea.mRailHolder;
+            var railIndex = CourseRail.findRailNum(railArray, mSelectedRailPoint);
+            var childIndex = CourseRail.findPointNum(railArray, mSelectedRailPoint);
+            ImGui.Text($"Rail Point {childIndex} from Rail {railIndex}");
+            ImGui.NewLine();
+            ImGui.Separator();
+
+            if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.Text("Hash"); ImGui.TableNextColumn();
+                    string hash = mSelectedRailPoint.mHash.ToString();
+                    if (ImGui.InputText("##Hash", ref hash, 256, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue))
+                    {
+                        mSelectedRailPoint.mHash = Convert.ToUInt64(hash);
+                    }
+
+                    ImGui.TableNextColumn();
+                    ImGui.AlignTextToFramePadding();
+                    ImGui.Text("Translation");
+
+                    ImGui.TableNextColumn();
+
+                    ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslation, 0.25f);
+
+
+                    ImGui.TableNextColumn();
+                    ImGui.AlignTextToFramePadding();
+                    ImGui.Text("Curve Control");
+
+                    ImGui.TableNextColumn();
+
+                    bool priorCurve = mSelectedRailPoint.mIsCurve;
+                    ImGui.Checkbox("##Curved", ref mSelectedRailPoint.mIsCurve);
+
+                    if (priorCurve != mSelectedRailPoint.mIsCurve)
+                        activeViewport.undoPointToggleMethod(mSelectedRailPoint, priorCurve);
+
+                    ImGui.SameLine();
+
+                    ImGui.BeginDisabled(!mSelectedRailPoint.mIsCurve);
+
+                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+                    ImGui.DragFloat3("##Control", ref mSelectedRailPoint.mControl.mTranslation, 0.25f);
+                    //if (mSelectedRailPoint.mControl.mTranslate != mSelectedRailPoint.mControl.mStartingTrans && !ImGui.IsMouseDragging(ImGuiMouseButton.Left) && mSelectedRailPoint.mIsCurve)
+                    //{
+                    //    editContext.CommitAction(new PropertyFieldsSetUndo(
+                    //       mSelectedRailPoint.mControl,
+                    //        [("mTranslate", mSelectedRailPoint.mControl.GetFieldValue("mStartingTrans"))],
+                    //        $"{IconUtil.ICON_ARROWS_ALT} Move Rail Point Control"));
+                    //}
+
+                    ImGui.PopItemWidth();
+
+                    ImGui.EndDisabled();
+
+                    ImGui.EndTable();
+                }
+            }
+
+            if (ImGui.CollapsingHeader("Dynamic Properties", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    foreach (KeyValuePair<string, object> param in mSelectedRailPoint.mParameters)
+                    {
+                        string type = param.Value.GetType().ToString();
+                        ImGui.Text(param.Key);
+                        ImGui.TableNextColumn();
+
+                        switch (type)
+                        {
+                            case "System.UInt32":
+                                int uint_val = Convert.ToInt32(param.Value);
+                                if (ImGui.InputInt($"##{param.Key}", ref uint_val))
+                                {
+                                    mSelectedRailPoint.mParameters[param.Key] = Convert.ToUInt32(uint_val);
+                                }
+                                break;
+                            case "System.Int32":
+                                int int_val = (int)param.Value;
+                                if (ImGui.InputInt($"##{param.Key}", ref int_val))
+                                {
+                                    mSelectedRailPoint.mParameters[param.Key] = int_val;
+                                }
+                                break;
+                            case "System.Single":
+                                float float_val = (float)param.Value;
+                                if (ImGui.InputFloat($"##{param.Key}", ref float_val))
+                                {
+                                    mSelectedRailPoint.mParameters[param.Key] = float_val;
+                                }
+                                break;
+                            case "System.Boolean":
+                                bool bool_val = (bool)param.Value;
+                                if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
+                                {
+                                    mSelectedRailPoint.mParameters[param.Key] = bool_val;
+                                }
+                                break;
+                        }
+                        ImGui.TableNextColumn();
+                    }
+                    ImGui.EndTable();
+                }
+            }
+        }
+        private void SelectedUnit(CourseUnit mSelectedUnit)
+        {
+            ImGui.AlignTextToFramePadding();
+            ImGui.Text($"Selected BG Unit");
+
+            ImGui.Separator();
+
+            if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.Text("Model Type"); ImGui.TableNextColumn();
+
+                    ImGui.Combo("##mModelType", ref Unsafe.As<CourseUnit.ModelType, int>(ref mSelectedUnit.mModelType),
+                        CourseUnit.ModelTypeNames, CourseUnit.ModelTypeNames.Length);
+
+                    ImGui.TableNextColumn();
+
+                    ImGui.Text("Skin Division"); ImGui.TableNextColumn();
+                    ImGui.Combo("##SkinDivision", ref Unsafe.As<CourseUnit.SkinDivision, int>(ref mSelectedUnit.mSkinDivision),
+                        CourseUnit.SkinDivisionNames, CourseUnit.SkinDivisionNames.Length);
+
+                    ImGui.EndTable();
+                }
+            }
+
+            if (mSelectedUnit.mModelType is CourseUnit.ModelType.SemiSolid)
+            {
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+
+                if (ImGui.Button("Remove all Belts"))
+                {
+                    var batchAction = mEditContext.BeginBatchAction();
+
+                    for (int i = mSelectedUnit.mBeltRails.Count - 1; i >= 0; i--)
+                        mEditContext.DeleteBeltRail(mSelectedUnit, mSelectedUnit.mBeltRails[i]);
+
+                    batchAction.Commit("Remove all Belts from TileUnit");
+                }
+
+                ImGui.SameLine();
+
+                if (ImGui.Button("Generate Belts"))
+                {
+                    var batchAction = mEditContext.BeginBatchAction();
+
+                    for (int i = mSelectedUnit.mBeltRails.Count - 1; i >= 0; i--)
+                        mEditContext.DeleteBeltRail(mSelectedUnit, mSelectedUnit.mBeltRails[i]);
+
+                    void ProcessRail(BGUnitRail rail)
+                    {
+                        if (rail.Points.Count <= 1)
+                            return;
+
+                        BGUnitRail? firstBeltRail = null;
+                        BGUnitRail? currentBeltRail = null;
+
+                        var lastPoint = new NumVec(float.NaN);
+
+                        for (int i = 0; i < rail.Points.Count; i++)
+                        {
+                            var point0 = rail.Points[i].Position;
+                            var point1 = rail.Points.GetWrapped(i + 1).Position;
+
+                            if (point0.X >= point1.X)
+                                continue;
+
+                            if (point0 != lastPoint)
+                            {
+                                if (currentBeltRail is not null)
+                                    mEditContext.AddBeltRail(mSelectedUnit, currentBeltRail);
+
+                                currentBeltRail = new BGUnitRail(mSelectedUnit);
+                                currentBeltRail.IsClosed = false;
+                                currentBeltRail.Points.Add(new BGUnitRail.RailPoint(currentBeltRail, point0));
+                                firstBeltRail ??= currentBeltRail;
+                            }
+
+                            currentBeltRail!.Points.Add(new BGUnitRail.RailPoint(currentBeltRail, point1));
+                            lastPoint = point1;
+                        }
+
+                        var lastBeltRail = currentBeltRail;
+
+                        if (firstBeltRail is not null && lastBeltRail is not null &&
+                            firstBeltRail != lastBeltRail &&
+                            lastBeltRail.Points[^1].Position == firstBeltRail.Points[0].Position)
+                        {
+                            //connect first and last rail
+
+                            for (int i = 0; i < lastBeltRail.Points.Count - 1; i++)
+                            {
+                                var position = lastBeltRail.Points[i].Position;
+                                firstBeltRail.Points.Insert(i, new BGUnitRail.RailPoint(firstBeltRail, position));
+                            }
+                        }
+                        else if (lastBeltRail is not null)
+                            mEditContext.AddBeltRail(mSelectedUnit, lastBeltRail);
+                    }
+
+                    foreach (var wall in mSelectedUnit.Walls)
+                    {
+                        ProcessRail(wall.ExternalRail);
+
+                        foreach (var internalRail in wall.InternalRails)
+                            ProcessRail(internalRail);
+                    }
+
+                    batchAction.Commit("Add Belts");
+                }
+            }
+        }
+
+        private void SelectedRail(CourseRail mSelectedRail)
+        {
+            ImGui.AlignTextToFramePadding();
+            ImGui.Text($"Selected {mSelectedRail.mType} Rail");
+            ImGui.NewLine();
+            ImGui.Separator();
+
+            if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+
+                    ImGui.Text("Rail Type"); ImGui.TableNextColumn();
+                    if (ImGui.BeginCombo("##Edit Rail Type", mSelectedRail.mType))
+                    {
+                        foreach (string type in RailTypes)
+                        {
+                            ImGui.Selectable(type);
+
+                            if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(0))
+                                mSelectedRail.mType = type;
+                        }
+
+                        ImGui.EndCombo();
+                    }
+                    ImGui.TableNextColumn();
+                    ImGui.Text("Hash"); ImGui.TableNextColumn();
+                    string hash = mSelectedRail.mHash.ToString();
+                    if (ImGui.InputText("##Hash", ref hash, 256, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue))
+                    {
+                        mSelectedRail.mHash = Convert.ToUInt64(hash);
+                    }
+
+                    ImGui.TableNextColumn();
+                    ImGui.Text("IsClosed");
+                    ImGui.TableNextColumn();
+                    ImGui.Checkbox("##IsClosed", ref mSelectedRail.mIsClosed);
+
+                    ImGui.EndTable();
+                }
+            }
+
+            if (ImGui.CollapsingHeader("Dynamic Properties", ImGuiTreeNodeFlags.DefaultOpen))
+            {
+                if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+                    foreach (KeyValuePair<string, object> param in mSelectedRail.mParameters)
+                    {
+                        string type = param.Value.GetType().ToString();
+                        ImGui.Text(param.Key);
+                        ImGui.TableNextColumn();
+
+                        switch (type)
+                        {
+                            case "System.Int32":
+                                int int_val = (int)param.Value;
+                                if (ImGui.InputInt($"##{param.Key}", ref int_val))
+                                {
+                                    mSelectedRail.mParameters[param.Key] = int_val;
+                                }
+                                break;
+                            case "System.Boolean":
+                                bool bool_val = (bool)param.Value;
+                                if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
+                                {
+                                    mSelectedRail.mParameters[param.Key] = bool_val;
+                                }
+                                break;
+                        }
+                        ImGui.TableNextColumn();
+                    }
+                    ImGui.EndTable();
+                }
+            }
+        }
+        private void SelectedUnitRail(BGUnitRail mSelectedUnitRail)
+        {
+           
+                ImGui.AlignTextToFramePadding();
+                ImGui.Text($"Selected BG Unit Rail");
+
+                ImGui.Separator();
+
+                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("IsClosed"); ImGui.TableNextColumn();
+                        if (ImGui.Checkbox("##IsClosed", ref mSelectedUnitRail.IsClosed))
+                            mSelectedUnitRail.mCourseUnit.GenerateTileSubUnits();
+
+                        ImGui.TableNextColumn();
+                        //Depth editing for bg unit. All points share the same depth, so batch edit the Z point
+                        float depth = mSelectedUnitRail.Points.Count == 0 ?
+                            mSelectedUnitRail.mCourseUnit.mModelType switch
+                            {
+                                CourseUnit.ModelType.Solid => 0,
+                                CourseUnit.ModelType.SemiSolid => -2,
+                                CourseUnit.ModelType.NoCollision => -4,
+                                CourseUnit.ModelType.Bridge => -2,
+                                _ => 0
+                            }
+                            : mSelectedUnitRail.Points[0].Position.Z;
+
+                        ImGui.Text("Z Depth"); ImGui.TableNextColumn();
+                        if (ImGui.DragFloat("##Depth", ref depth, 0.1f))
+                        {
+                            //Update depth to all points
+                            foreach (var p in mSelectedUnitRail.Points)
+                                p.Position = new System.Numerics.Vector3(p.Position.X, p.Position.Y, depth);
+                            mSelectedUnitRail.mCourseUnit.GenerateTileSubUnits();
+                        }
+
+                        ImGui.EndTable();
+                    }
+                }
+        }
+        private void SelectedActor(CourseActor mSelectedActor)
+        {
+
                 if (mSelectedActor == null && startedPicker)
                 {
                     mSelectedActor = globalSource;
@@ -2180,6 +2938,7 @@ namespace Fushigi.ui.widgets
 
                     ImGui.TableNextColumn();
                     ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+
                     if (ImGui.InputText($"##{name}", ref name, 512, ImGuiInputTextFlags.EnterReturnsTrue))
                     {
                         mSelectedActor.mName = name;
@@ -2253,7 +3012,7 @@ namespace Fushigi.ui.widgets
                                             mSource = mSelectedActor.mHash,
                                             mDest = pickedDest.mHash
                                         };
-                                        editContext.AddLink(link);
+                                        mEditContext.AddLink(link);
                                     } while ((modifier & KeyboardModifier.Shift) > 0);
                                 });
                             }
@@ -2272,7 +3031,7 @@ namespace Fushigi.ui.widgets
                     if (ImGui.Button($"{IconUtil.ICON_PASTE}") && mCopiedLinks.Count > 0)
                     {
                         var total = 0;
-                        var batch = editContext.BeginBatchAction();
+                        var batch = mEditContext.BeginBatchAction();
                         foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
                         {
                             for (int i = 0; i < hashArray.Count; i++)
@@ -2284,7 +3043,7 @@ namespace Fushigi.ui.widgets
                                 };
                                 if (!selectedArea.mLinkHolder.mLinks.Contains(link))
                                 {
-                                    editContext.AddLink(link);
+                                    mEditContext.AddLink(link);
                                     total++;
                                 }
                             }
@@ -2387,7 +3146,7 @@ namespace Fushigi.ui.widgets
                                     ImGui.SetItemTooltip("Delete Link");
 
                                     if (clicked)
-                                        editContext.DeleteLink(linkName, mSelectedActor.mHash, hashArray[i]);
+                                        mEditContext.DeleteLink(linkName, mSelectedActor.mHash, hashArray[i]);
 
                                     ImGui.PopID();
                                 }
@@ -2427,7 +3186,7 @@ namespace Fushigi.ui.widgets
                                             mSource = pickedDest.mHash,
                                             mDest = mSelectedActor.mHash
                                         };
-                                        editContext.AddLink(link);
+                                        mEditContext.AddLink(link);
                                     } while ((modifier & KeyboardModifier.Shift) > 0);
                                 });
                             }
@@ -2447,7 +3206,7 @@ namespace Fushigi.ui.widgets
                     if (ImGui.Button($"{IconUtil.ICON_PASTE}") && mCopiedLinks.Count > 0)
                     {
                         var total = 0;
-                        var batch = editContext.BeginBatchAction();
+                        var batch = mEditContext.BeginBatchAction();
 
                         foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
                         {
@@ -2461,7 +3220,7 @@ namespace Fushigi.ui.widgets
 
                                 if (!selectedArea.mLinkHolder.mLinks.Contains(link))
                                 {
-                                    editContext.AddLink(link);
+                                    mEditContext.AddLink(link);
                                     total++;
                                 }
                             }
@@ -2531,7 +3290,7 @@ namespace Fushigi.ui.widgets
                                     ImGui.SetItemTooltip("Delete Link");
 
                                     if (clicked)
-                                        editContext.DeleteLink(linkName, hashArray[i], mSelectedActor.mHash);
+                                        mEditContext.DeleteLink(linkName, hashArray[i], mSelectedActor.mHash);
 
                                     ImGui.PopID();
                                 }
@@ -2873,7 +3632,7 @@ namespace Fushigi.ui.widgets
                     if (propertyCapture.capture.TryGetRevertable(out var revertable,
                         names => $"{IconUtil.ICON_WRENCH} Change {string.Join(", ", names)}"))
                     {
-                        editContext.CommitAction(revertable);
+                        mEditContext.CommitAction(revertable);
                         needsRecapture = true;
                     }
                 }
@@ -2887,484 +3646,7 @@ namespace Fushigi.ui.widgets
 
                 propertyCapture.capture.MakeCheckpoint();
             }
-            else if (editContext.IsSingleObjectSelected(out CourseUnit? mSelectedUnit))
-            {
-                ImGui.AlignTextToFramePadding();
-                ImGui.Text($"Selected BG Unit");
 
-                ImGui.Separator();
-
-                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Model Type"); ImGui.TableNextColumn();
-
-                        ImGui.Combo("##mModelType", ref Unsafe.As<CourseUnit.ModelType, int>(ref mSelectedUnit.mModelType),
-                            CourseUnit.ModelTypeNames, CourseUnit.ModelTypeNames.Length);
-
-                        ImGui.TableNextColumn();
-
-                        ImGui.Text("Skin Division"); ImGui.TableNextColumn();
-                        ImGui.Combo("##SkinDivision", ref Unsafe.As<CourseUnit.SkinDivision, int>(ref mSelectedUnit.mSkinDivision),
-                            CourseUnit.SkinDivisionNames, CourseUnit.SkinDivisionNames.Length);
-
-                        ImGui.EndTable();
-                    }
-                }
-
-                if (mSelectedUnit.mModelType is CourseUnit.ModelType.SemiSolid)
-                {
-                    ImGui.Spacing();
-                    ImGui.Separator();
-                    ImGui.Spacing();
-
-                    if (ImGui.Button("Remove all Belts"))
-                    {
-                        var batchAction = editContext.BeginBatchAction();
-
-                        for (int i = mSelectedUnit.mBeltRails.Count - 1; i >= 0; i--)
-                            editContext.DeleteBeltRail(mSelectedUnit, mSelectedUnit.mBeltRails[i]);
-
-                        batchAction.Commit("Remove all Belts from TileUnit");
-                    }
-
-                    ImGui.SameLine();
-
-                    if (ImGui.Button("Generate Belts"))
-                    {
-                        var batchAction = editContext.BeginBatchAction();
-
-                        for (int i = mSelectedUnit.mBeltRails.Count - 1; i >= 0; i--)
-                            editContext.DeleteBeltRail(mSelectedUnit, mSelectedUnit.mBeltRails[i]);
-
-                        void ProcessRail(BGUnitRail rail)
-                        {
-                            if (rail.Points.Count <= 1)
-                                return;
-
-                            BGUnitRail? firstBeltRail = null;
-                            BGUnitRail? currentBeltRail = null;
-
-                            var lastPoint = new NumVec(float.NaN);
-
-                            for (int i = 0; i < rail.Points.Count; i++)
-                            {
-                                var point0 = rail.Points[i].Position;
-                                var point1 = rail.Points.GetWrapped(i + 1).Position;
-
-                                if (point0.X >= point1.X)
-                                    continue;
-
-                                if (point0 != lastPoint)
-                                {
-                                    if (currentBeltRail is not null)
-                                        editContext.AddBeltRail(mSelectedUnit, currentBeltRail);
-
-                                    currentBeltRail = new BGUnitRail(mSelectedUnit);
-                                    currentBeltRail.IsClosed = false;
-                                    currentBeltRail.Points.Add(new BGUnitRail.RailPoint(currentBeltRail, point0));
-                                    firstBeltRail ??= currentBeltRail;
-                                }
-
-                                currentBeltRail!.Points.Add(new BGUnitRail.RailPoint(currentBeltRail, point1));
-                                lastPoint = point1;
-                            }
-
-                            var lastBeltRail = currentBeltRail;
-
-                            if (firstBeltRail is not null && lastBeltRail is not null &&
-                                firstBeltRail != lastBeltRail &&
-                                lastBeltRail.Points[^1].Position == firstBeltRail.Points[0].Position)
-                            {
-                                //connect first and last rail
-
-                                for (int i = 0; i < lastBeltRail.Points.Count - 1; i++)
-                                {
-                                    var position = lastBeltRail.Points[i].Position;
-                                    firstBeltRail.Points.Insert(i, new BGUnitRail.RailPoint(firstBeltRail, position));
-                                }
-                            }
-                            else if (lastBeltRail is not null)
-                                editContext.AddBeltRail(mSelectedUnit, lastBeltRail);
-                        }
-
-                        foreach (var wall in mSelectedUnit.Walls)
-                        {
-                            ProcessRail(wall.ExternalRail);
-
-                            foreach (var internalRail in wall.InternalRails)
-                                ProcessRail(internalRail);
-                        }
-
-                        batchAction.Commit("Add Belts");
-                    }
-                }
-            }
-            else if (editContext.IsSingleObjectSelected(out BGUnitRail? mSelectedUnitRail))
-            {
-                ImGui.AlignTextToFramePadding();
-                ImGui.Text($"Selected BG Unit Rail");
-
-                ImGui.Separator();
-
-                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("IsClosed"); ImGui.TableNextColumn();
-                        if (ImGui.Checkbox("##IsClosed", ref mSelectedUnitRail.IsClosed))
-                            mSelectedUnitRail.mCourseUnit.GenerateTileSubUnits();
-
-                        ImGui.TableNextColumn();
-                        //Depth editing for bg unit. All points share the same depth, so batch edit the Z point
-                        float depth = mSelectedUnitRail.Points.Count == 0 ?
-                            mSelectedUnitRail.mCourseUnit.mModelType switch
-                            {
-                                CourseUnit.ModelType.Solid => 0,
-                                CourseUnit.ModelType.SemiSolid => -2,
-                                CourseUnit.ModelType.NoCollision => -4,
-                                CourseUnit.ModelType.Bridge => -2,
-                                _ => 0
-                            }
-                            : mSelectedUnitRail.Points[0].Position.Z;
-
-                        ImGui.Text("Z Depth"); ImGui.TableNextColumn();
-                        if (ImGui.DragFloat("##Depth", ref depth, 0.1f))
-                        {
-                            //Update depth to all points
-                            foreach (var p in mSelectedUnitRail.Points)
-                                p.Position = new System.Numerics.Vector3(p.Position.X, p.Position.Y, depth);
-                            mSelectedUnitRail.mCourseUnit.GenerateTileSubUnits();
-                        }
-
-                        ImGui.EndTable();
-                    }
-                }
-            }
-            else if (editContext.IsSingleObjectSelected(out CourseRail? mSelectedRail))
-            {
-                ImGui.AlignTextToFramePadding();
-                ImGui.Text($"Selected {mSelectedRail.mType} Rail");
-                ImGui.NewLine();
-                ImGui.Separator();
-
-                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-
-                        ImGui.Text("Rail Type"); ImGui.TableNextColumn();
-                        if (ImGui.BeginCombo("##Edit Rail Type", mSelectedRail.mType))
-                        {
-                            foreach (string type in RailTypes)
-                            {
-                                ImGui.Selectable(type);
-
-                                if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(0))
-                                    mSelectedRail.mType = type;
-                            }
-
-                            ImGui.EndCombo();
-                        }
-                        ImGui.TableNextColumn();
-                        ImGui.Text("Hash"); ImGui.TableNextColumn();
-                        string hash = mSelectedRail.mHash.ToString();
-                        if (ImGui.InputText("##Hash", ref hash, 256, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue))
-                        {
-                            mSelectedRail.mHash = Convert.ToUInt64(hash);
-                        }
-
-                        ImGui.TableNextColumn();
-                        ImGui.Text("IsClosed");
-                        ImGui.TableNextColumn();
-                        ImGui.Checkbox("##IsClosed", ref mSelectedRail.mIsClosed);
-
-                        ImGui.EndTable();
-                    }
-                }
-
-                if (ImGui.CollapsingHeader("Dynamic Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        foreach (KeyValuePair<string, object> param in mSelectedRail.mParameters)
-                        {
-                            string type = param.Value.GetType().ToString();
-                            ImGui.Text(param.Key);
-                            ImGui.TableNextColumn();
-
-                            switch (type)
-                            {
-                                case "System.Int32":
-                                    int int_val = (int)param.Value;
-                                    if (ImGui.InputInt($"##{param.Key}", ref int_val))
-                                    {
-                                        mSelectedRail.mParameters[param.Key] = int_val;
-                                    }
-                                    break;
-                                case "System.Boolean":
-                                    bool bool_val = (bool)param.Value;
-                                    if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
-                                    {
-                                        mSelectedRail.mParameters[param.Key] = bool_val;
-                                    }
-                                    break;
-                            }
-                            ImGui.TableNextColumn();
-                        }
-                        ImGui.EndTable();
-                    }
-                }
-            }
-            else if (editContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint? mSelectedRailPoint) ||
-                editContext.IsSingleObjectSelected(out CourseRail.CourseRailPointControl? mSelectedRailPointCont))
-            {
-                if (editContext.IsSingleObjectSelected(out CourseRail.CourseRailPointControl? cont))
-                    mSelectedRailPoint ??= cont.point;
-                ImGui.AlignTextToFramePadding();
-
-                CourseRailHolder railArray = selectedArea.mRailHolder;
-                var railIndex = CourseRail.findRailNum(railArray, mSelectedRailPoint);
-                var childIndex = CourseRail.findPointNum(railArray, mSelectedRailPoint);
-                ImGui.Text($"Rail Point {childIndex} from Rail {railIndex}");
-                ImGui.NewLine();
-                ImGui.Separator();
-
-                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Hash"); ImGui.TableNextColumn();
-                        string hash = mSelectedRailPoint.mHash.ToString();
-                        if (ImGui.InputText("##Hash", ref hash, 256, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue))
-                        {
-                            mSelectedRailPoint.mHash = Convert.ToUInt64(hash);
-                        }
-
-                        ImGui.TableNextColumn();
-                        ImGui.AlignTextToFramePadding();
-                        ImGui.Text("Translation");
-
-                        ImGui.TableNextColumn();
-
-                        ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslation, 0.25f);
-
-
-                        ImGui.TableNextColumn();
-                        ImGui.AlignTextToFramePadding();
-                        ImGui.Text("Curve Control");
-
-                        ImGui.TableNextColumn();
-
-                        bool priorCurve = mSelectedRailPoint.mIsCurve;
-                        ImGui.Checkbox("##Curved", ref mSelectedRailPoint.mIsCurve);
-
-                        if (priorCurve != mSelectedRailPoint.mIsCurve)
-                            activeViewport.undoPointToggleMethod(mSelectedRailPoint, priorCurve);
-
-                        ImGui.SameLine();
-
-                        ImGui.BeginDisabled(!mSelectedRailPoint.mIsCurve);
-
-                        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-                        ImGui.DragFloat3("##Control", ref mSelectedRailPoint.mControl.mTranslation, 0.25f);
-                        //if (mSelectedRailPoint.mControl.mTranslate != mSelectedRailPoint.mControl.mStartingTrans && !ImGui.IsMouseDragging(ImGuiMouseButton.Left) && mSelectedRailPoint.mIsCurve)
-                        //{
-                        //    editContext.CommitAction(new PropertyFieldsSetUndo(
-                        //       mSelectedRailPoint.mControl,
-                        //        [("mTranslate", mSelectedRailPoint.mControl.GetFieldValue("mStartingTrans"))],
-                        //        $"{IconUtil.ICON_ARROWS_ALT} Move Rail Point Control"));
-                        //}
-
-                        ImGui.PopItemWidth();
-
-                        ImGui.EndDisabled();
-
-                        ImGui.EndTable();
-                    }
-                }
-
-                if (ImGui.CollapsingHeader("Dynamic Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        foreach (KeyValuePair<string, object> param in mSelectedRailPoint.mParameters)
-                        {
-                            string type = param.Value.GetType().ToString();
-                            ImGui.Text(param.Key);
-                            ImGui.TableNextColumn();
-
-                            switch (type)
-                            {
-                                case "System.UInt32":
-                                    int uint_val = Convert.ToInt32(param.Value);
-                                    if (ImGui.InputInt($"##{param.Key}", ref uint_val))
-                                    {
-                                        mSelectedRailPoint.mParameters[param.Key] = Convert.ToUInt32(uint_val);
-                                    }
-                                    break;
-                                case "System.Int32":
-                                    int int_val = (int)param.Value;
-                                    if (ImGui.InputInt($"##{param.Key}", ref int_val))
-                                    {
-                                        mSelectedRailPoint.mParameters[param.Key] = int_val;
-                                    }
-                                    break;
-                                case "System.Single":
-                                    float float_val = (float)param.Value;
-                                    if (ImGui.InputFloat($"##{param.Key}", ref float_val))
-                                    {
-                                        mSelectedRailPoint.mParameters[param.Key] = float_val;
-                                    }
-                                    break;
-                                case "System.Boolean":
-                                    bool bool_val = (bool)param.Value;
-                                    if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
-                                    {
-                                        mSelectedRailPoint.mParameters[param.Key] = bool_val;
-                                    }
-                                    break;
-                            }
-                            ImGui.TableNextColumn();
-                        }
-                        ImGui.EndTable();
-                    }
-                }
-            }
-            else if (editContext.GetSelectedObjects<CourseActor>().ToArray().Length > 1)
-            {
-                var actors = editContext.GetSelectedObjects<CourseActor>().ToArray();
-                ImGui.AlignTextToFramePadding();
-                ImGui.SameLine();
-                if (ImGui.Button($"Paste Source Links") && mCopiedLinks.Count > 0)
-                {
-                    var total = 0;
-                    var batch = editContext.BeginBatchAction();
-                    foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
-                    {
-                        for (int i = 0; i < hashArray.Count; i++)
-                        {
-                            var link = new CourseLink(linkName)
-                            {
-                                mSource = 0,
-                                mDest = 0
-                            };
-                            if (actors.Length > 1)
-                            {
-                                foreach (CourseActor actor in actors)
-                                {
-                                    link = new CourseLink(linkName)
-                                    {
-                                        mSource = actor.mHash,
-                                        mDest = hashArray[i]
-                                    };
-                                    if (!selectedArea.mLinkHolder.mLinks.Contains(link))
-                                    {
-                                        editContext.AddLink(link);
-                                        total++;
-                                    }
-                                }
-                            }
-                            if (!selectedArea.mLinkHolder.mLinks.Contains(link))
-                            {
-                                editContext.AddLink(link);
-                                total++;
-                            }
-                        }
-                    }
-                    batch.Commit($"{IconUtil.ICON_PASTE} Paste {total} Link{(total == 1 ? "" : "s")}");
-                }
-
-                ImGui.SameLine();
-                if (ImGui.Button($"Paste Destination Links") && mCopiedLinks.Count > 0)
-                {
-                    var total = 0;
-                    var batch = editContext.BeginBatchAction();
-                    foreach ((string linkName, List<ulong> hashArray) in mCopiedLinks)
-                    {
-                        for (int i = 0; i < hashArray.Count; i++)
-                        {
-                            var link = new CourseLink(linkName)
-                            {
-                                mSource = 0,
-                                mDest = 0
-                            };
-                            if (actors.Length > 1)
-                            {
-                                foreach (CourseActor actor in actors)
-                                {
-                                    link = new CourseLink(linkName)
-                                    {
-                                        mSource = hashArray[i],
-                                        mDest = actor.mHash
-                                    };
-                                    if (!selectedArea.mLinkHolder.mLinks.Contains(link))
-                                    {
-                                        editContext.AddLink(link);
-                                        total++;
-                                    }
-                                }
-                            }
-                            if (!selectedArea.mLinkHolder.mLinks.Contains(link))
-                            {
-                                editContext.AddLink(link);
-                                total++;
-                            }
-                        }
-                    }
-                    batch.Commit($"{IconUtil.ICON_CLIPBOARD_CHECK} Paste {total} Link{(total == 1 ? "" : "s")}");
-                }
-                ImGui.SetItemTooltip("Paste Source Links");
-
-                ImGui.Text("Layer");
-                ImGui.TableNextColumn();
-                ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-
-                if (ImGui.BeginCombo("##Dropdown", "Select Layer"))
-                {
-                    foreach (var layer in mLayersVisibility.Keys.ToArray().ToImmutableList())
-                    {
-                        if (ImGui.Selectable(layer))
-                        {
-                            //item is selected
-                            //Console.WriteLine("Changing " + mSelectedActor.mName + "'s layer from " + mSelectedActor.mLayer + " to " + layer + ".");
-                            foreach (var actor in actors)
-                                actor.mLayer = layer;
-                        }
-                    }
-                }
-                string text = "Multiple Actors Selected";
-                var windowWidth = ImGui.GetWindowSize().X;
-                var textWidth = ImGui.CalcTextSize(text).X;
-
-                var windowHight = ImGui.GetWindowSize().Y;
-                var textHeight = ImGui.CalcTextSize(text).Y;
-
-                ImGui.SetCursorPosX((windowWidth - textWidth) * 0.5f);
-                ImGui.SetCursorPosY((windowHight - textHeight) * 0.5f);
-                ImGui.BeginDisabled();
-                ImGui.Text(text);
-                ImGui.EndDisabled();
-            }
-
-            if (status)
-            {
-                ImGui.End();
-            }
-        }
 
         private static void NoneSelected()
         {
@@ -3384,6 +3666,7 @@ namespace Fushigi.ui.widgets
             ImGui.Text(text);
             ImGui.EndDisabled();
         }
+        #endregion
         private static void AreaParameters(AreaParam area)
         {
             ParamHolder areaParams = ParamLoader.GetHolder("AreaParam");
@@ -3886,335 +4169,8 @@ namespace Fushigi.ui.widgets
             }
         }
 
-        private void CourseGlobalLinksView(CourseLinkHolder linkHolder)
-        {
-            var editContext = areaScenes[selectedArea].EditContext;
 
-            for (int i = 0; i < linkHolder.mLinks.Count; i++)
-            {
-                CourseLink link = linkHolder.mLinks[i];
-
-                ImGui.Selectable($"Link {i}", editContext.IsSelected(link));
-
-                if (ImGui.IsItemHovered() &&
-                    ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
-                {
-                    editContext.DeselectAll();
-                    editContext.Select(link);
-
-                    showGlobalLinkWindow = true;
-                    linkNumb = i;
-                    gLink = link;
-                }
-            }
-        }
-
-        void DrawGlobalLinksPanel(ref bool continueDisplay, IPopupModalHost modalHost, CourseLink link, int linkNumb)
-        {
-            ImGui.SetNextWindowSize(new Vector2(550 * MainWindow.dpiScale, 250 * MainWindow.dpiScale), ImGuiCond.Once);
-
-            ImGui.Begin("Global Links Panel", ref continueDisplay, ImGuiWindowFlags.NoCollapse);
-
-            ImGui.AlignTextToFramePadding();
-            mSelectedGlobalLink = link;
-            if (mSelectedGlobalLink != null)
-                ImGui.Text("Link " + linkNumb);
-            else
-                continueDisplay = false;
-
-            if (ImGui.Button("Delete Link") || ImGui.IsKeyPressed(ImGuiKey.Delete))
-            {
-                course.RemoveGlobalLink(mSelectedGlobalLink);
-                mSelectedGlobalLink = null;
-                continueDisplay = false;
-            }
-
-            if (mSelectedGlobalLink != null)
-            {
-                ImGui.Separator();
-
-                if (ImGui.CollapsingHeader("Properties", ImGuiTreeNodeFlags.DefaultOpen))
-                {
-                    if (ImGui.BeginTable("Props", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    {
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Source Hash"); ImGui.TableNextColumn();
-
-                        if (LevelViewport.setGlobalSrc)
-                        {
-                            mSelectedGlobalLink.mSource = LevelViewport.globalHash;
-                            LevelViewport.setGlobalSrc = false;
-                        }
-                        string srcHash = mSelectedGlobalLink.mSource.ToString();
-                        if (ImGui.InputText("##Source Hash", ref srcHash, 256, ImGuiInputTextFlags.CharsDecimal))
-                        {
-                            mSelectedGlobalLink.mSource = ulong.TryParse(srcHash, out var v) ? v : 0;
-
-                        }
-
-                        ImGui.TableNextColumn();
-                        ImGui.Text("Destination Hash"); ImGui.TableNextColumn();
-
-                        if (LevelViewport.setGlobalDst)
-                        {
-                            mSelectedGlobalLink.mDest = LevelViewport.globalHash;
-                            LevelViewport.setGlobalDst = false;
-                        }
-                        string destHash = mSelectedGlobalLink.mDest.ToString();
-
-                        if (ImGui.InputText("##Dest Hash", ref destHash, 256, ImGuiInputTextFlags.CharsDecimal))
-                        {
-                            mSelectedGlobalLink.mDest = ulong.TryParse(destHash, out var v) ? v : 0;
-                        }
-
-                        ImGui.TableNextColumn();
-                        ImGui.Text("Link Type"); ImGui.TableNextColumn();
-
-                        List<string> types = mLinkTypes.ToList();
-                        int idx = types.IndexOf(mSelectedGlobalLink.mLinkName);
-                        ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X);
-                        if (ImGui.Combo("##Link Type", ref idx, mLinkTypes, mLinkTypes.Length))
-                        {
-                            mSelectedGlobalLink.mLinkName = mLinkTypes[idx];
-                        }
-
-                        ImGui.EndTable();
-                    }
-                }
-            }
-            ImGui.End();
-        }
-        //VERY ROUGH BASE
-        //TODO, optomize recursion
-        List<CourseActor> topLinks;
-        CourseActor? selected;
-        private CourseActor? storedGlobalActor;
-        public static bool killPicker;
-        private CancellationTokenSource globalPickToken;
-        private bool isPickingSecondArea;
-        private string secondPickArea;
-        private bool startedPicker;
-        public static bool pickingComplete;
-        private LevelViewport oldViewport;
-        private bool reverseGlobalLink;
-        private float previousDelta;
-        private BymlArrayNode actorsArray;
-        private CourseActorHolder prefabActors;
-        private Dictionary<ulong, ulong> hashMapActors = new();
-        private string mActorSearchAll = "";
-        private string prevSearch;
-        private CourseAreaEditContext ctx;
-        private CourseAreaEditContext mEditContext;
-        private CourseActor pickActor;
-
-        private void PrefabsView()
-        {
-            string appDataPath = Path.Combine(UserSettings.SettingsDir, "prefabs");
-            string resPath = "res/prefabs";
-            string[] resPrefab = Directory.GetFiles(resPath, "*.bcett*");
-
-            if (ImGui.BeginTabBar("PrefabTabs"))
-            {
-                if (ImGui.BeginTabItem("User Prefabs"))
-                {
-                    if (Directory.Exists(appDataPath))
-                    {
-                        string[] files = Directory.GetFiles(appDataPath, "*.bcett*");
-                        prefabList(files, true, appDataPath);
-                    }
-                        ImGui.EndTabItem();
-                }
-
-                if (ImGui.BeginTabItem("Default Prefabs"))
-                {
-                    prefabList(resPrefab, false, resPath);
-                    ImGui.EndTabItem();
-                }
-
-                ImGui.EndTabBar();
-            }
-        }
-
-        public void prefabList(string[] files, bool canDelete, string directory)
-        {
-            ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
-            float rowHeight = ImGui.GetFrameHeight();
-            float deleteButtonWidth = rowHeight * 1.6f;
-
-            if(directory.Contains("AppData") && files.Length == 0)
-            {
-                ImGui.Text("You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ");
-            }
-            foreach (string file in files)
-            {
-
-                string prefab = Path.GetFileName(file).Split(".bcett")[0];
-
-                ImGui.PushID(prefab);
-
-                float fullWidth = ImGui.GetContentRegionAvail().X;
-                float nameWidth = fullWidth - deleteButtonWidth - 8;
-
-                ImGui.BeginGroup();
-                ImGui.PushItemWidth(nameWidth);
-
-                if (ImGui.Selectable(prefab, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
-                {
-                    LoadPrefab(prefab, directory);
-                }
-
-                ImGui.PopItemWidth();
-                ImGui.EndGroup();
-
-                ImGui.SameLine();
-
-                Vector2 deletePos = ImGui.GetCursorScreenPos();
-                bool clicked = ImGui.InvisibleButton("##delete", new Vector2(deleteButtonWidth, rowHeight));
-
-                if (canDelete)
-                {
-                    string deleteIcon = IconUtil.ICON_TRASH_ALT;
-                    Vector2 iconSize = ImGui.CalcTextSize(deleteIcon);
-                    Vector2 iconPos = deletePos + new Vector2(
-                        (deleteButtonWidth - iconSize.X) * 0.5f,
-                        (rowHeight - iconSize.Y) * 0.5f
-                    );
-
-
-                    uint color = ImGui.GetColorU32(ImGuiCol.Text);
-                    if (!ImGui.IsItemHovered())
-                        color = (color & 0xFFFFFF) | ((uint)((color >> 24) * 0.5f) << 24);
-
-                    ImGui.GetWindowDrawList().AddText(iconPos, color, deleteIcon);
-                    ImGui.SetItemTooltip("Delete Prefab");
-
-                    if (clicked)
-                    {
-                        DeletePrefabPopup(file);
-                    }
-
-                    ImGui.PopID();
-                }
-            }
-            ImGui.EndChild();
-        }
-        public async Task DeletePrefabPopup(string file)
-        {
-            var result = await RemoveAreaConfirmationDialog.ShowDialog(MainWindow.mModalHost, "Remove Prefab", "Do you want to remove this prefab?\nThis action cannot be undone!");
-
-            if (result == RemoveAreaConfirmationDialog.DialogResult.Yes)
-            {
-                File.Delete(file);
-            }
-
-        }
-        private void AreaLocalLinksView(CourseArea area)
-        {
-            var links = area.mLinkHolder;
-            var editContext = areaScenes[selectedArea].EditContext;
-
-            float em = ImGui.GetFrameHeight();
-            var wcMin = ImGui.GetCursorScreenPos() + new Vector2(0, ImGui.GetScrollY());
-            var wcMax = wcMin + ImGui.GetContentRegionAvail();
-
-            topLinks = area.GetActors()
-                .Where(x => links.mLinks.Any(y => y.mSource == x.mHash)).ToList();
-            if (ImGui.BeginTable("##Links", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-            {
-                CourseActor? selected = null;
-                RecursiveLinkFind(area, links, editContext, em, topLinks, []);
-                ImGui.EndTable();
-            }
-
-            ImGui.PopClipRect();
-
-            ImGui.EndChild();
-        }
-
-        private void RecursiveLinkFind(CourseArea area, CourseLinkHolder links,
-            CourseAreaEditContext editContext, float em, IEnumerable<CourseActor> linkList,
-            Hashtable parentActors)
-        {
-            foreach (CourseActor actor in linkList)
-            {
-                var destLinks = links.GetDestHashesFromSrc(actor.mHash);
-                ImGui.TableNextRow();
-
-                string actorName = actor.mPackName;
-
-                if (UserSettings.GetEnableTranslation())
-                    actorName = Translate.FetchTranslatedName(actorName);
-
-                string name = actor.mName;
-
-                ulong actorHash = actor.mHash;
-                bool isSelected = editContext.IsSelected(actor);
-
-                ImGui.TableSetColumnIndex(1);
-                ImGui.TextDisabled(name);
-
-                bool expanded = false;
-                bool isVisible = true;
-                float margin = 1.5f * em;
-                float headerHeight = 1.4f * em;
-                Vector2 cp = ImGui.GetCursorScreenPos();
-                ImGui.TableSetColumnIndex(0);
-
-                ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags.FramePadding | ImGuiTreeNodeFlags.OpenOnArrow;
-
-                if (isSelected)
-                    node_flags |= ImGuiTreeNodeFlags.Selected;
-
-                if (!parentActors.ContainsValue(actor) && destLinks.Count > 0)
-                    expanded = ImGui.TreeNodeEx($"{actorHash}", node_flags, actorName);
-                else
-                    expanded = ImGui.Selectable(actorName, isSelected);
-
-                if (ImGui.IsItemClicked())
-                {
-                    activeViewport.SelectedActor(actor);
-                }
-
-                if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
-                {
-                    activeViewport.FrameSelectedActor(actor);
-                    selected ??= actor;
-                }
-                if (parentActors.Count == 0 && selected == actor)
-                {
-                    ImGui.SetScrollHereY();
-                    selected = null;
-                }
-
-                ImGui.BeginDisabled(!isVisible);
-
-                UpdateWonderVisibility(actor, destLinks, area);
-
-                if (expanded)
-                {
-                    if (!parentActors.ContainsValue(actor) && destLinks.Count > 0)
-                    {
-                        foreach (var link in destLinks)
-                        {
-                            if (ImGui.TreeNodeEx($"{link.Key}##{actorHash}", ImGuiTreeNodeFlags.FramePadding, link.Key))
-                            {
-                                var parents = new Hashtable(parentActors);
-                                parents[actorHash] = actor;
-                                var reLinks = area.GetActors().Where(x => link.Value.Contains(x.mHash));
-                                RecursiveLinkFind(area, links, editContext, em, reLinks, parents);
-                                ImGui.TreePop();
-                            }
-                        }
-                        ImGui.TreePop();
-                    }
-                }
-
-                ImGui.EndDisabled();
-            }
-            parentActors.Clear();
-        }
-
+      
         static void UpdateWonderVisibility(CourseActor actor, Dictionary<string, List<ulong>> links, CourseArea area)
         {
             foreach (var link in links)
@@ -4243,13 +4199,6 @@ namespace Fushigi.ui.widgets
             }
         }
 
-        private void UpdateAllLayerVisiblity()
-        {
-            foreach (string layer in mLayersVisibility.Keys)
-            {
-                mLayersVisibility[layer] = mAllLayersVisible;
-            }
-        }
 
         private static bool ToggleButton(string id, string textOn, string textOff, ref bool value, Vector2 size = default)
         {
@@ -4282,6 +4231,7 @@ namespace Fushigi.ui.widgets
             return clicked;
         }
 
+        #region Layers
         private void CourseActorsLayerView(CourseActorHolder actorArray)
         {
             var editContext = areaScenes[selectedArea].EditContext;
@@ -4435,78 +4385,15 @@ namespace Fushigi.ui.widgets
 
             ImGui.EndChild();
         }
-
-
-        private void CommentsView(CourseCommentHolder commentHolder)
+        private void UpdateAllLayerVisiblity()
         {
-            if (commentHolder.mComments.Count == 0)
+            foreach (string layer in mLayersVisibility.Keys)
             {
-                ImGui.Text("No comments found");
-                return;
-            }
-
-            CourseComment commentToDelete = null;
-            float rowHeight = ImGui.GetFrameHeight();
-            float deleteButtonWidth = rowHeight * 1.6f;
-
-            int commentVal = 0;
-            int i = 0;
-            var ctx = areaScenes[selectedArea].EditContext;
-            foreach (CourseComment comment in commentHolder.mComments)
-            {
-                i++;
-                string commentNum = $"Comment {i}";
-
-                ImGui.PushID(commentNum);
-
-                float fullWidth = ImGui.GetContentRegionAvail().X;
-                float nameWidth = fullWidth - deleteButtonWidth - 8;
-
-                ImGui.BeginGroup();
-                ImGui.PushItemWidth(nameWidth);
-
-                if (ImGui.Selectable(commentNum, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
-                {
-                    ctx.Select(comment);
-                    activeViewport.FrameSelectedComment(comment);
-                }
-
-                ImGui.PopItemWidth();
-                ImGui.EndGroup();
-
-                ImGui.SameLine();
-
-                Vector2 deletePos = ImGui.GetCursorScreenPos();
-                bool clicked = ImGui.InvisibleButton("##delete", new Vector2(deleteButtonWidth, rowHeight));
-
-                string deleteIcon = IconUtil.ICON_TRASH_ALT;
-                Vector2 iconSize = ImGui.CalcTextSize(deleteIcon);
-                Vector2 iconPos = deletePos + new Vector2(
-                    (deleteButtonWidth - iconSize.X) * 0.5f,
-                    (rowHeight - iconSize.Y) * 0.5f
-                );
-
-                uint color = ImGui.GetColorU32(ImGuiCol.Text);
-                if (!ImGui.IsItemHovered())
-                    color = (color & 0xFFFFFF) | ((uint)((color >> 24) * 0.5f) << 24);
-
-                ImGui.GetWindowDrawList().AddText(iconPos, color, deleteIcon);
-                ImGui.SetItemTooltip("Remove Comment");
-
-                if (clicked)
-                {
-                    commentToDelete = comment;
-                    commentVal = i;
-                }
-                ImGui.PopID();
-            }
-
-            if (commentToDelete != null)
-            {
-                ctx.RemoveComment(commentToDelete, commentVal);
-                commentToDelete = null;
+                mLayersVisibility[layer] = mAllLayersVisible;
             }
         }
+
+        #endregion 
 
         private void CourseMiniView()
         {
@@ -4912,6 +4799,7 @@ namespace Fushigi.ui.widgets
             return course;
         }
 
+        #region Picking
         private async Task<(CourseActor?, KeyboardModifier modifiers)> PickLinkDestInViewportFor(CourseActor source)
         {
             using var tokenSource = new CancellationTokenSource();
@@ -4928,7 +4816,6 @@ namespace Fushigi.ui.widgets
                             "Select actor to use ring", x => x is CourseActor, tokenSource);
             return (picked as CourseActor, modifier);
         }
-
 
         private async void RunGlobalPicker()
         {
@@ -4963,6 +4850,19 @@ namespace Fushigi.ui.widgets
             }
         }
 
+        public async Task<CourseActor?> ActorPicker()
+        {
+            ImGui.SetWindowFocus(selectedArea.GetName());
+            bypassSelection = true;
+
+            var (pickedActor, _) = await PickActor();
+            Console.WriteLine("Picked Actor: " + pickedActor?.mPackName);
+
+            return pickedActor;
+        }
+        #endregion
+
+        #region Deletion
         private async Task DeleteObjectsWithWarningPrompt(IReadOnlyList<object> objectsToDelete,
             CourseAreaEditContext ctx, string actionName)
         {
@@ -5090,6 +4990,7 @@ namespace Fushigi.ui.widgets
             batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Layer: {layer}");
         }
 
+        #endregion
         interface IToolWindow
         {
             void Draw(ref bool windowOpen);

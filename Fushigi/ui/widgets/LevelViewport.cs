@@ -815,7 +815,8 @@ namespace Fushigi.ui.widgets
 
             var mat = debugSMat * scaleMat * rotMat * transMat;
 
-            DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
+            //if(actor.mPackName.StartsWith("DV") || actor.mPackName.StartsWith("Cloud"))
+                DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
 
             var model = render.Models[modelName];
 

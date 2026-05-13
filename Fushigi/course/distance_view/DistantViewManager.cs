@@ -64,10 +64,15 @@ namespace Fushigi.course.distance_view
             foreach (var layer in ParamTable.Layers.Keys)
             {
                 var scroll_config = ParamTable.Layers[layer];
+
+
+                //Console.WriteLine(layer + scroll_config);
+
                 var locator_pos = DVLocator != null ? DVLocator.mTranslation : Vector3.Zero;
 
+                
                 //Place via base locator pos + camera
-
+                
                 //Distance between dv locator and camera
                 if (UserSettings.GetUseNewCamera())
                 {
