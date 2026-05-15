@@ -211,69 +211,11 @@ namespace Fushigi.course
             return mGlobalLinks;
         }
 
-        public void Save(string backupDir)
-        {
-            var rstbPath = Path.Combine(UserSettings.GetRomFSPath(), "System", "Resource");
-
-            if (!Directory.Exists(rstbPath))
-                Directory.CreateDirectory(rstbPath);
-
-            string[] sizeTables = Directory.GetFiles(rstbPath);
-
-            foreach (string path in sizeTables)
-            {
-                RSTB resource_table = new RSTB();
-                resource_table.Load(Path.GetFileName(path));
-
-
-                BymlHashTable stageParamRoot = new();
-
-                stageParamRoot.AddNode(BymlNodeId.Array, new BymlArrayNode(), "Actors");
-
-                stageParamRoot.AddNode(BymlNodeId.Array, mGlobalLinks.SerializeToArray(), "Links");
-
-                BymlArrayNode refArr = new();
-
-                foreach (CourseArea area in mAreas)
-                {
-                    string refPath = $"Work/Stage/StageParam/{area.GetName()}.game__stage__StageParam.gyml";
-                    refArr.AddNodeToArray(BymlUtil.CreateNode(refPath));
-                }
-
-
-                stageParamRoot.AddNode(BymlNodeId.Array, refArr, "RefStages");
-
-                var byml = new Byml.Byml(stageParamRoot);
-                var mem = new MemoryStream();
-
-                byml.Save(mem);
-                string virtualPath = $"BancMapUnit/{mCourseName}.bcett.byml";
-                resource_table.SetResource(virtualPath, (uint)mem.Length);
-
-                string folder = Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit");
-                bool backup = (backupDir != "");
-                if (backup)
-                    folder = Path.Combine(backupDir, "BancMapUnit");
-
-                if (!Directory.Exists(folder))
-                    Directory.CreateDirectory(folder);
-
-                string levelPath = Path.Combine(folder, $"{mCourseName}.bcett.byml.zs");
-
-                File.WriteAllBytes(levelPath, FileUtil.CompressData(mem.ToArray()));
-
-                SaveAreas(resource_table, backup, backupDir);
-                // SaveAreas(resource_table);
-                resource_table.Save();
-            }
-        }
-
-        public void UpdateStageParam()
+       
+        public void UpdateStageParam(string dir)
         {
             if (!overWriteCourseParam)
-            {
                 return;
-            }
 
             var stageParamFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "StageParam", $"{mCourseName}.game__stage__StageParam.bgyml"));
             bool noFileFound = !File.Exists(stageParamFilePath);
@@ -294,11 +236,7 @@ namespace Fushigi.course
 
             newRoot.AddNode(BymlNodeId.String, BymlUtil.CreateNode(Catergory), "Category");
             stageParam.Root = newRoot;
-            string outPath = Path.Combine(
-                  UserSettings.GetModRomFSPath(),
-                  "Stage/StageParam",
-                  $"{mCourseName}.game__stage__StageParam.bgyml"
-              );
+            string outPath = Path.Combine(dir, "Stage/StageParam", $"{mCourseName}.game__stage__StageParam.bgyml");
 
             Directory.CreateDirectory(Path.GetDirectoryName(outPath));
 
@@ -307,7 +245,6 @@ namespace Fushigi.course
                 stageParam.Save(ms);
                 File.WriteAllBytes(outPath, ms.ToArray());
             }
-
         }
 
         public CourseActor? ResolveActorByHash(ulong hash)
@@ -321,8 +258,7 @@ namespace Fushigi.course
             return null;
         }
 
-        //Added for saving the Course file for global links
-        public void SaveGlobalLinks(RSTB resource_table, string folder)
+        public void SaveCourse(RSTB resource_table, string folder)
         {
             if (!Directory.Exists(folder))
                 Directory.CreateDirectory(folder);
@@ -332,13 +268,23 @@ namespace Fushigi.course
             root.AddNode(BymlNodeId.Array, mGlobalLinks.SerializeToArray(), "Links");
 
             if (mStageReferences != null)
-                root.AddNode(BymlNodeId.Array, mStageReferences, "RefStages");
+            {
+                BymlArrayNode refArr = new();
+                foreach (CourseArea area in mAreas)
+                {
+                    string refPath = $"Work/Stage/StageParam/{area.GetName()}.game__stage__StageParam.gyml";
+                    refArr.AddNodeToArray(BymlUtil.CreateNode(refPath));
+                }
+
+                root.AddNode(BymlNodeId.Array, refArr, "RefStages");
+            }
 
             var byml = new Byml.Byml(root);
             var mem = new MemoryStream();
             byml.Save(mem);
 
             var decomp_size = (uint)mem.Length;
+
 
             //Compress and save the course          
             string levelPath = Path.Combine(folder, $"{mCourseName}.bcett.byml.zs");
@@ -347,25 +293,6 @@ namespace Fushigi.course
             //Update resource table
             // filePath is a key not an actual path so we cannot use Path.Combine
             resource_table.SetResource($"BancMapUnit/{mCourseName}.bcett.byml", decomp_size);
-        }
-        public void SaveAreas(RSTB resTable)
-        {
-            foreach (var area in GetAreas())
-            {
-                area.Save(resTable);
-            }
-        }
-        public void SaveAreas(RSTB resTable, bool backup, String backupFolder)
-        {
-            foreach (var area in GetAreas())
-            {
-                Logger.Logger.LogMessage("Course", $"Saving area {area.GetName()}...");
-                if (backup)
-                    area.SaveBackup(resTable, backupFolder);
-                else
-                    area.Save(resTable);
-            }
-
         }
 
 

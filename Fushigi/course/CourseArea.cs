@@ -261,52 +261,24 @@ namespace Fushigi.course
         {
             return mActorHolder.mActors.FirstOrDefault(a => a.mHash == hash);
         }
-        public void SaveBackup(RSTB resource_table, String backupFolder)
-        {
-            Save(resource_table, Path.Combine(backupFolder, "BancMapUnit"), false);
-        }
-        public void Save(RSTB resource_table)
-        {
-            Save(resource_table, Path.Combine(UserSettings.GetModRomFSPath(), "BancMapUnit"), false);
-        }
-        public void SaveStageParam(RSTB resource_table)
-        {
-            string path = Path.Combine(
-                UserSettings.GetModRomFSPath(),
-                "Stage",
-                "StageParam"
-            );
-            SaveStageParam(resource_table, path);
-        }
-        public void SaveStageParam(RSTB resource_table, string folder)
+
+        public void SaveStageParam(RSTB resource_table, string dir)
         {
             if (Course.IsOneAreaCourse)
-            {
                 return;
-            }
 
             string fileName = mAreaName;
-            var stageParamFilePath = Path.Combine(folder, $"{fileName}.game__stage__StageParam.bgyml");
+            var stageParamFilePath = Path.Combine(dir, "Stage", "StageParam", $"{fileName}.game__stage__StageParam.bgyml");
             bool noFileFound = !File.Exists(stageParamFilePath);
-
 
             if (noFileFound)
             {
-                string phiveDir = Path.Combine(
-                  UserSettings.GetModRomFSPath(),
-                  "Phive",
-                  "StaticCompoundBody"
-              );
+                string phiveDir = Path.Combine(dir, "Phive", "StaticCompoundBody");
 
-                string normalDir = Path.Combine(
-                           UserSettings.GetRomFSPath(),
-                           "Phive",
-                           "StaticCompoundBody"
-                       );
+                string normalDir = Path.Combine(UserSettings.GetRomFSPath(), "Phive", "StaticCompoundBody");
 
                 if (!Directory.Exists(phiveDir))
                     Directory.CreateDirectory(phiveDir);
-
 
                 string phiveFileDir = Path.Combine(
                     phiveDir,
@@ -317,6 +289,7 @@ namespace Fushigi.course
                     normalDir,
                     $"{fileName}.Nin_NX_NVN.bphsc.zs"
                 );
+
                 bool phiveFound = File.Exists(phiveFileDir) || File.Exists(phiveNormalDir);
 
                 if (!phiveFound)
@@ -344,7 +317,6 @@ namespace Fushigi.course
                     $"Work/MapUnit/Map/{fileName}.mumap";
                 string StaticCompoundBody =
                     $"Work/Phive/StaticCompoundBody/{fileName}.phive__StaticCompoundBodySourceParam.gyml";
-
 
                 components.AddNode(BymlNodeId.String, BymlUtil.CreateNode(AreaParamPath), "AreaParam");
                 components.AddNode(BymlNodeId.String, BymlUtil.CreateNode(Mumap), "Mumap");
@@ -393,6 +365,7 @@ namespace Fushigi.course
             File.WriteAllBytes(prefabPath, FileUtil.CompressData(mem.ToArray()));
 
         }
+
         public void Save(RSTB resource_table, string folder, bool saveTemplate)
         {
             if (!saveTemplate)
@@ -411,17 +384,11 @@ namespace Fushigi.course
                 root.AddNode(BymlNodeId.Array, mCommentHolder.SerializeToArray(), "Comments");
 
             if (mUnitHolder != null)
-            {
                 root.AddNode(BymlNodeId.Array, mUnitHolder.SerializeToArray(), "BgUnits");
-            }
 
             root.AddNode(BymlNodeId.Array, mLinkHolder.SerializeToArray(), "Links");
             root.AddNode(BymlNodeId.Array, mRailHolder.SerializeToArray(), "Rails");
             root.AddNode(BymlNodeId.Array, mGroupsHolder.SerializeToArray(), "SimultaneousGroups");
-            //if (Course.Catergory != null)
-            //{
-            //root.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>($"Work/Stage/StageParam/{mAreaName}.game__stage__StageParam.gyml"), "StageParam");
-            //}
 
             var byml = new Byml.Byml(root);
             var mem = new MemoryStream();
@@ -432,6 +399,7 @@ namespace Fushigi.course
 
             //Compress and save the course area           
             string levelPath = Path.Combine(folder, $"{mAreaName}.bcett.byml.zs");
+           
             if (saveTemplate)
             {
                 string paramPath = "res/template.game__stage__AreaParam.bgyml";

@@ -29,23 +29,7 @@ namespace Fushigi.course
             mAreaHash = areaHash;
             mRailParam = "Work/Gyml/Rail/RailParam/"+type+".game__rail__RailParam.gyml";
             mIsClosed = false;
-            var railParams = ParamDB.GetRailComponent(mType);
-            var railParent = ParamDB.GetRailComponentParent(railParams);
-            var comp = ParamDB.GetRailComponentParams(railParams);
-            if (railParent != "null")
-            {
-                var parentComp = ParamDB.GetRailComponentParams(railParent);
-                foreach (var component in parentComp)
-                {
-                    comp.TryAdd(component.Key, component.Value);
-                }
-            }
-
-            foreach (string component in comp.Keys)
-            {
-                var c = comp[component];
-                mParameters.Add(component, c.InitValue);
-            }
+            RegenerateParameters();
         }
 
         public CourseRail(BymlHashTable node)
@@ -102,6 +86,27 @@ namespace Fushigi.course
             }
         }
 
+        public void RegenerateParameters()
+        {
+            this.mParameters = new Dictionary<string, object>();
+            var railParams = ParamDB.GetRailComponent(mType);
+            var railParent = ParamDB.GetRailComponentParent(railParams);
+            var comp = ParamDB.GetRailComponentParams(railParams);
+
+            if (railParent != "null")
+            {
+                var parentComp = ParamDB.GetRailComponentParams(railParent);
+                foreach (var component in parentComp)
+                {
+                    comp.TryAdd(component.Key, component.Value);
+                }
+            }
+            foreach (string component in comp.Keys)
+            {
+                var c = comp[component];
+                mParameters.Add(component, c.InitValue);
+            }
+        }
         public CourseRail CloneRail(CourseArea areaTo)
         {
             CourseRail cloned = new(mAreaHash, mType)

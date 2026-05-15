@@ -581,7 +581,7 @@ namespace Fushigi.ui
                                 Task.Run(async () =>
                                 {
                                     if (await TrySaveCourse())
-                                        mSelectedCourseScene.Save();
+                                        mSelectedCourseScene.Save(false);
                                     else
                                         return;
                                 }).ConfigureAwait(false);
@@ -590,7 +590,7 @@ namespace Fushigi.ui
                             {
                                 mSelectedCourseScene.deleteEmptyRails();
                             }
-                                mSelectedCourseScene.Save();
+                                mSelectedCourseScene.Save(false);
                         }
                         else //Else configure the mod path
                         {
@@ -599,7 +599,7 @@ namespace Fushigi.ui
                             {
                                 Logger.Logger.LogMessage("MainWindow", $"Setting RomFS path to {dlg.SelectedPath}");
                                 UserSettings.SetModRomFSPath(dlg.SelectedPath);
-                                mSelectedCourseScene.Save();
+                                mSelectedCourseScene.Save(false);
                             }
                         }
                     }
@@ -609,7 +609,7 @@ namespace Fushigi.ui
                         if (dlg.ShowDialog("Select the romfs directory to save to."))
                         {
                             UserSettings.SetModRomFSPath(dlg.SelectedPath);
-                            mSelectedCourseScene.Save();
+                            mSelectedCourseScene.Save(false);
                         }
                     }
 

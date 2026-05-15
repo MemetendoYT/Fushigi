@@ -512,7 +512,7 @@ namespace Fushigi.ui.widgets
             ImGui.InvisibleButton("canvas", size,
                 ImGuiButtonFlags.MouseButtonLeft | ImGuiButtonFlags.MouseButtonRight | ImGuiButtonFlags.MouseButtonMiddle);
 
-            IsViewportHovered = ImGui.IsItemHovered();
+            IsViewportHovered = IsViewportHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem);
             IsViewportActive = ImGui.IsItemActive();
 
             KeyboardModifier modifiers = KeyboardModifier.None;
@@ -786,10 +786,6 @@ namespace Fushigi.ui.widgets
 
             ImGui.SetNextItemAllowOverlap();
 
-            //Temp quick fix, add canvas below for handling 2d pick later
-            ImGui.SetCursorScreenPos(mTopLeft);
-            ImGui.InvisibleButton("canvas", size,
-                  ImGuiButtonFlags.MouseButtonLeft | ImGuiButtonFlags.MouseButtonRight | ImGuiButtonFlags.MouseButtonMiddle);
         }
 
         private void RenderActor(CourseActor actor, ModelInfo modelInfo)
