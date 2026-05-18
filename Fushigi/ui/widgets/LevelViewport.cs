@@ -18,6 +18,7 @@ using System.Data;
 using System.Drawing;
 using System.Numerics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using static Fushigi.course.CourseUnit;
 using Vector3 = System.Numerics.Vector3;
 
@@ -110,10 +111,12 @@ namespace Fushigi.ui.widgets
         public ulong prevSelectVersion { get; private set; } = 0;
         public bool dragRelease;
         List<object> newSelection = new();
+        public List<CourseActor> BgUnits = new();
         public static object?[] CopiedObjects = [];
         public static Vector3 CopiedMedianPosition;
         public bool ScreenshotMode;
         private object? mHoveredObject;
+        private object? lastHoveredObject;
 
 
         public Camera Camera = new Camera();
@@ -127,6 +130,7 @@ namespace Fushigi.ui.widgets
         public static bool updateSkinB = false;
         private IDictionary<string, bool>? mLayersVisibility;
         private readonly HashSet<CourseUnit> mRegisteredUnits = [];
+        private readonly HashSet<CourseActor> mRegisteredBgUnits = [];
         DistantViewManager DistantViewScrollManager = new DistantViewManager(area);
 
         List<CourseActor> backupSelection;
@@ -170,6 +174,8 @@ namespace Fushigi.ui.widgets
             mObjectPickingRequest = null;
         public (string message, string layer, TaskCompletionSource<(Vector3? picked, KeyboardModifier modifiers)> promise)?
             mPositionPickingRequest = null;
+        public bool tileRebuild;
+        private bool hasInitialized;
 
         public Task<(object? picked, KeyboardModifier modifiers)> PickObject(string tooltipMessage,
             Predicate<object?> predicate, CancellationTokenSource tokenSource)
@@ -726,22 +732,61 @@ namespace Fushigi.ui.widgets
                     TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
 
                 //continuously register all course units that haven't been registered yet
-                foreach (var courseUnit in mArea.mUnitHolder.mUnits)
+                //foreach (var actor in BgUnits)
+                //{
+                //    if (!tileRebuild)
+                //    {
+                //        if (mRegisteredBgUnits.Contains(actor))
+                //            continue;
+                //    }
+
+                //    TileBfresRenderFieldB.LoadBGUnit(this.BgUnits);
+
+                //    if (!tileRebuild)
+                //    {
+                //        mRegisteredBgUnits.Add(actor);
+                //    }
+
+                //    tileRebuild = false;
+
+                //}
+
+                if (!hasInitialized)
                 {
-                    if (mRegisteredUnits.Contains(courseUnit))
-                        continue;
-
-                    if (courseUnit.mSkinDivision == SkinDivision.FieldA && TileBfresRenderFieldA is not null)
-                    {
-                        courseUnit.TilesUpdated += () => TileBfresRenderFieldA.Load(this.mArea.mUnitHolder);
-                    }
-                    else if (courseUnit.mSkinDivision == SkinDivision.FieldB && TileBfresRenderFieldB is not null)
-                    {
-                        courseUnit.TilesUpdated += () => TileBfresRenderFieldB.Load(this.mArea.mUnitHolder);
-                    }
-
-                    mRegisteredUnits.Add(courseUnit);
+                    tileRebuild = true;
+                    hasInitialized = true;
                 }
+
+                if (tileRebuild || CourseUnit.UpdateTiles)
+                {
+                    Console.WriteLine("running?");
+                    if (TileBfresRenderFieldA is not null)            
+                        TileBfresRenderFieldA.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
+
+                    if (TileBfresRenderFieldB is not null)
+                        TileBfresRenderFieldB.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
+
+                    tileRebuild = false;
+                    CourseUnit.UpdateTiles = false;
+                }
+
+                //foreach (var courseUnit in mArea.mUnitHolder.mUnits)
+                //{
+                //    if (mRegisteredUnits.Contains(courseUnit))
+                //        continue;
+
+                //    if (courseUnit.mSkinDivision == SkinDivision.FieldA && TileBfresRenderFieldA is not null)
+                //    {
+                //        courseUnit.TilesUpdated += () => TileBfresRenderFieldA.Load(this.mArea.mUnitHolder);
+                //    }
+                //    else if (courseUnit.mSkinDivision == SkinDivision.FieldB && TileBfresRenderFieldB is not null)
+                //    {
+                //        courseUnit.TilesUpdated += () => TileBfresRenderFieldB.Load(this.mArea.mUnitHolder);
+                //    }
+
+                //    mRegisteredUnits.Add(courseUnit);
+                //}
+
 
                 TileBfresRenderFieldA?.Render(gl, this.Camera);
                 TileBfresRenderFieldB?.Render(gl, this.Camera);
@@ -756,6 +801,13 @@ namespace Fushigi.ui.widgets
             {
                 foreach (var actor in this.mArea.GetSortedActors())
                 {
+
+                    //if (actor.mActorPack.BgUnitControl != null && actor.mActorPack.BgUnitControl.UnitType == "FullHitB")
+                    //{
+                    //    BgUnits.Add(actor);
+                      
+                    //    //Console.WriteLine("does this run though");
+                    //}
                     //actor.wonderVisible = WonderViewMode == actor.mWonderView ||
                     //                        WonderViewMode == WonderViewType.Normal ||
                     //                        actor.mWonderView == WonderViewType.Normal;
@@ -2213,9 +2265,7 @@ namespace Fushigi.ui.widgets
             if ((ImGui.IsMouseDragging(ImGuiMouseButton.Left) && !isPanGesture))
             {
                 if (IsTransformableSelected() && mMultiSelectEnded)
-                {
                     mMultiSelecting = false;
-                }
                 else if (mMultiSelectStartPos != null && !ImGui.IsWindowHovered() && !IsNonTransformableSelected())
                 {
                     mMultiSelectCurrentPos = ImGui.GetMousePos();
@@ -2243,13 +2293,20 @@ namespace Fushigi.ui.widgets
                 // Perform Object Translation
                 if (!mMultiSelecting && IsTransformableSelected())
                 {
+                    if (!IsViewportActive)
+                        return;
+
                     Vector3 StartingTrans = new Vector3();
                     Vector3 CurrentTrans = new Vector3();
-                    switch (mHoveredObject)
+                    if(mHoveredObject != null) 
+                        lastHoveredObject = mHoveredObject;
+
+                    switch (lastHoveredObject)
                     {
                         case CourseActor actor:
                             StartingTrans = actor.mStartingTrans;
                             CurrentTrans = actor.mTranslation;
+                            tileRebuild = true;
                             break;
 
                         case CourseRail.CourseRailPoint mPoint:

@@ -19,6 +19,7 @@ using Silk.NET.Core.Native;
 using Silk.NET.OpenGL;
 using System.Collections;
 using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -1013,23 +1014,26 @@ namespace Fushigi.ui.widgets
                             saveStatus = false;
                         }
 
-                        if (areaToFocus == area)
-                        {
-                            ImGui.SetItemDefaultFocus();
-                            activeViewport = viewport;
-                            if (selectedArea != area)
-                                mHasFilledLayers = false;
+                        //if (areaToFocus == area)
+                        //{
+                        //    ImGui.SetItemDefaultFocus();
+                        //    activeViewport = viewport;
+                        //    if (selectedArea != area)
+                        //    {
+                        //        mHasFilledLayers = false;
+                        //    }
 
-                            selectedArea = area;
-                            currentArea = selectedArea;
-                            areaToFocus = null;
-                        }
+                        //    selectedArea = area;
+                        //    currentArea = selectedArea;
+                        //    areaToFocus = null;
+                        //}
 
 
                         if (selectedArea != area)
                         {
                             mHasFilledLayers = false;
                             areaSwitched = true;
+                            regenerateLayersList = true;
                         }
 
                         activeViewport = viewport;
@@ -1782,6 +1786,7 @@ namespace Fushigi.ui.widgets
                 if (actors.Count > 0)
                     _ = DeleteObjectsWithWarningPrompt(actors,
                         ctx, "Delete actors");
+
             }
 
             ImGui.SameLine();
@@ -2027,26 +2032,15 @@ namespace Fushigi.ui.widgets
 
         private string mSelectedActor;
         public string mSelectedLayer;
+        private bool regenerateLayersList;
 
         #endregion
 
         #region Prefabs
-        public List<CourseActor> CreatePrefab(NumVec location, string prefab, string prefabFolder)
+        public List<CourseActor> CreatePrefab(NumVec placement, string prefab, byte[] levelBytes, uint areaHash)
         {
-            var areaHash = selectedArea.mRootHash;
-            var areaLinks = selectedArea.mLinkHolder;
-
-            NumVec placement;
-
-            placement.X = MathF.Round(location.X * 2, MidpointRounding.AwayFromZero) / 2;
-            placement.Y = MathF.Round(location.Y * 2, MidpointRounding.AwayFromZero) / 2;
-            placement.Z = 0.0f;
-
-            string prefabPath = Path.Combine(prefabFolder, $"{prefab}.bcett.byml.zs");
-            byte[] levelBytes = FileUtil.DecompressFile(prefabPath);
-
-            var actorsArray = selectedArea.LoadPrefab(prefab, levelBytes);
-            var linksArray = selectedArea.LoadPrefabLinks(prefab, levelBytes);
+            var actorsArray = selectedArea.LoadPrefab(prefab, levelBytes, "Actors");
+            var linksArray = selectedArea.LoadPrefab(prefab, levelBytes, "Links");
 
             prefabActors = new CourseActorHolder(actorsArray);
             var prefabLinks = new CourseLinkHolder(linksArray);
@@ -2074,31 +2068,19 @@ namespace Fushigi.ui.widgets
                 links.Add(link);
             }
 
-
             return prefabActors.mActors;
         }
 
-        public List<CourseRail> CreatePrefabRail(NumVec location, string prefab, string prefabFolder)
+        public List<CourseRail> CreatePrefabRail(NumVec placement, string prefab, byte[] levelBytes, uint areaHash)
         {
-            var areaHash = selectedArea.mRootHash;
-            var areaLinks = selectedArea.mLinkHolder;
-
-            NumVec placement;
-
-            placement.X = MathF.Round(location.X * 2, MidpointRounding.AwayFromZero) / 2;
-            placement.Y = MathF.Round(location.Y * 2, MidpointRounding.AwayFromZero) / 2;
-            placement.Z = 0.0f;
-
-            string prefabPath = Path.Combine(prefabFolder, $"{prefab}.bcett.byml.zs");
-            byte[] levelBytes = FileUtil.DecompressFile(prefabPath);
-
-            var railsArray = selectedArea.LoadPrefabRails(prefab, levelBytes);
-
+            var railsArray = selectedArea.LoadPrefab(prefab, levelBytes, "Rails");
             var prefabRails = new CourseRailHolder(railsArray);
-            var railLinksArray = selectedArea.LoadPrefabRailLinks(prefab, levelBytes);
+            var railLinksArray = selectedArea.LoadPrefab(prefab, levelBytes, "ActorToRailLinks");
             var prefabRailLinks = new CourseActorToRailLinksHolder(railLinksArray, prefabActors, prefabRails);
+
             Dictionary<ulong, ulong> hashMap = new();
             Dictionary<ulong, ulong> hashMapPoint = new();
+
             foreach (CourseRail rail in prefabRails.mRails)
             {
                 ulong oldHash = rail.mHash;
@@ -2125,20 +2107,14 @@ namespace Fushigi.ui.widgets
                 }
             }
 
-
             var links = selectedArea.mRailLinksHolder.mLinks;
             foreach (CourseActorToRailLink link in prefabRailLinks.mLinks)
             {
-
                 if (hashMapActors.TryGetValue(link.mSourceActor, out ulong newSrc))
                     link.mSourceActor = newSrc;
 
                 if (hashMap.TryGetValue(link.mDestRail, out ulong newDst))
-                {
                     link.mDestRail = newDst;
-
-                }
-
 
                 if (hashMapPoint.TryGetValue(link.mDestPoint, out ulong newPointDst))
                     link.mDestPoint = newPointDst;
@@ -2156,6 +2132,10 @@ namespace Fushigi.ui.widgets
             var ctx = areaScenes[selectedArea].EditContext;
 
             NumVec? pos;
+
+            var areaHash = selectedArea.mRootHash;
+            var areaLinks = selectedArea.mLinkHolder;
+      
             KeyboardModifier modifier;
             mSelectedLayer = mSelectedLayer ?? "PlayArea1";
 
@@ -2165,7 +2145,7 @@ namespace Fushigi.ui.widgets
                 AddSelectedLayer();
                 mSelectedLayer = "PlayArea1";
             }
-
+            
             using var tokenSource = new CancellationTokenSource();
             {
                 ImGui.SetWindowFocus(area.mAreaName);
@@ -2174,11 +2154,24 @@ namespace Fushigi.ui.widgets
 
                 if (!pos.TryGetValue(out var posVec))
                 {
+                    mSelectedLayer = null;
                     return;
                 }
-
                 ctx.DeselectAll();
-                var prefabActors = CreatePrefab(posVec, prefab, directory);
+
+                NumVec placement;
+
+                placement.X = MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2;
+                placement.Y = MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2;
+                placement.Z = 0.0f;
+
+                string prefabPath = Path.Combine(directory, $"{prefab}.bcett.byml.zs");
+                byte[] levelBytes = FileUtil.DecompressFile(prefabPath);
+
+                var actorsArray = selectedArea.LoadPrefab(prefab, levelBytes, "Actor");
+                var linksArray = selectedArea.LoadPrefab(prefab, levelBytes, "Links");
+
+                var prefabActors = CreatePrefab(placement, prefab, levelBytes, areaHash);
 
                 var batch = ctx.BeginBatchAction();
                 foreach (var actor in prefabActors)
@@ -2194,15 +2187,10 @@ namespace Fushigi.ui.widgets
                     AddLayerFromFile();
                 }
 
-                string prefabPath = Path.Combine(directory, $"{prefab}.bcett.byml.zs");
-                byte[] levelBytes = FileUtil.DecompressFile(prefabPath);
-
-                var byml = new Byml.Byml(new MemoryStream(levelBytes));
-                BymlHashTable? root = byml.Root as BymlHashTable;
-                if (root.ContainsKey("Rails"))
+                List<CourseRail>? prefabRails = CreatePrefabRail(placement, prefab, levelBytes, areaHash);
+                if (prefabRails != null)
                 {
-                    var prefabRails = CreatePrefabRail(posVec, prefab, directory);
-                    foreach (var rail in prefabRails)           
+                    foreach (var rail in prefabRails)
                         ctx.AddRail(rail);
                 }
                 batch.Commit($"{IconUtil.ICON_PASTE} Added {prefab} Prefab");
@@ -2225,6 +2213,8 @@ namespace Fushigi.ui.widgets
                         string[] files = Directory.GetFiles(appDataPath, "*.bcett*");
                         prefabList(files, true, appDataPath);
                     }
+                    else
+                        ImGui.Text(noPrefabsText);
                     ImGui.EndTabItem();
                 }
 
@@ -2240,14 +2230,16 @@ namespace Fushigi.ui.widgets
 
         public void prefabList(string[] files, bool canDelete, string directory)
         {
-            ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                ImGui.SetWindowFocus(null); 
+
+            ImGui.BeginChild("PrefabScroll", ImGui.GetContentRegionAvail());
             float rowHeight = ImGui.GetFrameHeight();
             float deleteButtonWidth = rowHeight * 1.6f;
 
-            if (directory.Contains("AppData") && files.Length == 0)
-            {
-                ImGui.Text("You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ");
-            }
+            if (files.Length == 0)
+                ImGui.Text(noPrefabsText);
+
             foreach (string file in files)
             {
 
@@ -2383,17 +2375,31 @@ namespace Fushigi.ui.widgets
             if (ImGui.BeginTabItem("Add Actor"))
             {
 
+                if (ImGui.IsItemClicked())
+                    regenerateLayersList = true;
+
                 ActorSearch();
                 ImGui.EndTabItem();
             }
 
             if (ImGui.BeginTabItem("Add Layer"))
             {
-                ImGui.InputText("##LayerSearch", ref mLayerSearch, 0x100);
-                if (ImGui.BeginTable("##Layers", 1, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                    layerSearch();
+                    ImGui.InputText("##LayerSearch", ref mLayerSearch, 0x100);
+                ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
 
-                ImGui.EndTable();
+                if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                    ImGui.SetWindowFocus(null);
+                if (ImGui.BeginTable("##Layers", 1, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    var layers = LayerTypes
+                      .Except(mLayersVisibility.Keys)
+                      .ToArray();
+
+                    layerSearch(layers, 0);
+                    ImGui.EndTable();
+                    ImGui.EndChild();
+                }
+
                 ImGui.EndTabItem();
             }
 
@@ -2403,18 +2409,21 @@ namespace Fushigi.ui.widgets
                 ImGui.EndTabItem();
             }
 
-            ImGui.EndTabItem();
             ImGui.EndTabBar();
 
             ImGui.End();
         }
-        private void layerSearch()
+        private void layerSearch(string[] layers, int callFrom)
         {
-            var layers = mLayersVisibility.Keys.ToArray().ToImmutableList();
             bool isSearch = !string.IsNullOrWhiteSpace(mLayerSearch);
+            const int MaxLayerCount = 10;
+            int layerCount = 0;
 
-            if (prevLayerSearch != mLayerSearch)
+            if (prevCallFrom != callFrom)
+                regenerateLayersList = true;
+            if (prevLayerSearch != mLayerSearch || regenerateLayersList)
             {
+                regenerateLayersList = false;
                 filteredLayers.Clear();
                 prevLayerSearch = mLayerSearch;
 
@@ -2427,20 +2436,33 @@ namespace Fushigi.ui.widgets
 
                     filteredLayers.Add(layer);
                 }
+                prevCallFrom = callFrom;
             }
 
-            foreach (string layer in filteredLayers)
+            for (var i = 0; i < filteredLayers.Count; i++)
             {
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                
+
+                var layer = filteredLayers[i];
+
+                if (callFrom == 0)
+                {
+                    layerCount = mLayersVisibility.Keys
+                                .Count(x => x.StartsWith(layer) && NumberRegex.IsMatch(x.AsSpan(layer.Length..)));
+                    if (layer == "PlayArea" || layer == "DecoArea")
+                        layer += $" ({layerCount}/{MaxLayerCount})";
+                }
+
                 ImGui.Selectable(layer);
 
                 if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+                {
                     mSelectedLayer = layer;
+                    regenerateLayersList = true;
+                }
               
             }
-
             if (mSelectedLayer != null && mSelectedActor != null)
                 AddSelectedActorWithLayer();
             else if (mSelectedLayer != null)
@@ -2466,7 +2488,6 @@ namespace Fushigi.ui.widgets
 
             bool isSearch = !string.IsNullOrWhiteSpace(mActorSearchAll);
 
-
             if (prevSearch != mActorSearchAll)
             {
                 filteredActors.Clear();
@@ -2490,39 +2511,54 @@ namespace Fushigi.ui.widgets
        
             ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
             string enActor = "";
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+                ImGui.SetWindowFocus(null);
+
             if (ImGui.BeginTable("##ActorsAndLayers", columnCount, flags))
             {
 
-            if (mSelectedActor == null)
-            {
-                int i = 0;
-                foreach (string actor in filteredActors)
+                if (mSelectedActor == null)
                 {
-                    ImGui.TableNextRow();
-                    ImGui.TableSetColumnIndex(0);
-                    if (UserSettings.GetEnableTranslation())
+                    int i = 0;
+                    foreach (string actor in filteredActors)
                     {
-                        enActor = translatedActors[i];
-                        ImGui.Selectable(enActor);
-                    }
-                    else
-                        ImGui.Selectable(actor);
 
-                    if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
-                        mSelectedActor = actor;
-                    if (UserSettings.GetEnableTranslation())
-                    {
-                        ImGui.TableSetColumnIndex(1);
-                        ImGui.BeginDisabled();
-                        ImGui.Text(actor);
-                        ImGui.EndDisabled();
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        if (UserSettings.GetEnableTranslation())
+                        {
+                            var actorType = CourseActor.GetActorTypeFromGyaml(actor);
+                            uint color = CourseActor.CourseActorColors[CourseActorType.None];
+                            CourseActor.CourseActorColors.TryGetValue(actorType, out color);
+
+                            enActor = translatedActors[i];
+                            ImGui.PushStyleColor(ImGuiCol.Text, CourseActor.ColorShift(color));
+                            ImGui.Selectable(enActor);
+                            ImGui.PopStyleColor();
+                        }
+                        else
+                            ImGui.Selectable(actor);
+
+                        if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+                            mSelectedActor = actor;
+                        if (UserSettings.GetEnableTranslation())
+                        {
+                            ImGui.TableSetColumnIndex(1);
+                            ImGui.BeginDisabled();
+                            ImGui.Text(actor);
+                            ImGui.EndDisabled();
+                        }
+                        i++;
                     }
-                    i++;
                 }
-            }
-            else if (mSelectedLayer == null)
-                layerSearch();
-            ImGui.EndTable();
+                else if (mSelectedLayer == null)
+                {
+                    var layers = mLayersVisibility.Keys.ToArray().ToArray();
+                    layerSearch(layers, 1);
+                }
+
+                    ImGui.EndTable();
         }
         ImGui.EndChild();
     }
@@ -2568,7 +2604,6 @@ namespace Fushigi.ui.widgets
 
                 mEditContext.AddActor(actor);
                 } while ((modifier & KeyboardModifier.Shift) > 0);
-            Console.WriteLine("does this bazinga run");
                 mSelectedActor = null;
                 mSelectedLayer = null;
         }
@@ -4866,7 +4901,7 @@ namespace Fushigi.ui.widgets
                     var name = area.mAreaParams.EnvPaletteSetting.InitPaletteBaseName;
 
                     if (hasOpened)
-                       envPaletteWindow.SavePalette(resource_table, savePath);
+                       envPaletteWindow.SavePalette(resource_table, Path.Combine(savePath, "Gyml", "Gfx", "EnvPaletteParam"));
 
                     area.Save(resource_table, Path.Combine(savePath, "BancMapUnit"), false);
                     area.mAreaParams.Save(resource_table, Path.Combine(savePath, "Stage", "AreaParam"), area.mAreaName, false);
@@ -4904,6 +4939,8 @@ namespace Fushigi.ui.widgets
         public static bool blankLevel = false;
         private string mLayerSearch = "";
         private string prevLayerSearch;
+        private int prevCallFrom = 0;
+        private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
 
         public bool attemptSave()
         {
