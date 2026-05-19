@@ -4,6 +4,8 @@ using Fushigi.param;
 using Fushigi.util;
 using ImGuiNET;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
+using System.Threading.Channels;
 
 namespace Fushigi.course
 {
@@ -259,7 +261,7 @@ namespace Fushigi.course
                 return CourseActorType.Tag;
             if (gyaml.Contains("area"))
                 return CourseActorType.Area;
-            if (gyaml.StartsWith("block"))
+            if (gyaml.Contains("block"))
                 return CourseActorType.Block;
             if (gyaml.StartsWith("bgunit"))
                 return CourseActorType.BgUnit;
@@ -329,10 +331,10 @@ namespace Fushigi.course
                 mScale = mScale,
                 mRotation = mRotation
             };
-            cloned.mStartingTrans = mStartingTrans; 
+            cloned.mStartingTrans = mStartingTrans;
             cloned.mStartingRot = mStartingRot;
             cloned.mAreaHash = areaTo.mRootHash;
-            cloned.mHash = mHash; 
+            cloned.mHash = mHash;
             cloned.mActorParameters = mActorParameters.Clone();
             cloned.mSystemParameters = mSystemParameters.Clone();
             cloned.mActorPack = mActorPack;
@@ -374,10 +376,25 @@ namespace Fushigi.course
             { CourseActorType.MapObj, ImGui.ColorConvertFloat4ToU32(new(0.85f, 0.63f, 0.43f, 1)) },
             { CourseActorType.WObj, ImGui.ColorConvertFloat4ToU32(new(0.85f, 0.63f, 0.43f, 1)) },
             { CourseActorType.WMap, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) },
+            { CourseActorType.WorldMap, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) },
             { CourseActorType.Object, ImGui.ColorConvertFloat4ToU32(new(0.125f, 0.976f, 0.988f, 1)) },
             { CourseActorType.Sound, ImGui.ColorConvertFloat4ToU32(new(0.36f, 0.25f, 0.83f, 1)) },
             { CourseActorType.Camera, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) },
         };
+
+        public static uint ColorShift(uint color)
+        {
+            Vector4 vecCol = ImGui.ColorConvertU32ToFloat4(color);
+            vecCol.X = EditColorChannel(vecCol.X);
+            vecCol.Y = EditColorChannel(vecCol.Y);
+            vecCol.Z = EditColorChannel(vecCol.Z);
+            return ImGui.ColorConvertFloat4ToU32(vecCol);
+        }
+
+        public static float EditColorChannel(float channel)
+        {
+            return (float)(channel + (1 - channel) * 0.6);
+        }
     }
 
     public class CourseActorHolder

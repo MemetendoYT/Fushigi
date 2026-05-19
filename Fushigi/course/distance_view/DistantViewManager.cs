@@ -65,9 +65,6 @@ namespace Fushigi.course.distance_view
             {
                 var scroll_config = ParamTable.Layers[layer];
 
-
-                //Console.WriteLine(layer + scroll_config);
-
                 var locator_pos = DVLocator != null ? DVLocator.mTranslation : Vector3.Zero;
 
                 

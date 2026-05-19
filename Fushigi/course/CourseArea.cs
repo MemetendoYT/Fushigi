@@ -206,57 +206,19 @@ namespace Fushigi.course
                 mUnitHolder = new();
             }
         }
-        public BymlArrayNode LoadPrefabRailLinks(string prefabName, byte[] levelBytes)
-        {
-            var byml = new Byml.Byml(new MemoryStream(levelBytes));
-            BymlHashTable? root = byml.Root as BymlHashTable;
-            BymlArrayNode linksArray = null;
-            if (root.ContainsKey("ActorToRailLinks"))
-            {
-                linksArray = (BymlArrayNode)root["ActorToRailLinks"];
-            }
-            return linksArray;
 
-        }
-        public BymlArrayNode LoadPrefabLinks(string prefabName, byte[] levelBytes)
-        {
-            var byml = new Byml.Byml(new MemoryStream(levelBytes));
-            BymlHashTable? root = byml.Root as BymlHashTable;
-            BymlArrayNode linksArray = null;
-            if (root.ContainsKey("Links"))
-            {
-                linksArray = (BymlArrayNode)root["Links"];
-            }
-            return linksArray;
-
-        }
-        public BymlArrayNode LoadPrefab(string prefabName, byte[] levelBytes)
+        public BymlArrayNode LoadPrefab(string prefabName, byte[] levelBytes, string objType)
         {
             var byml = new Byml.Byml(new MemoryStream(levelBytes));
 
             BymlHashTable? root = byml.Root as BymlHashTable;
-            BymlArrayNode actorsArray = null;
-            if (root.ContainsKey("Actors"))
-            {
-                actorsArray = (BymlArrayNode)root["Actors"];
-            }
-            return actorsArray;
-
+            BymlArrayNode objArray = null;
+            if (root.ContainsKey(objType))
+                objArray = (BymlArrayNode)root[objType];
+ 
+            return objArray;
         }
 
-        public BymlArrayNode LoadPrefabRails(string prefabName, byte[] levelBytes)
-        {
-            var byml = new Byml.Byml(new MemoryStream(levelBytes));
-
-            BymlHashTable? root = byml.Root as BymlHashTable;
-            BymlArrayNode railsArray = null;
-            if (root.ContainsKey("Rails"))
-            {
-                railsArray = (BymlArrayNode)root["Rails"];
-            }
-            return railsArray;
-
-        }
         public CourseActor? GetActorByHash(ulong hash)
         {
             return mActorHolder.mActors.FirstOrDefault(a => a.mHash == hash);

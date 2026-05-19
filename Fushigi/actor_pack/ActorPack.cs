@@ -43,6 +43,7 @@ namespace Fushigi
         public ControllerSetParam ControllerPath;
         public ShapeParamList ShapeParams;
         public BgUnitInfo BgUnitInfo;
+        public BgUnitControl BgUnitControl;
         public string ChildActorParamName;
         public string CalcDistanceParam;
 
@@ -219,6 +220,9 @@ namespace Fushigi
                     break;
                     case "BgUnitInfo":
                         this.BgUnitInfo = BymlSerialize.Deserialize<BgUnitInfo>(data);
+                    break;
+                    case "BgUnitControl":
+                        this.BgUnitControl = BymlSerialize.Deserialize<BgUnitControl>(data);
                     break;
                 }
             }

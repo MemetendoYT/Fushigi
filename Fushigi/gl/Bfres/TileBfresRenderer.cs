@@ -6,6 +6,7 @@ using Silk.NET.OpenGL;
 using System.Diagnostics;
 using System.Numerics;
 using static Fushigi.course.CourseUnit;
+using static Fushigi.gl.Bfres.TileBfresRender;
 
 namespace Fushigi.gl.Bfres
 {
@@ -33,6 +34,7 @@ namespace Fushigi.gl.Bfres
             BgUnitInfo? halfHitInfo = ActorPackCache.Load(packNames.HalfHit)?.BgUnitInfo;
             BgUnitInfo? noHitInfo = ActorPackCache.Load(packNames.NoHit)?.BgUnitInfo;
             BgUnitInfo? bridgeInfo = ActorPackCache.Load(packNames.Bridge)?.BgUnitInfo;
+
 
             if (fullHitInfo is null ||
                 halfHitInfo is null ||
@@ -72,12 +74,74 @@ namespace Fushigi.gl.Bfres
                 ));
         }
 
-        public void Load(CourseUnitHolder unitHolder)
+        public void LoadBGUnit(List<CourseActor> actors)
+        {
+            var type = ModelType.Solid;
+            var model = type switch
+            {
+                ModelType.Solid => this.SolidModel,
+                ModelType.SemiSolid => this.SemisolidModel,
+                ModelType.NoCollision => this.NoCollisionModel,
+                ModelType.Bridge => this.BridgeModel,
+                _ => null
+            };
+
+
+            foreach (var actor in actors)
+            {
+                var scale = actor.mScale;
+
+                float startX = actor.mTranslation.X - (scale.X / 2f);
+                float endX = actor.mTranslation.X + (scale.X / 2f);
+
+                float startY = actor.mTranslation.Y - (scale.Y / 2f);
+                float endY = actor.mTranslation.Y + (scale.Y / 2f);
+
+                for (int x = (int)MathF.Floor(startX); x <= (int)MathF.Floor(endX); x++)
+                {
+                    for (int y = (int)MathF.Floor(startY); y <= (int)MathF.Floor(endY); y++)
+                    {
+                        model.TileManager.AddWallTile(new Vector3(x, y, 0), 0);
+                    }
+                }
+
+
+            //var model = type switch
+            //   ModelType.Solid => this.SolidModel,
+            //    ModelType.SemiSolid => this.SemisolidModel,
+            //    ModelType.NoCollision => this.NoCollisionModel,
+            //    ModelType.Bridge => this.BridgeModel,
+            //    _ => null
+            //};
+
+            //model.TileManager.AddWallTile(actor.mTranslation, 0);
+
+            //model.TileManager.UpdateTileParameters();
+        }
+            model.TileManager.UpdateTileParameters();
+        }
+        public void ClearTiles()
         {
             SolidModel.TileManager.Clear();
             SemisolidModel.TileManager.Clear();
             NoCollisionModel.TileManager.Clear();
             BridgeModel.TileManager.Clear();
+        }
+
+        public void DoLoad(CourseUnitHolder unitHolder, List<CourseActor> actors)
+        {
+            ClearTiles();
+            Load(unitHolder);
+            //LoadBGUnit(actors);
+
+            //if (activeViewport.BgUnits.Contains(actor))
+            //{
+            //    activeViewport.BgUnits.Remove(actor);
+            //    activeViewport.tileRebuild = true;
+            //}
+        }
+        public void Load(CourseUnitHolder unitHolder)
+        {
 
             foreach (var unit in unitHolder.mUnits)
             {
@@ -87,6 +151,7 @@ namespace Fushigi.gl.Bfres
                 if (unit.mSkinDivision != this.mSkinDivision)
                     continue;
 
+                
                 var model = unit.mModelType switch
                 {
                     ModelType.Solid => this.SolidModel,
@@ -280,6 +345,7 @@ namespace Fushigi.gl.Bfres
             public BfresMaterialRender Edge;
 
             public TileManager TileManager = new TileManager();
+            public TileManager TileUnitManager = new TileManager();
 
             private BfresRender BfresRender;
             private BfresRender.BfresModel BfresModelRender;

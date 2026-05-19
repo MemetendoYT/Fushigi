@@ -9,6 +9,7 @@ namespace Fushigi.course
     public class CourseUnit
     {
         public event Action? TilesUpdated;
+        public static bool UpdateTiles = false;
 
         public readonly static string[] ModelTypeNames = Enum.GetNames(typeof(ModelType));
         public readonly static string[] SkinDivisionNames = Enum.GetNames(typeof(SkinDivision));
@@ -176,6 +177,7 @@ namespace Fushigi.course
             }
 
             TilesUpdated?.Invoke();
+            UpdateTiles = true;
         }
 
         public ModelType mModelType;
