@@ -1475,6 +1475,11 @@ namespace Fushigi.ui.widgets
                 if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
                     showCourseSettings = true;
                 ImGui.SetItemTooltip("Edit Course Settings");
+                ImGui.SameLine();
+
+                if (ImGui.Button(IconUtil.ICON_HAMBURGER, icon_size))
+                    showActorVisibility = true;
+                ImGui.SetItemTooltip("Edit Actor Visibility");
 
                 ImGui.SameLine();
 
@@ -1520,6 +1525,9 @@ namespace Fushigi.ui.widgets
 
                 if (showCourseSettings)
                     CourseSettings.Draw(ref showCourseSettings, mPopupModalHost, course.mCourseInfo, course.mMapAnalysisInfo, course.mStageLoadInfo);
+
+                if (showActorVisibility)
+                    ActorVisibility.Draw(ref showActorVisibility, mPopupModalHost);
 
                 var flags = ImGuiComboFlags.NoArrowButton | ImGuiComboFlags.WidthFitPreview;
                 if (ImGui.BeginCombo($"##EnvPalette", $"{IconUtil.ICON_PALETTE}", flags))
@@ -1580,14 +1588,6 @@ namespace Fushigi.ui.widgets
                 }
                 ImGui.SetItemTooltip("Hide/Show Foreground Actors");
 
-
-                ImGui.SameLine();
-
-                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_LONG_ARROW_ALT_UP, viewport.ShowRails, icon_size))
-                {
-                    viewport.ShowRails = !viewport.ShowRails;
-                }
-                ImGui.SetItemTooltip("Hide/Show Rails");
 
                 ImGui.SameLine();
 
@@ -1776,7 +1776,7 @@ namespace Fushigi.ui.widgets
         #region Actors
         private void ActorsPanel()
         {
-            ImGui.Begin("Actors");
+            ImGui.Begin("Current");
 
             if (ImGui.Button("Delete Actor"))
             {
@@ -2368,7 +2368,7 @@ namespace Fushigi.ui.widgets
         #region Add Actor
         private void SelectActorAndLayerPanel()
         {
-            ImGui.Begin("Actors and Layers");
+            ImGui.Begin("Add");
 
             ImGui.BeginTabBar("SelectActorAndLayerWindow");
 
@@ -4941,6 +4941,7 @@ namespace Fushigi.ui.widgets
         private string prevLayerSearch;
         private int prevCallFrom = 0;
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
+        private bool showActorVisibility;
 
         public bool attemptSave()
         {

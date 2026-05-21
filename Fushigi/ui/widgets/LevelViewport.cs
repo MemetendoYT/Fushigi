@@ -11,6 +11,7 @@ using Fushigi.param;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
+using Microsoft.Msagl.Layout.Incremental;
 using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Silk.NET.OpenGL;
 using System;
@@ -96,11 +97,13 @@ namespace Fushigi.ui.widgets
         public bool isPanGesture;
 
         ImDrawListPtr mDrawList;
+        public static List<string> HiddenActors = new();
+        public static List<string> HiddenModels = new();
         public bool PlayAnimations = false;
         public bool ShowGrid = true;
         public bool ShowBackground = true;
         public bool ShowActors = true;
-        public bool ShowRails = true;
+        public static bool ShowRails = true;
         bool pasteContext = false;
         bool copyContext = false;
         bool deleteContext = false;
@@ -816,9 +819,12 @@ namespace Fushigi.ui.widgets
                     !actor.wonderVisible)
                         continue;
 
-                   RenderActor(actor, actor.mActorPack.ModelInfoRef);
-                   RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
+                    bool renderModels = false;
 
+                    if (!HiddenModels.Contains(actor.mType.ToString())) {
+                        RenderActor(actor, actor.mActorPack.ModelInfoRef);
+                        RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
+                    }
                 }
             }
             //Reset back to defaults
@@ -840,6 +846,11 @@ namespace Fushigi.ui.widgets
 
         }
 
+        private void RenderActorSprite(CourseActor actor)
+        {
+
+
+        }
         private void RenderActor(CourseActor actor, ModelInfo modelInfo)
         {
             if (modelInfo == null || modelInfo.mFilePath == null)
@@ -1081,6 +1092,8 @@ namespace Fushigi.ui.widgets
             const float pointSize = 8.0f;
             foreach (CourseActor actor in mArea.GetActors())
             {
+                if(HiddenActors.Contains(actor.mType.ToString()))
+                    continue;
 
                 Vector3 min = new(-.5f);
                 Vector3 max = new(.5f);
