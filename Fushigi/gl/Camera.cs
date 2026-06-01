@@ -15,7 +15,7 @@ namespace Fushigi.gl
         public Vector3 Target = Vector3.Zero;
         public float Distance = 10;
 
-        public float Fov = MathF.PI / 2;
+        public float Fov = 70 * MathF.PI / 180.0f;
 
         public float Width;
         public float Height;
@@ -29,9 +29,10 @@ namespace Fushigi.gl
         public Matrix4x4 ViewProjectionMatrix { get; private set; }
         public Matrix4x4 ViewProjectionMatrixInverse { get; private set; }
 
-        public CameraFrustum CameraFrustum = new CameraFrustum();
+        internal CameraFrustum CameraFrustum = new CameraFrustum();
 
-        public bool InFrustum(BoundingBox box, float radius = 1f) {
+        internal bool InFrustum(BoundingBox box, float radius = 1f)
+        {
             return CameraFrustum.CheckIntersection(this, box, radius);
         }
 
@@ -41,15 +42,22 @@ namespace Fushigi.gl
 
             if (IsOrthographic)
             {
-                ProjectionMatrix = Matrix4x4.CreateOrthographic(AspectRatio * tanFOV * Distance, tanFOV * Distance,
+                ProjectionMatrix = Matrix4x4.CreateOrthographic(AspectRatio * tanFOV * 2 * Distance, tanFOV * 2 * Distance,
                         -10000, 10000);
 
-                ViewMatrix = Matrix4x4.CreateTranslation(-Target + new Vector3(0, 0, -10));
+                ViewMatrix =
+                    Matrix4x4.CreateTranslation(-Target) *
+                    Matrix4x4.CreateFromQuaternion(Quaternion.Inverse(Rotation)) *
+                    Matrix4x4.CreateTranslation(0, 0, -10);
+
             }
             else
             {
                 ProjectionMatrix = Matrix4x4.CreatePerspectiveFieldOfView(Fov, AspectRatio, 1.0f, 10000);
-                ViewMatrix = Matrix4x4.CreateTranslation(-Target) * Matrix4x4.CreateTranslation(0, 0, -Distance / 2);
+                ViewMatrix =
+                    Matrix4x4.CreateTranslation(-Target) *
+                    Matrix4x4.CreateFromQuaternion(Quaternion.Inverse(Rotation)) *
+                    Matrix4x4.CreateTranslation(0, 0, -Distance);
             }
 
             ViewProjectionMatrix = ViewMatrix * ProjectionMatrix;

@@ -11,23 +11,22 @@ namespace Fushigi.ui.widgets
             public DialogResult Result;
             public string PrefabName;
         }
-
         public enum DialogResult
         {
             Yes,
             No
         }
 
-        // Persistent text field (must NOT be inside DrawModalContent)
         private string PrefabName = "";
-
-        public static async Task<SavePrefabResult> ShowDialog(IPopupModalHost modalHost)
+        public static string modalText = "";
+        public static async Task<SavePrefabResult> ShowDialog(IPopupModalHost modalHost, string title, string text)
         {
+            modalText = text;
             var dialog = new SavePrefabDialog();
 
             var result = await modalHost.ShowPopUp(
                 dialog,
-                "Save Prefab",
+                title,
                 ImGuiWindowFlags.AlwaysAutoResize
             );
 
@@ -49,7 +48,7 @@ namespace Fushigi.ui.widgets
 
         public void DrawModalContent(Promise<SavePrefabResult> promise)
         {
-            ImGui.Text("Enter name for this prefab");
+            ImGui.Text(modalText);
             ImGui.NewLine();
 
             ImGui.InputText("##Prefab", ref PrefabName, 0x100);

@@ -213,7 +213,7 @@ namespace Fushigi.ui.widgets
             var dpiToggle = UserSettings.GetDPIOverride();
             var dpiVal = UserSettings.GetDPIVal();
             var ClickDuplicate = UserSettings.GetClickDuplicate();
-
+            var UseSprites = UserSettings.GetUseSprites();
             ImGui.Indent();
 
             Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
@@ -309,6 +309,11 @@ namespace Fushigi.ui.widgets
                     }
                 }
             }
+
+            if (ImGui.Checkbox("Use Sprites", ref UseSprites))
+                UserSettings.SetUseSprites(UseSprites);
+
+            Tooltip.Show("Bazinga");
 
             if (dpiToggle)
             {

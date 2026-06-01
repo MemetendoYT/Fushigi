@@ -87,6 +87,30 @@ namespace Fushigi.util
             //no separating axis found -> collision
             return true;
         }
+        public static Vector3 IntersectPlaneRay(Vector3 rayVector, Vector3 rayPoint, Vector3 planeNormal, Vector3 planePoint)
+        {
+            //code from: https://rosettacode.org/wiki/Find_the_intersection_of_a_line_with_a_plane
+            var diff = rayPoint - planePoint;
+            var prod1 = Vector3.Dot(diff, planeNormal);
+            var prod2 = Vector3.Dot(rayVector, planeNormal);
+            var prod3 = prod1 / prod2;
+            return rayPoint - rayVector * prod3;
+        }
+
+        public static Quaternion QuatFromEulerXYZ(Vector3 eulerAngles)
+        {
+            // adapted from https://github.com/Unity-Technologies/Unity.Mathematics/blob/master/src/Unity.Mathematics/quaternion.cs#L113
+            (float s_x, float c_x) = MathF.SinCos(0.5f * eulerAngles.X);
+            (float s_y, float c_y) = MathF.SinCos(0.5f * eulerAngles.Y);
+            (float s_z, float c_z) = MathF.SinCos(0.5f * eulerAngles.Z);
+            return new Quaternion(
+                s_x * c_y * c_z - s_y * s_z * c_x,
+                s_y * c_x * c_z + s_x * s_z * c_y,
+                s_z * c_x * c_y - s_x * s_y * c_z,
+                c_x * c_y * c_z + s_y * s_z * s_x
+                );
+        }
+
 
         public static bool HitTestConvexQuad(Vector2 p1, Vector2 p2, Vector2 p3, Vector2 p4, Vector2 point) 
         {

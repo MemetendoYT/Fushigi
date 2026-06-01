@@ -39,12 +39,16 @@ namespace Fushigi.ui.widgets
             selectedArea = course.GetArea(0);
             undoWindow = new UndoWindow();
             envPaletteWindow = new EnvPaletteWindow();
-            collisionEditorWindow = new EnvCollisionEditor();
             activeViewport = null!;
             LevelViewport._courseScene = this;
             UpdateDRPC();
         }
 
+        public CourseScene(GLTaskScheduler glScheduler)
+        {
+            activeViewport = null!;
+            LevelViewport._courseScene = this;
+        }
 
         #region Variables
         readonly Dictionary<CourseArea, LevelViewport> viewports = [];
@@ -54,7 +58,6 @@ namespace Fushigi.ui.widgets
         public LevelViewport activeViewport;
         readonly UndoWindow undoWindow;
         readonly EnvPaletteWindow envPaletteWindow;
-        readonly EnvCollisionEditor collisionEditorWindow;
         NumVec camSave;
         public static bool saveStatus = true;
         private bool areaSwitched;
@@ -316,10 +319,12 @@ namespace Fushigi.ui.widgets
             for (int i = 0; i < resourceFiles.Count; i++)
             {
                 string? file = resourceFiles[i];
-                progress.Report(($"Loading models", i / (float)resourceFiles.Count));
-                Logger.Logger.LogMessage("CourseScene", $"Loading {file}");
-                await BfresCache.LoadAsync(glScheduler, file);
-                Logger.Logger.LogMessage("CourseScene", $"Loaded {file}");
+                if (!UserSettings.GetUseSprites()) { 
+                    progress.Report(($"Loading models", i / (float)resourceFiles.Count));
+                    Logger.Logger.LogMessage("CourseScene", $"Loading {file}");
+                    await BfresCache.LoadAsync(glScheduler, file);
+                    Logger.Logger.LogMessage("CourseScene", $"Loaded {file}");
+                }
             }
             Logger.Logger.LogMessage("CourseScene", $"Finished loading models");
         }
@@ -350,7 +355,7 @@ namespace Fushigi.ui.widgets
 
         #region Area
         readonly LayerSorter layerSort = new();
-        public static void overwriteLevel(CourseArea currentArea)
+        public void overwriteLevel(CourseArea currentArea, GLTaskScheduler GLTaskScheduler)
         {
             CourseArea blank = new CourseArea("BlankStage", false);
             currentArea.mAreaParams = blank.mAreaParams;
@@ -363,6 +368,8 @@ namespace Fushigi.ui.widgets
             currentArea.mRailLinksHolder = blank.mRailLinksHolder;
             currentArea.mRootHash = blank.mRootHash;
             reloadUnit = true;
+
+            RebuildAreaData(GLTaskScheduler, currentArea);
         }
         private static void AreaParameters(AreaParam area)
         {
@@ -454,10 +461,9 @@ namespace Fushigi.ui.widgets
             MainWindow.removeCurrentArea = true;
             ImGui.CloseCurrentPopup();
         }
-        public async Task RebuildAreaData(GLTaskScheduler scheduler)
+        public async Task RebuildAreaData(GLTaskScheduler scheduler, CourseArea newArea)
         {
-            var newArea = course.GetAreas().Last();
-            uint hash = Crc32.Compute(newArea.GetName());
+            uint hash = (uint)(new Random().NextDouble() * uint.MaxValue);
             newArea.mRootHash = hash;
             var hashMap = new Dictionary<ulong, ulong>();
 
@@ -587,12 +593,13 @@ namespace Fushigi.ui.widgets
                 oldAreaParamSize += old_size;
             }
 
-
-            BymlHashTable old_croot = course.mCourseInfo.Serialize();
-            var old_cbyml = new Byml.Byml(old_croot);
-            var old_csize = AreaParam.GetDecompressedSize(old_cbyml);
-            oldCourseInfoSize = old_csize;
-
+            if (!Course.IsWorldMap)
+            {
+                BymlHashTable old_croot = course.mCourseInfo.Serialize();
+                var old_cbyml = new Byml.Byml(old_croot);
+                var old_csize = AreaParam.GetDecompressedSize(old_cbyml);
+                oldCourseInfoSize = old_csize;
+            }
 
             cs.activeViewport = cs.viewports[cs.selectedArea];
 
@@ -969,12 +976,6 @@ namespace Fushigi.ui.widgets
                 envPaletteWindow.Draw(ref showPaletteWindow, mPopupModalHost);
 
 
-            if (showCollisionWindow)
-            {
-                if (sizeToUse != null)
-                    collisionEditorWindow.Draw(ref showCollisionWindow, mPopupModalHost, sizeToUse, deltaSeconds, activeViewport);
-            }
-
             if (showGlobalLinkWindow)
                 DrawGlobalLinksPanel(ref showGlobalLinkWindow, mPopupModalHost, gLink, linkNumb);
 
@@ -1069,7 +1070,11 @@ namespace Fushigi.ui.widgets
                         var drawPos = ImGui.GetCursorScreenPos();
                         ImGui.SetCursorScreenPos(drawPos);
 
-                        viewport.Draw(size, deltaSeconds, mLayersVisibility);
+                        if (!Course.IsWorldMap)
+                            viewport.Draw(size, deltaSeconds, mLayersVisibility);
+                        else
+                            viewport.DrawWM(size, deltaSeconds, mLayersVisibility);
+
                         viewport.vpMin = ImGui.GetItemRectMin();
                         viewport.vpMax = ImGui.GetItemRectMax();
                         insideViewport = ImGui.IsMouseHoveringRect(viewport.vpMin, viewport.vpMax);
@@ -1615,12 +1620,12 @@ namespace Fushigi.ui.widgets
 
                 ImGui.SameLine();
 
-                //if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SQUARE, true, icon_size))
-                //{
-                //    showCollisionWindow = true;
-                //}
+                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SQUARE, true, icon_size))
+                {
+                    showCollisionWindow = true;
+                }
 
-                //ImGui.SetItemTooltip("Collision Editor [Experimental]");
+                ImGui.SetItemTooltip("Collision Editor [Experimental]");
 
                 ImGui.PopStyleColor(1);
                 ImGui.EndChild();
@@ -3017,6 +3022,8 @@ namespace Fushigi.ui.widgets
                 SelectedActor(mSelectedActor);
             else if (editContext.IsSingleObjectSelected(out CourseUnit? mSelectedUnit))
                 SelectedUnit(mSelectedUnit);
+            else if (editContext.IsSingleObjectSelected(out BGUnitRail? mSelectedUnitRail))
+                SelectedUnitRail(mSelectedUnitRail);
             else if (editContext.IsSingleObjectSelected(out CourseRail? mSelectedRail))
                 SelectedRail(mSelectedRail);
             else if (editContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint? mSelectedRailPoint) ||
@@ -4715,7 +4722,6 @@ namespace Fushigi.ui.widgets
             bypassSelection = true;
 
             var (pickedActor, _) = await PickActor();
-            Console.WriteLine("Picked Actor: " + pickedActor?.mPackName);
 
             return pickedActor;
         }
@@ -4872,6 +4878,7 @@ namespace Fushigi.ui.widgets
 
             foreach (string path in sizeTables)
             {
+
                 RSTB resource_table = new RSTB();
                 resource_table.Load(Path.GetFileName(path));
 
@@ -4881,13 +4888,19 @@ namespace Fushigi.ui.widgets
                 Console.WriteLine($"{(backup ? "Backing up" : "Saving")} course {course.GetName()}...");
                 course.SaveCourse(resource_table, Path.Combine(savePath, "BancMapUnit"));
 
-                //Save the CourseInfo file
-                Console.WriteLine($"{(backup ? "Backing up" : "Saving")} course info for {course.GetName()}...");
-                course.mCourseInfo.Save(resource_table, Path.Combine(savePath, "Stage", "CourseInfo"), course.GetName());
 
-                //Save the MapAnalysisInfo file
-                Console.WriteLine($"{(backup ? "Backing up" : "Saving")} map analysis info for {course.GetName()}...");
-                course.mMapAnalysisInfo.Save(resource_table, Path.Combine(savePath, "Stage", "MapAnalysisInfo"), course.GetName());
+                //Save the CourseInfo file
+                if (!Course.IsWorldMap)
+                {
+                    Console.WriteLine($"{(backup ? "Backing up" : "Saving")} course info for {course.GetName()}...");
+                    course.mCourseInfo.Save(resource_table, Path.Combine(savePath, "Stage", "CourseInfo"), course.GetName());
+
+
+                    //Save the MapAnalysisInfo file
+                    Console.WriteLine($"{(backup ? "Backing up" : "Saving")} map analysis info for {course.GetName()}...");
+                    course.mMapAnalysisInfo.Save(resource_table, Path.Combine(savePath, "Stage", "MapAnalysisInfo"), course.GetName());
+
+                }
 
                 //Save the StageLoadInfo file
                 Console.WriteLine($"{(backup ? "Backing up" : "Saving")} stage load info for {course.GetName()}...");

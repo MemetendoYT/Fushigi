@@ -131,18 +131,28 @@ namespace Fushigi
                 Byml.Byml byml = new(new MemoryStream(File.ReadAllBytes(loadFile)));
                 var root = (BymlHashTable)byml.Root;
                 var courseList = (BymlArrayNode)root["CourseTable"];
-                for (int i = 0; i < courseList.Length; i++)
+                string courseLocation = "";
+                bool isWorldMap = false;
+                for (int i = -1; i < courseList.Length; i++)
                 {
-                    var course = (BymlHashTable)courseList[i];
-                    string derp = ((BymlNode<string>)course["StagePath"]).Data;
-
-                    // we need to "fix" our StagePath so it points to our course
-                    string courseLocation = Path.GetFileName(derp).Split(".game")[0];
-
+                    if (i == -1)
+                    {
+                        isWorldMap = true;
+                        courseLocation = worldName;
+                    }
+                    else
+                    {
+                        isWorldMap = false;
+                        var course = (BymlHashTable)courseList[i];
+                        string derp = ((BymlNode<string>)course["StagePath"]).Data;
+                        // we need to "fix" our StagePath so it points to our course
+                        courseLocation = Path.GetFileName(derp).Split(".game")[0];
+                    }
                     WorldEntry.CourseEntry courseEntry = new();
-                    var courseInfo = new CourseInfo(courseLocation);
+
+                    var courseInfo = new CourseInfo(courseLocation, isWorldMap);
                     if (courseInfo.CourseNameLabel != null &&
-                        courseNames.TryGetValue(courseInfo.CourseNameLabel, out string? courseName))
+                    courseNames.TryGetValue(courseInfo.CourseNameLabel, out string? courseName))
                     {
                         courseEntry.name = courseName;
                         CourseNames.TryAdd(courseInfo.GlobalCourseId, courseName);
@@ -156,6 +166,7 @@ namespace Fushigi
                     CourseWorlds.TryAdd(courseInfo.GlobalCourseId, int.Parse(worldName.Split("World")[1]));
 
                     courseLocationList.Add(courseLocation, courseEntry);
+
                 }
 
                 worldEntry.courseEntries = courseLocationList;

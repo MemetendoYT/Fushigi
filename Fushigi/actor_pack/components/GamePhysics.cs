@@ -102,6 +102,12 @@ namespace Fushigi.actor_pack.components
         [BymlProperty("HalfExtents")]
         public Vector3 mExtents { get; set; }
 
+        [BymlProperty("MaterialPresets")]
+        public List<string> mPresets { get; set; }
+
+        [BymlProperty("Vertices")]
+        public List<PolytopeVertex> Vertices { get; set; }
+
     }
 
     [Serializable]
@@ -115,4 +121,17 @@ namespace Fushigi.actor_pack.components
         [BymlProperty("CenterB")]
         public Vector3 mCenterB { get; set; }   
     }
+
+    public class PolytopeVertex
+    {
+        public float X { get; set; }
+        public float Y { get; set; }
+        public float Z { get; set; }
+
+        public Vector3 mTranslation => new Vector3(X, Y, Z);
+        public Vector3 mStartingTrans = new Vector3(0, 0, 0);
+
+
+    }
+
 }

@@ -77,6 +77,12 @@ namespace Fushigi.SARC
             }
         }
 
+
+        public void Save()
+        {
+
+        }
+
         public bool DirectoryExists(string path)
         {
             foreach (string file in Files.Keys)

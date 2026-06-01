@@ -43,8 +43,7 @@ namespace Fushigi.ui
 
         public MainWindow()
         {
-         
-
+        
             Logger.Logger.LogMessage("MainWindow", "Loading icons");
 
             unsafe
@@ -229,6 +228,7 @@ namespace Fushigi.ui
 
                 if (result == RailConfirmationDialog.DialogResult.Yes)
                 {
+                    mSelectedCourseScene.deleteEmptyRails();
                     return true;
                 }
                 else if (result == RailConfirmationDialog.DialogResult.AutoDelete)
@@ -319,12 +319,13 @@ namespace Fushigi.ui
                         Task.Run(() => ParamDB.Load(p));
                         await task;
                     });
-                    isRegenerate(false);
         }
 
-        async Task StartupRoutine()
+        
+        public async Task StartupRoutine()
         {
             await WaitTick();
+
             bool shouldShowPreferenceWindow = true;
             bool shouldShowWelcomeDialog = true;
             string romFSPath = UserSettings.GetRomFSPath();
@@ -386,7 +387,7 @@ namespace Fushigi.ui
                 $"Loading {mCurrentCourseName}",
                 async (p) =>
                 {
-                    CourseScene.overwriteLevel(CourseScene.currentArea);
+                    mSelectedCourseScene.overwriteLevel(CourseScene.currentArea, mGLTaskScheduler);
 
                     Logger.Logger.LogMessage("MainWindow", $"Reload course {mCurrentCourseName}!");
 
@@ -428,7 +429,14 @@ namespace Fushigi.ui
                     {
                         p.Report(("Loading course files", null));
                         await mModalHost.WaitTick();
-                        var course = new Course(name);
+                        bool isWorldMap = false;
+                        Course.SetIsWorldMap(false);
+                        if (name.Contains("World00"))
+                        {
+                            isWorldMap = true;
+                            Course.SetIsWorldMap(true);
+                        }
+                        var course = new Course(name, isWorldMap);
                         p.Report(("Loading other resources (this temporarily freezes the app)", null));
                         await mModalHost.WaitTick();
 
@@ -490,6 +498,9 @@ namespace Fushigi.ui
             {
                 if (ImGui.BeginMenu(" "))
                 {
+                    if (ImGui.MenuItem("Change Mode"))
+                        EditorMode.Draw(this);
+
                     if (ImGui.MenuItem("Settings"))
                         mIsShowPreferenceWindow = true;
 
@@ -561,6 +572,10 @@ namespace Fushigi.ui
                             }).ConfigureAwait(false); //fire and forget
                         }
                     }
+
+                    if (ImGui.MenuItem("Rename Course"))
+                        RenameLevel();
+
 
                     ImGui.Separator();
 
@@ -691,11 +706,26 @@ namespace Fushigi.ui
                 ImGui.EndMenuBar();
             }
         }
+
+        
+        public async Task RenameLevel()
+        {
+            var result = await SavePrefabDialog.ShowDialog(MainWindow.mModalHost, "Rename Course", "Enter new name for course");
+
+            if (result.Result == SavePrefabDialog.DialogResult.Yes)
+            {
+                mSelectedCourseScene.course.SetName(result.PrefabName + "_Course");
+                mSelectedCourseScene.course.renameAreaFromMenu();
+            }
+
+        }
+
+     
         public async Task AddArea()
         {
             addNewArea = false;
             mSelectedCourseScene.course.AddArea();
-            await mSelectedCourseScene.RebuildAreaData(mGLTaskScheduler);
+            await mSelectedCourseScene.RebuildAreaData(mGLTaskScheduler, mSelectedCourseScene.course.GetAreas().Last());
 
         }
         public void Render(GL gl, double delta, ImGuiController controller)
@@ -712,10 +742,14 @@ namespace Fushigi.ui
             ImGui.DockSpaceOverViewport();
 
             //only works after the first frame
+            if (EditorMode.editMode == "")
+                EditorMode.Draw(this);
+
             if (ImGui.GetFrameCount() == 2)
             {
                 ImGui.LoadIniSettingsFromDisk("imgui.ini");
-                _ = StartupRoutine();
+                //_ = EditorRoutine();
+                //_ = StartupRoutine();
             }
 
 
@@ -739,9 +773,27 @@ namespace Fushigi.ui
             }
 
             if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
-                !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()) && EditorMode.editMode == "Level Editor")
             {
                 mSelectedCourseScene?.DrawUI(gl, delta);
+            }
+
+            if(EditorMode.editMode != "")
+            {
+                if (EditorMode.editMode == "AINB")
+                {
+                    nodeEditor.Draw();
+                }
+
+                if (EditorMode.editMode == "Collision")
+                {
+                    collisionEditor.Draw(mGLTaskScheduler, delta);
+                }
+
+                if (EditorMode.editMode == "MSBT")
+                {
+                    msbtEditor.Draw();
+                }
             }
 
             if (mIsShowPreferenceWindow)
@@ -777,6 +829,9 @@ namespace Fushigi.ui
         public static string? mCurrentCourseName;
         public static string mCurrentLevelName = "";
         CourseScene? mSelectedCourseScene;
+        DrawNodeEditor? nodeEditor = new DrawNodeEditor();
+        CollisionEditor? collisionEditor = new CollisionEditor();
+        MsbtEditor? msbtEditor = new MsbtEditor();
         bool mIsShowPreferenceWindow = false;
         public static float backupSize;
     }

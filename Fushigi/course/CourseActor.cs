@@ -255,6 +255,10 @@ namespace Fushigi.course
         public static CourseActorType GetActorTypeFromGyaml(string gyaml)
         {
             gyaml = gyaml.ToLower();
+            if (gyaml.StartsWith("edv"))
+                return CourseActorType.DV;
+            if (gyaml.StartsWith("richdv"))
+                return CourseActorType.DV;
             if (gyaml.StartsWith("camera"))
                 return CourseActorType.Camera;
             if (gyaml.EndsWith("tag"))

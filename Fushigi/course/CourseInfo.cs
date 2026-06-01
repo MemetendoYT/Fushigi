@@ -40,8 +40,11 @@ namespace Fushigi.course
         public string UnlockBadgeIdOnCourseClear { get; set; } //
 
 
-        public CourseInfo(string name)
+        public CourseInfo(string name, bool isWorldMap)
         {
+            if (isWorldMap)
+                return;
+
             var courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "CourseInfo", $"{name}.game__stage__CourseInfo.bgyml"));
             var byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
 

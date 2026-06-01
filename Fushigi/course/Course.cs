@@ -12,11 +12,16 @@ namespace Fushigi.course
 {
     public class Course
     {
-        public Course(string courseName)
+        public Course(string courseName, bool isWorldMap)
         {
             mCourseName = courseName;
-            mCourseInfo = new CourseInfo(courseName);
-            mMapAnalysisInfo = new MapAnalysisInfo(courseName);
+
+            if (!isWorldMap)
+            {
+                mCourseInfo = new CourseInfo(mCourseName, isWorldMap);
+                mMapAnalysisInfo = new MapAnalysisInfo(mCourseName);
+            }
+
             mStageLoadInfo = new StageLoadInfo(courseName);
             mAreas = [];
             LoadFromRomFS();
@@ -25,6 +30,30 @@ namespace Fushigi.course
         {
             return mCourseName;
         }
+
+        public static void SetIsWorldMap(bool value)
+        {
+            IsWorldMap = value;
+        }
+        public static bool GetIsWorldMap()
+        {
+            return IsWorldMap;
+        }
+        public void SetName(string newName)
+        {
+            mCourseName = newName;
+        }
+
+
+        public void renameAreaFromMenu()
+        {
+            foreach (CourseArea mArea in mAreas)
+            {
+                string areaName = mArea.mAreaName;
+                mArea.mAreaName = mCourseName.Split("_")[0] + "_" + areaName.Split("_")[1];
+            }
+        }
+
 
         public void LoadFromRomFS()
         {
@@ -296,7 +325,7 @@ namespace Fushigi.course
         }
 
 
-        readonly string mCourseName;
+        string mCourseName;
         List<CourseArea> mAreas;
         BymlArrayNode mStageReferences;
         CourseLinkHolder? mGlobalLinks;
@@ -307,6 +336,7 @@ namespace Fushigi.course
         public static string Catergory;
         public static bool updateStageParam;
         private bool overWriteCourseParam;
+        public static bool IsWorldMap;
     }
 }
 

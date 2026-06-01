@@ -37,6 +37,7 @@ namespace Fushigi.util
             public bool dpiOverride = false;
             public float dpiVal = 1.0f;
             public bool DeleteEmptyRails;
+            public bool UseSprites;
 
             public Settings()
             {
@@ -60,6 +61,7 @@ namespace Fushigi.util
                 dpiOverride = false;
                 dpiVal = 1.0f;
                 DeleteEmptyRails = false;
+                UseSprites = false;
             }
         }
 
@@ -286,6 +288,17 @@ namespace Fushigi.util
         public static void SetDeleteEmptyRails(bool value)
         {
             AppSettings.DeleteEmptyRails = value;
+            Save();
+        }
+
+        public static bool GetUseSprites()
+        {
+            return AppSettings.UseSprites;
+        }
+
+        public static void SetUseSprites(bool value)
+        {
+            AppSettings.UseSprites = value;
             Save();
         }
 

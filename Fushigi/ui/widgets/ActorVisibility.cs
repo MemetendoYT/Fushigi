@@ -16,7 +16,8 @@ namespace Fushigi.ui.widgets
     internal class ActorVisibility
     {
 
-        private static LevelViewport viewport;
+        private static Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
+
         private static readonly Dictionary<string, string> ViewingSettings = new Dictionary<string, string>()
         {
             {"Rails", "No Model" },
@@ -24,71 +25,88 @@ namespace Fushigi.ui.widgets
             {"Actors", "Dropdown" },
         };
 
-        private static readonly Dictionary<string, string> Actors = new Dictionary<string, string>()
+        private static readonly Dictionary<string, string> ForegroundActors = new Dictionary<string, string>()
         {
-            {"DV", "" },
             {"Camera", "No Model"},
+            {"Area", "No Model" },
+            {"DV", "" },
             {"MapObj", "" },
             {"Enemy", "" },
-            {"Area", "" }
         };
 
-        public static void DrawThingy(Dictionary<string, string> actors, string name)
+        private static readonly Dictionary<string, string> BackgroundActors = new Dictionary<string, string>()
         {
-            foreach (var actor in actors)
-            {
-                TableJargon(actor.Key);
-                ImGui.TableSetColumnIndex(1);
-                Bazinga(actor.Key, name, "Tag");
+            {"DV", "" },
+        };
 
-                if (actor.Value != "No Model")
+        private static readonly Dictionary<string, string> Actors = new Dictionary<string, string>()
+        {
+            {"Camera", "No Model"},
+            {"Area", "No Model" },
+            {"MapObj", "" },
+            {"Enemy", "" },
+            {"DV", "" }
+        };
+
+        public static void DrawDropdown(Dictionary<string, string> DropDownObjects, string ObjectName)
+        {
+            foreach (var objects in DropDownObjects)
+            {
+                DrawFirstColumn(objects.Key);
+                ImGui.TableSetColumnIndex(1);
+                DrawVisibilityToggle(objects.Key, ObjectName, "Tag");
+
+                if (objects.Value != "No Model")
                 {
                     ImGui.TableSetColumnIndex(2);
                     ImGui.SameLine();
-                    Bazinga(actor.Key, actor.Key, "Model");
+                    DrawVisibilityToggle(objects.Key, ObjectName, "Model");
                 }
             }
-
         }
 
-        public static void Bazinga(string name, string parent, string dictionary)
+        public static void DrawVisibilityToggle(string objectName, string parentObjectName, string listToUse)
         {
-            var thing = LevelViewport.HiddenActors;
-            if(dictionary == "Model")
-            {
-                thing = LevelViewport.HiddenModels;
-            }
+            var visibilityList = LevelViewport.HiddenActors;
 
-                Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
-            if (ImGui.Button($"{IconUtil.ICON_EYE}##EyeButton_{name}", icon_size))
-            {
-                switch (parent)
+            if(listToUse == "Model")
+                visibilityList = LevelViewport.HiddenModels;
+
+            bool contains = visibilityList.Contains(objectName);
+            var icon = IconUtil.ICON_EYE;
+
+            if (contains)
+                icon = IconUtil.ICON_EYE_SLASH;
+
+                if (ImGui.Button($"{icon}##EyeButton_{objectName}_{listToUse}", icon_size))
                 {
-                    case "Rails":
-                        LevelViewport.ShowRails = !LevelViewport.ShowRails;
-                        break;
-                    case "Actor":
-                        AddToList(name, thing);
-                        break;
+                    switch (parentObjectName)
+                    {
+                        case "Rails":
+                            LevelViewport.ShowRails = !LevelViewport.ShowRails;
+                            break;
+                        case "Actor":
+                            AddToList(objectName, visibilityList);
+                            break;
+                    }
                 }
-
-            }
         }
 
         public static void AddToList(string name, List<string> list)
         {
-            Console.WriteLine(name);
             if (list.Contains(name))
                 list.Remove(name);
             else
                 list.Add(name);
         }
-        public static void TableJargon(string name)
+
+        public static void DrawFirstColumn(string name)
         {
             ImGui.TableNextRow();
             ImGui.TableSetColumnIndex(0);
             ImGui.Text(name + ":");
         }
+
         public static void Draw(ref bool continueDisplay, IPopupModalHost modalHost)
         {
             ImGui.SetNextWindowSize(new Vector2(500 * MainWindow.dpiScale, 500 * MainWindow.dpiScale), ImGuiCond.Once);
@@ -103,15 +121,18 @@ namespace Fushigi.ui.widgets
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Thingy");
+                    ImGui.Text("Object");
+                    ImGui.Separator();
                     ImGui.TableSetColumnIndex(1);
-                    ImGui.Text("Show Tag");
+                    ImGui.Text("Tag Visibility");
+                    ImGui.Separator();
                     ImGui.TableSetColumnIndex(2);
-                    ImGui.Text("Show Model");
+                    ImGui.Text("Model Visibility");
+                    ImGui.Separator();
 
                     foreach (var setting in ViewingSettings)
                     {
-                        TableJargon(setting.Key);
+                        DrawFirstColumn(setting.Key);
 
                         if (setting.Value == "Dropdown")
                         {
@@ -121,25 +142,27 @@ namespace Fushigi.ui.widgets
                                 switch (setting.Key)
                                 {
                                     case "Actors":
-                                        DrawThingy(Actors, "Actor");
+                                        DrawDropdown(Actors, "Actor");
                                         break;
                                 }
+
                                 ImGui.TreePop();
                             }
                         }
                         else
                         {
                             ImGui.TableSetColumnIndex(1);
-                            Bazinga(setting.Key, setting.Key, "Tag");
+                            DrawVisibilityToggle(setting.Key, setting.Key, "Tag");
 
                             if (setting.Value != "No Model")
                             {
                                 ImGui.TableSetColumnIndex(2);
                                 ImGui.SameLine();
-                                Bazinga(setting.Key, setting.Key, "Model");
+                                DrawVisibilityToggle(setting.Key, setting.Key, "Model");
                             }
                         }
-                       
+                        //ImGui.TableSetColumnIndex(0);
+                        //ImGui.Separator();
                     }
                     ImGui.EndTable();
                 }
