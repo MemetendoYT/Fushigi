@@ -62,8 +62,7 @@ namespace Fushigi.ui.widgets
             ["0E 0A 18 02 00 00"] = "{Left Button}",
             ["0E 0A 18 02 01 01"] = "{B Button}",
             ["0E 0A 18 02 01 01"] = "{B Button}",
-            ["0E 0A 18 02 01 00"] = "{Down Button}",
-            ["0E 0A 0F 02 01 C3 8D"] = "{R again}"
+            ["0E 0A 18 02 01 00"] = "{Down Button}"
 
         };
 

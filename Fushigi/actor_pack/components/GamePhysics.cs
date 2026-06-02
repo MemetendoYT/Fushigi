@@ -53,13 +53,14 @@ namespace Fushigi.actor_pack.components
         public List<ShapeParam> mBox { get; set; }
 
         [BymlProperty("Sphere", DefaultValue = "")]
-        public List<ShapeParam> mSphere { get; set; } 
+        public List<Sphere> mSphere { get; set; } 
 
         [BymlProperty("Capsule", DefaultValue = "")]
         public List<ShapeParam> mCapsule { get; set; }
 
         [BymlProperty("Polytope", DefaultValue = "")]
         public List<ShapeParam> mPoly { get; set; }
+
     }
 
     [Serializable]
@@ -102,9 +103,6 @@ namespace Fushigi.actor_pack.components
         [BymlProperty("HalfExtents")]
         public Vector3 mExtents { get; set; }
 
-        [BymlProperty("MaterialPresets")]
-        public List<string> mPresets { get; set; }
-
         [BymlProperty("Vertices")]
         public List<PolytopeVertex> Vertices { get; set; }
 
@@ -131,6 +129,19 @@ namespace Fushigi.actor_pack.components
         public Vector3 mTranslation => new Vector3(X, Y, Z);
         public Vector3 mStartingTrans = new Vector3(0, 0, 0);
 
+
+    }
+
+    public class Sphere
+    {
+        public float Radius { get; set; }
+
+        [BymlProperty("MaterialPresets")]
+        public List<string> mPresets { get; set; }
+
+        public Vector3 Center {  get; set; }
+
+        public Vector3 mStartingTrans;
 
     }
 
