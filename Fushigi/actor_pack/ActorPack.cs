@@ -5,9 +5,11 @@ using Fushigi.Byml.Serializer;
 using Fushigi.gl.Bfres;
 using Fushigi.SARC;
 using Fushigi.util;
+using SarcLibrary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -48,11 +50,14 @@ namespace Fushigi
         public string CalcDistanceParam;
 
         public string Category = "";
+        public List<PathAry> shapes;
+        public string sarcPath = "";
 
         public ActorPack(string path)
         {
             try
             {
+                sarcPath = path;
                 Load(path);
             }
             catch
@@ -83,7 +88,7 @@ namespace Fushigi
         private void Load(string path)
         {
             var stream = new MemoryStream(FileUtil.DecompressFile(path));
-            SARC.SARC sarc = new SARC.SARC(stream);
+            var sarc = new SARC.SARC(stream);
 
             //Notes:
             //We load the component list rather than folders as there can be multiple components of the same type
@@ -228,6 +233,17 @@ namespace Fushigi
             }
         }
 
+        public void updateCollisionFile(string path)
+        {
+            var stream = new MemoryStream(FileUtil.DecompressFile(sarcPath));
+            var sarc = new SARC.SARC(stream);
+            var file = GetPathGyml(path);
+            var dat = sarc.OpenFile(file);
+            Console.WriteLine(file);
+            this.ShapeParams = BymlSerialize.Deserialize<ShapeParamList>(dat);
+            stream.Dispose();
+        }
+
         private ShapeParamList? GetActorShape(SARC.SARC sarc)
         {
             var file = GetPathGyml(this.GamePhysicsRef.mPath);
@@ -248,7 +264,7 @@ namespace Fushigi
                 this.ControllerPath.parent = par.parent;
             }
             
-            var shapes = this.ControllerPath.ShapeNamePathAry ?? [];
+            shapes = this.ControllerPath.ShapeNamePathAry ?? [];
             var rigidBodies = (this.ControllerPath.mRigids ?? [])
                 .Concat((this.ControllerPath.mEntity ?? [])
                 .Concat(this.ControllerPath.mSensor ?? []));
@@ -269,7 +285,7 @@ namespace Fushigi
 
                 foreach(var shape in shapes)
                 {
-                    if(((body.ShapeName ?? "")  == shape.Name || (body.ShapeNames?.Cast<string>() ?? []).Contains(shape.Name)) && 
+                    if (((body.ShapeName ?? "")  == shape.Name || (body.ShapeNames?.Cast<string>() ?? []).Contains(shape.Name)) && 
                     shape.FilePath != null)
                     {
                         file = GetPathGyml(shape.FilePath);

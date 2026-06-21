@@ -530,137 +530,161 @@ namespace Fushigi.ui
 
                 if (ImGui.BeginMenu("File"))
                 {
-                    if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
-                        !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+
+                    if (EditorMode.editMode == "Level Editor")
                     {
-                        if (ImGui.MenuItem("Open Course"))
+                        if (!string.IsNullOrEmpty(RomFS.GetRoot()) &&
+                            !string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
                         {
-                            Task.Run(async () =>
-                            {
-                                string? selectedCourse = await CourseSelect.ShowDialog(this, mCurrentCourseName);
-
-                                if (selectedCourse is null || mCurrentCourseName == selectedCourse)
-                                    return;
-
-                                if (await TryCloseCourse())
-                                {
-                                    mCurrentCourseName = selectedCourse;
-   
-                                    Logger.Logger.LogMessage("MainWindow", $"Selected course {mCurrentCourseName}!");
-                                    await LoadCourseWithProgressBar(mCurrentCourseName);
-                                    UserSettings.AppendRecentCourse(mCurrentCourseName);
-                                    CourseScene.saveStatus = true;
-                                }
-                            }).ConfigureAwait(false); //fire and forget
-                        }
-
-                        // Reload Course
-                        if (ImGui.MenuItem("Reload Course"))
-                        {
-                            Task.Run(async () =>
-                            {
-                                if (mCurrentCourseName is null)
-                                    return;
-
-                                if (await TryCloseCourse())
-                                {
-                                    Logger.Logger.LogMessage("MainWindow", $"Reload course {mCurrentCourseName}!");
-                                    await LoadCourseWithProgressBar(mCurrentCourseName);
-                                    UserSettings.AppendRecentCourse(mCurrentCourseName);
-                                    CourseScene.saveStatus = true;
-                                }
-                            }).ConfigureAwait(false); //fire and forget
-                        }
-                    }
-
-                    if (ImGui.MenuItem("Rename Course"))
-                        RenameLevel();
-
-
-                    ImGui.Separator();
-
-                /* Saves the currently loaded course */
-                var text_color = mSelectedCourseScene == null ?
-                         ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled] :
-                         ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
-
-                    ImGui.PushStyleColor(ImGuiCol.Text, ImGui.ColorConvertFloat4ToU32(text_color));
-
-                    if (ImGui.MenuItem("Save") && mSelectedCourseScene != null)
-                    {
-                        //Ensure the romfs path is set for saving
-                        if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
-                        {
-                            if (mSelectedCourseScene.attemptSave() && !UserSettings.GetDeleteEmptyRails())
+                            if (ImGui.MenuItem("Open Course"))
                             {
                                 Task.Run(async () =>
                                 {
-                                    if (await TrySaveCourse())
-                                        mSelectedCourseScene.Save(false);
-                                    else
+                                    string? selectedCourse = await CourseSelect.ShowDialog(this, mCurrentCourseName);
+
+                                    if (selectedCourse is null || mCurrentCourseName == selectedCourse)
                                         return;
-                                }).ConfigureAwait(false);
+
+                                    if (await TryCloseCourse())
+                                    {
+                                        mCurrentCourseName = selectedCourse;
+
+                                        Logger.Logger.LogMessage("MainWindow", $"Selected course {mCurrentCourseName}!");
+                                        await LoadCourseWithProgressBar(mCurrentCourseName);
+                                        UserSettings.AppendRecentCourse(mCurrentCourseName);
+                                        CourseScene.saveStatus = true;
+                                    }
+                                }).ConfigureAwait(false); //fire and forget
                             }
-                            else if (UserSettings.GetDeleteEmptyRails())
+
+                            // Reload Course
+                            if (ImGui.MenuItem("Reload Course"))
                             {
-                                mSelectedCourseScene.deleteEmptyRails();
+                                Task.Run(async () =>
+                                {
+                                    if (mCurrentCourseName is null)
+                                        return;
+
+                                    if (await TryCloseCourse())
+                                    {
+                                        Logger.Logger.LogMessage("MainWindow", $"Reload course {mCurrentCourseName}!");
+                                        await LoadCourseWithProgressBar(mCurrentCourseName);
+                                        UserSettings.AppendRecentCourse(mCurrentCourseName);
+                                        CourseScene.saveStatus = true;
+                                    }
+                                }).ConfigureAwait(false); //fire and forget
                             }
-                                mSelectedCourseScene.Save(false);
                         }
-                        else //Else configure the mod path
+
+                        if (ImGui.MenuItem("Rename Course"))
+                            RenameLevel();
+
+
+                        ImGui.Separator();
+
+                        /* Saves the currently loaded course */
+                        var text_color = mSelectedCourseScene == null ?
+                                 ImGui.GetStyle().Colors[(int)ImGuiCol.TextDisabled] :
+                                 ImGui.GetStyle().Colors[(int)ImGuiCol.Text];
+
+                        ImGui.PushStyleColor(ImGuiCol.Text, ImGui.ColorConvertFloat4ToU32(text_color));
+
+                        if (ImGui.MenuItem("Save") && mSelectedCourseScene != null)
+                        {
+                            //Ensure the romfs path is set for saving
+                            if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
+                            {
+                                if (mSelectedCourseScene.attemptSave() && !UserSettings.GetDeleteEmptyRails())
+                                {
+                                    Task.Run(async () =>
+                                    {
+                                        if (await TrySaveCourse())
+                                            mSelectedCourseScene.Save(false);
+                                        else
+                                            return;
+                                    }).ConfigureAwait(false);
+                                }
+                                else if (UserSettings.GetDeleteEmptyRails())
+                                {
+                                    mSelectedCourseScene.deleteEmptyRails();
+                                }
+                                mSelectedCourseScene.Save(false);
+                            }
+                            else //Else configure the mod path
+                            {
+                                FolderDialog dlg = new FolderDialog();
+                                if (dlg.ShowDialog("Select the romfs directory to save to."))
+                                {
+                                    Logger.Logger.LogMessage("MainWindow", $"Setting RomFS path to {dlg.SelectedPath}");
+                                    UserSettings.SetModRomFSPath(dlg.SelectedPath);
+                                    mSelectedCourseScene.Save(false);
+                                }
+                            }
+                        }
+                        if (ImGui.MenuItem("Save As") && mSelectedCourseScene != null)
                         {
                             FolderDialog dlg = new FolderDialog();
                             if (dlg.ShowDialog("Select the romfs directory to save to."))
                             {
-                                Logger.Logger.LogMessage("MainWindow", $"Setting RomFS path to {dlg.SelectedPath}");
                                 UserSettings.SetModRomFSPath(dlg.SelectedPath);
                                 mSelectedCourseScene.Save(false);
                             }
                         }
-                    }
-                    if (ImGui.MenuItem("Save As") && mSelectedCourseScene != null)
-                    {
-                        FolderDialog dlg = new FolderDialog();
-                        if (dlg.ShowDialog("Select the romfs directory to save to."))
+
+                        ImGui.Separator();
+
+                        if (ImGui.MenuItem("Blank out baked collisions") && mSelectedCourseScene != null)
                         {
-                            UserSettings.SetModRomFSPath(dlg.SelectedPath);
-                            mSelectedCourseScene.Save(false);
+                            string directory = Path.Combine(UserSettings.GetModRomFSPath(), "Phive", "StaticCompoundBody");
+
+                            if (!Directory.Exists(directory))
+                                Directory.CreateDirectory(directory);
+
+                            foreach (var area in mSelectedCourseScene.GetCourse().GetAreas())
+                            {
+                                var filePath = Path.Combine(directory, $"{area.GetName()}.Nin_NX_NVN.bphsc.zs");
+                                File.Copy(Path.Combine(AppContext.BaseDirectory, "res", "BlankStaticCompoundBody.bphsc.zs"),
+                                    filePath, overwrite: true);
+                            }
                         }
-                    }
 
-                    ImGui.Separator();
+                        ImGui.Separator();
 
-                    if (ImGui.MenuItem("Blank out baked collisions") && mSelectedCourseScene != null)
-                    {
-                        string directory = Path.Combine(UserSettings.GetModRomFSPath(), "Phive", "StaticCompoundBody");
-
-                        if (!Directory.Exists(directory))
-                            Directory.CreateDirectory(directory);
-
-                        foreach (var area in mSelectedCourseScene.GetCourse().GetAreas())
+                        if (ImGui.MenuItem("Reset Area"))
                         {
-                            var filePath = Path.Combine(directory, $"{area.GetName()}.Nin_NX_NVN.bphsc.zs");
-                            File.Copy(Path.Combine(AppContext.BaseDirectory, "res", "BlankStaticCompoundBody.bphsc.zs"),
-                                filePath, overwrite: true);
+                            CourseScene.blankLevel = true;
                         }
+
+                        if (ImGui.MenuItem("Use this area as template"))
+                        {
+                            var area = mSelectedCourseScene.selectedArea;
+                            area.mAreaParams.Save(null, "", "", true);
+                            area.Save(null, "", true);
+
+
+                        }
+                        ImGui.PopStyleColor();
+
                     }
 
-                    ImGui.Separator();
-
-                    if (ImGui.MenuItem("Reset Area"))
+                    if (EditorMode.editMode == "Collision")
                     {
-                        CourseScene.blankLevel = true;
+
+                        if (ImGui.MenuItem("Export Collision"))
+                        {
+                            FileDialog dlg = new FileDialog();
+                            if (dlg.ShowSaveDialog("Export Collision"))
+                            {
+                                string path = dlg.SelectedPath;
+
+                                if (!path.EndsWith(".bgyml"))
+                                    path += ".bgyml";
+
+                                CollisionEditor.Save(path);
+                            }
+                        }
+
                     }
-
-                    if (ImGui.MenuItem("Use this area as template"))
-                    {
-                        var area = mSelectedCourseScene.selectedArea;
-                        area.mAreaParams.Save(null, "", "", true);
-                        area.Save(null, "", true);
-
-
-                    }
-                    ImGui.PopStyleColor();
 
                     ImGui.Separator();
 
@@ -794,6 +818,11 @@ namespace Fushigi.ui
                 {
                     msbtEditor.Draw();
                 }
+
+                if (EditorMode.editMode == "SaveData")
+                {
+                    saveEditor.Draw();
+                }
             }
 
             if (mIsShowPreferenceWindow)
@@ -832,6 +861,7 @@ namespace Fushigi.ui
         DrawNodeEditor? nodeEditor = new DrawNodeEditor();
         CollisionEditor? collisionEditor = new CollisionEditor();
         MsbtEditor? msbtEditor = new MsbtEditor();
+        SaveEditor? saveEditor = new SaveEditor();
         bool mIsShowPreferenceWindow = false;
         public static float backupSize;
     }

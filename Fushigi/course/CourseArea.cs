@@ -358,7 +358,6 @@ namespace Fushigi.course
 
             var decomp_size = (uint)mem.Length;
 
-
             //Compress and save the course area           
             string levelPath = Path.Combine(folder, $"{mAreaName}.bcett.byml.zs");
            

@@ -2,10 +2,13 @@
 using Fushigi.ui.modal;
 using Fushigi.util;
 using ImGuiNET;
+using Newtonsoft.Json.Linq;
+using Silk.NET.SDL;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Security.AccessControl;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -17,21 +20,23 @@ namespace Fushigi.ui.widgets
     {
 
         private static Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
+        public static List<string> HiddenAll = new();
 
         private static readonly Dictionary<string, string> ViewingSettings = new Dictionary<string, string>()
         {
             {"Rails", "No Model" },
             {"BgUnits", "" },
-            {"Actors", "Dropdown" },
+            {"ForegroundActors", "Dropdown" },
+            {"BackgroundActors", "Dropdown" }
         };
 
         private static readonly Dictionary<string, string> ForegroundActors = new Dictionary<string, string>()
         {
             {"Camera", "No Model"},
             {"Area", "No Model" },
-            {"DV", "" },
             {"MapObj", "" },
             {"Enemy", "" },
+            {"Object", ""},
         };
 
         private static readonly Dictionary<string, string> BackgroundActors = new Dictionary<string, string>()
@@ -59,10 +64,39 @@ namespace Fushigi.ui.widgets
                 if (objects.Value != "No Model")
                 {
                     ImGui.TableSetColumnIndex(2);
-                    ImGui.SameLine();
                     DrawVisibilityToggle(objects.Key, ObjectName, "Model");
                 }
             }
+        }
+
+        public static void DrawParentIcon(Dictionary<string, string> DropDownObjects, string ObjectName)
+        {
+            ImGui.TableSetColumnIndex(1);
+            var icon = IconUtil.ICON_EYE;
+
+            if (HiddenAll.Contains(ObjectName + "_tag"))
+                icon = IconUtil.ICON_EYE_SLASH;
+
+            if (ImGui.Button($"{icon}##{ObjectName}_Parent_Tag", icon_size))
+            {
+                AddToList(ObjectName + "_tag", HiddenAll);
+                foreach (var objects in DropDownObjects)
+                    AddToList(objects.Key, LevelViewport.HiddenActors);
+            }
+
+            icon = IconUtil.ICON_EYE;
+            if (HiddenAll.Contains(ObjectName + "_model"))
+                icon = IconUtil.ICON_EYE_SLASH;
+
+            ImGui.TableSetColumnIndex(2);
+            if (ImGui.Button($"{icon}##{ObjectName}_Parent_Model", icon_size))
+            {
+                AddToList(ObjectName + "_model", HiddenAll);
+                foreach (var objects in DropDownObjects)
+                    if (objects.Value != "No Model")
+                        AddToList(objects.Key, LevelViewport.HiddenModels);
+            }
+            ImGui.TableSetColumnIndex(0);
         }
 
         public static void DrawVisibilityToggle(string objectName, string parentObjectName, string listToUse)
@@ -72,7 +106,7 @@ namespace Fushigi.ui.widgets
             if(listToUse == "Model")
                 visibilityList = LevelViewport.HiddenModels;
 
-            bool contains = visibilityList.Contains(objectName);
+            bool contains = visibilityList.Contains(objectName) || HiddenAll.Contains(objectName);
             var icon = IconUtil.ICON_EYE;
 
             if (contains)
@@ -83,7 +117,8 @@ namespace Fushigi.ui.widgets
                     switch (parentObjectName)
                     {
                         case "Rails":
-                            LevelViewport.ShowRails = !LevelViewport.ShowRails;
+                        AddToList("Rails", HiddenAll);
+                        LevelViewport.ShowRails = !LevelViewport.ShowRails;
                             break;
                         case "Actor":
                             AddToList(objectName, visibilityList);
@@ -130,24 +165,40 @@ namespace Fushigi.ui.widgets
                     ImGui.Text("Model Visibility");
                     ImGui.Separator();
 
+                    var i = 0;
                     foreach (var setting in ViewingSettings)
                     {
                         DrawFirstColumn(setting.Key);
 
                         if (setting.Value == "Dropdown")
                         {
-                            ImGui.SameLine();
-                            if (ImGui.TreeNode(""))
+                            switch (setting.Key)
+                            {
+                                case "ForegroundActors":
+                                    DrawParentIcon(ForegroundActors, "ForegroundActor");
+                                    break;
+                                case "BackgroundActors":
+                                    DrawParentIcon(BackgroundActors, "BackgroundActor");
+                                    break;
+
+                            }
+
+                            if (ImGui.TreeNode($"##Node{i}"))
                             {
                                 switch (setting.Key)
                                 {
-                                    case "Actors":
-                                        DrawDropdown(Actors, "Actor");
+                                    case "ForegroundActors":
+                                        DrawDropdown(ForegroundActors, "Actor");
                                         break;
+                                    case "BackgroundActors":
+                                        DrawDropdown(BackgroundActors, "Actor");
+                                        break;
+
                                 }
 
                                 ImGui.TreePop();
                             }
+                            i++;
                         }
                         else
                         {

@@ -1,22 +1,17 @@
-﻿using EditorToolkit.Core;
-using EditorToolkit.ImGui;
-using Fasterflect;
+﻿using CommunityToolkit.HighPerformance;
 using Fushigi.actor_pack.components;
+using Fushigi.Byml;
 using Fushigi.course;
-using Fushigi.env;
 using Fushigi.gl;
 using Fushigi.param;
-using Fushigi.ui.modal;
 using Fushigi.ui.SceneObjects;
 using Fushigi.util;
-using FuzzySharp.Edits;
 using ImGuiNET;
-using OpenAbility.ImGui.Nodes;
-using Silk.NET.Maths;
-using Silk.NET.OpenGL;
-using Silk.NET.SDL;
+using Microsoft.Msagl.Layout.Incremental;
+using System.Drawing;
 using System.Numerics;
-using static DiscordRPC.User;
+using Vector3 = System.Numerics.Vector3;
+
 
 namespace Fushigi.ui.widgets
 {
@@ -29,9 +24,12 @@ namespace Fushigi.ui.widgets
         private bool hasSetCamera;
         private string prevSearch;
         public Viewport3D vp3D = new Viewport3D();
+        CourseAreaEditContext mEditContext = null;
 
         private List<string> filteredActors = new List<string>();
-        private CourseActor CollisionActor = new CourseActor("EnemyKuribo", 0, "PlayArea");
+        private static CourseActor CollisionActor = new CourseActor("EnemyKuribo", 0, "PlayArea");
+        private float prevFront;
+        private uint capsuleColor = ImGui.ColorConvertFloat4ToU32(new(0.125f, 0.988f, 0.561f, 0.4f));
 
         internal void Draw(GLTaskScheduler scheduler, double delta)
         {
@@ -49,13 +47,11 @@ namespace Fushigi.ui.widgets
 
             if (viewport != null)
             {
-                if (!hasSetCamera)
-                {
-                    viewport.Camera.Distance = 10;
-                    viewport.Camera.IsOrthographic = false;
-                    hasSetCamera = true;
-                }
-
+                //if (!hasSetCamera)
+                //{
+                //    viewport.Camera.Distance = 10;
+                //    hasSetCamera = true;
+                //}
                 viewport.DrawCollisionVP(size, delta, CollisionActor, this);
 
             }
@@ -64,93 +60,189 @@ namespace Fushigi.ui.widgets
 
         internal void SelectionPanel(CourseAreaEditContext editContext)
         {
-            ImGui.Begin("Collision Selection");
-            if (editContext.IsSingleObjectSelected(out Sphere? sphere))
+            if (!ImGui.Begin("Collision Selection"))
+                return;
+
+            if (ImGui.BeginCombo("##Dropdown", "Select File"))
             {
-                if (ImGui.CollapsingHeader("Sphere:", ImGuiTreeNodeFlags.DefaultOpen))
+                foreach (var collisionFile in CollisionActor.mActorPack.shapes)
                 {
-                    ImGui.Indent();
-                    if (ImGui.BeginTable("Trans", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                    if (ImGui.Selectable(collisionFile.FilePath))
                     {
-                        // --- Center ---
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.AlignTextToFramePadding();
-                        ImGui.Text("Center");
-
-                        ImGui.TableSetColumnIndex(1);
-                        var center = sphere.Center;
-                        ImGui.DragFloat3("##Center", ref center);
-                        sphere.Center = center;
-
-
-                        // --- Radius ---
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Radius");
-
-                        ImGui.TableSetColumnIndex(1);
-                        var radius = sphere.Radius;
-                        ImGui.DragFloat("##Radius", ref radius, 0.25f, 0, float.MaxValue);
-                        sphere.Radius = radius;
-
-
-                        // --- Material header ---
-                        ImGui.TableNextRow();
-                        ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Material");
-
-                        // First material entry goes in column 1
-                        ImGui.TableSetColumnIndex(1);
-
-                        // --- Material list ---
-                        for (int i = 0; i < sphere.mPresets.Count; i++)
-                        {
-                            var mat = sphere.mPresets[i];
-
-                            ImGui.InputText($"##Mat{i}", ref mat, 255);
-                            sphere.mPresets[i] = mat;
-
-                            // If more materials exist, start a new row
-                            if (i < sphere.mPresets.Count - 1)
-                            {
-                                ImGui.TableNextRow();
-                                ImGui.TableSetColumnIndex(1);
-                            }
-                        }
-
-                        // Optional width adjustment
-                        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-
-
-
-                        ImGui.EndTable();
+                        CollisionActor.mActorPack.updateCollisionFile(collisionFile.FilePath);
                     }
-                    ImGui.Unindent();
                 }
-
+                ImGui.EndCombo();
             }
-                ImGui.End();
+
+            if (mEditContext.IsSingleObjectSelected(out DefaultShape shape))
+            {
+                if (ImGui.BeginTable("Trans", 2,
+                    ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+
+                    ImGui.Text("Center");
+                    ImGui.TableSetColumnIndex(1);
+
+                    PolytopeVertex dupeVertex = null;
+                    var center = shape.Center;
+                    if (shape is PolytopeVertex vertex)
+                    {
+                        dupeVertex = vertex;
+                        var vTrans = new Vector2(vertex.Center.X, vertex.Center.Y);
+                        ImGui.DragFloat2("##Center", ref vTrans);
+                        vertex.X = vTrans.X;
+                        vertex.Y = vTrans.Y;
+                    }
+                    else
+                    {
+                        ImGui.DragFloat3("##Center", ref center);
+                        shape.Center = center;
+                    }
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
+
+                    switch (shape)
+                    {
+                        case Box box:
+                            ImGui.Text("Extents");
+                            ImGui.TableSetColumnIndex(1);
+
+                            var ext = box.mExtents;
+                            ImGui.DragFloat3("##Extent", ref ext);
+                            box.mExtents = ext;
+                            break;
+
+                        case Sphere sphere:
+                            ImGui.Text("Radius");
+                            ImGui.TableSetColumnIndex(1);
+                            var radius = sphere.Radius;
+                            ImGui.DragFloat("##Radius", ref radius, 0.25f, 0, float.MaxValue);
+                            sphere.Radius = radius;
+                            break;
+                        case PolytopeVertex:
+                            //ImGui.Text("Vertex:" + dupeVertex.Parent.Vertices.IndexOf(dupeVertex));
+                            break;
+                    }
+
+
+                    if (shape is PolytopeVertex)
+                        shape = dupeVertex.Parent;
+
+                    if (shape is Polytope polytope)
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Back Pos");
+
+                        ImGui.TableSetColumnIndex(1);
+                        var zFloat = polytope.zBack;
+                        ImGui.DragFloat("##ZBack", ref zFloat, 0.1f, float.MinValue, polytope.zFront);
+                        polytope.zBack = zFloat;
+
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Front Pos");
+
+                        ImGui.TableSetColumnIndex(1);
+                        zFloat = polytope.zFront;
+                        prevFront = zFloat;
+                        ImGui.DragFloat("##ZFront", ref zFloat, 0.1f, polytope.zBack, float.MaxValue);
+                        polytope.zFront = zFloat;
+                        if(prevFront != zFloat)
+                        {
+                            foreach(var point in dupeVertex.Parent.mergeList)
+                                point.Z = zFloat;
+                        }
+                        
+                    }
+
+                    if (!(shape is CapsulePoint))
+                    {
+                        for (int i = 0; i < shape.mPresets.Count; i++)
+                        {
+                            ImGui.TableNextRow();
+
+                            ImGui.TableSetColumnIndex(0);
+                            ImGui.Text($"Material {i}");
+
+                            ImGui.TableSetColumnIndex(1);
+                            var mat = shape.mPresets[i];
+                            ImGui.InputText($"##Mat{i}", ref mat, 255);
+                            shape.mPresets[i] = mat;
+                        }
+                    }
+
+                    ImGui.EndTable();
+                }
+            }
+
+            ImGui.End();
         }
+
 
         internal void RightClickMenu(CourseActor actor)
         {
-            if ((ImGui.IsMouseClicked(ImGuiMouseButton.Right) || ImGui.IsKeyPressed(ImGuiKey.Menu)) && viewport.IsViewportHovered)
+            var shapeParams = actor.mActorPack.ShapeParams;
+            if ((ImGui.IsKeyPressed(ImGuiKey.A)|| ImGui.IsKeyPressed(ImGuiKey.Menu)) && viewport.IsViewportHovered)
             {
                 ImGui.OpenPopup("ViewportContextMenu");
             }
 
             if (ImGui.BeginPopup("ViewportContextMenu"))
             {
+                if(mEditContext.IsSingleObjectSelected(out PolytopeVertex vertex))
+                {
+                    if (ImGui.MenuItem("Add Point"))
+                    {
+                        vertex.Parent.mergeList.Add(new PolytopeVertex
+                        {
+                            Z = vertex.Parent.zFront
+                        });
+                    }
+                }
                 if (ImGui.BeginMenu("Add"))
                 {
                     if (ImGui.MenuItem("Sphere"))
-                        actor.mActorPack.ShapeParams.mSphere.Add(new Sphere
+                    {
+
+                        if (shapeParams.mSphere == null)
+                            shapeParams.mSphere = new List<Sphere>();
+
+                        shapeParams.mSphere.Add(new Sphere
                         {
                             Radius = 1.0f,
-                            mPresets = new List<string> {"Dummy"},
+                            mPresets = new List<string> { "Dummy" },
                         });
-                      
+                    }
+
+                    if (ImGui.MenuItem("Polytope"))
+                    {
+                        if (shapeParams.mPoly == null)
+                            shapeParams.mPoly = new List<Polytope>();
+
+                        shapeParams.mPoly.Add(new Polytope
+                        {
+                            mPresets = new List<string> { "Dummy" },
+                            Vertices = new List<PolytopeVertex> { new PolytopeVertex()}
+                        });
+                    }
+
+
+                    if (ImGui.MenuItem("Box"))
+                    {
+                        if (shapeParams.mBox == null)
+                            shapeParams.mBox = new List<Box>();
+
+                        shapeParams.mBox.Add(new Box
+                        {
+                            mPresets = new List<string> { "Dummy" },
+                            mExtents = new Vector3(1, 1, 1)
+                        });
+                    }
+
                     ImGui.EndMenu();
 
                 }
@@ -162,7 +254,9 @@ namespace Fushigi.ui.widgets
             string romFSPath = UserSettings.GetRomFSPath();
             await scheduler.Schedule(gl => RomFS.SetRoot(romFSPath, gl));
             var area = new CourseArea("dummy", false);
-            viewport = await scheduler.Schedule(gl => new LevelViewport(area, gl, new CourseAreaScene(area, new CourseAreaSceneRoot(area))));
+            var areaScene = new CourseAreaScene(area, new CourseAreaSceneRoot(area));
+            viewport = await scheduler.Schedule(gl => new LevelViewport(area, gl, areaScene));
+            mEditContext = areaScene.EditContext;
         }
 
         internal void DrawActorCollisionPoop(CourseActor actor, CourseAreaEditContext mEditContext, LevelViewport VP)
@@ -178,9 +272,7 @@ namespace Fushigi.ui.widgets
                 if (shapeParams.mBox?.Count > 0)
                 {
                     foreach (var box in shapeParams.mBox)
-                    {
-
-                    }
+                        shapesList.Add(box);
                 }
                 //shapesList.Add("box");
 
@@ -188,6 +280,18 @@ namespace Fushigi.ui.widgets
                 {
                     foreach (var sphere in shapeParams.mSphere)
                         shapesList.Add(sphere);
+                }
+
+                if (shapeParams.mPoly?.Count > 0)
+                {
+                    foreach (var mPoly in shapeParams.mPoly)
+                        shapesList.Add(mPoly);
+                }
+
+                if (shapeParams.mCapsule?.Count > 0)
+                {
+                    foreach (var capsule in shapeParams.mCapsule)
+                        shapesList.Add(capsule);
                 }
             }
 
@@ -216,10 +320,10 @@ namespace Fushigi.ui.widgets
                 {
                     drawing = "sphere";
                 }
-                else if ((shapes.mPoly?.Count ?? 0) > 0)
-                {
-                    calc = shapes.mPoly[0].mCalc;
-                }
+                //else if ((shapes.mPoly?.Count ?? 0) > 0)
+                //{
+                //    calc = shapes.mPoly[0].mCalc;
+                //}
 
                 if (calc != null)
                 {
@@ -292,17 +396,6 @@ namespace Fushigi.ui.widgets
             if (actor.mActorPack?.ShapeParams == null && halfOffsetCDP.Contains(actor.mCalcDistanceParam))
                 off = new(0, .5f, 0);
 
-
-
-            //s_actorRectPolygon[0] = WorldToScreen(Vector3.Transform(new Vector3(min.X, max.Y, 0) + off, transform));
-            ////topRight
-            //s_actorRectPolygon[1] = WorldToScreen(Vector3.Transform(new Vector3(max.X, max.Y, 0) + off, transform));
-            ////bottomRight
-            //s_actorRectPolygon[2] = WorldToScreen(Vector3.Transform(new Vector3(max.X, min.Y, 0) + off, transform));
-            ////bottomLeft
-            //s_actorRectPolygon[3] = WorldToScreen(Vector3.Transform(new Vector3(min.X, min.Y, 0) + off, transform));
-
-
             uint color = CourseActor.CourseActorColors[CourseActorType.None];
             CourseActor.CourseActorColors.TryGetValue(actor.mType, out color);
 
@@ -312,151 +405,306 @@ namespace Fushigi.ui.widgets
             {
                 switch (shape)
                 {
-                    case "box":
-                        for (int i = 0; i < 4; i++)
-                        {
-                            //mDrawList.AddLine(
-                            //s_actorRectPolygon[i],
-                            //s_actorRectPolygon[(i + 1) % 4],
-                            //color, isHovered ? 2.5f : 1.5f);
-                        }
+                    case Box Box:
+                        vp3D.TestDrawActor(Box, viewport, mEditContext);
                         break;
                     case Sphere Sphere:
                         HandleSphereCollision(Sphere, actor, center, transform, color);
                         break;
-                    case "polytope":
-                        {
-                            int j = 0;
-                            foreach (var poly in shapeParams.mPoly)
-                            {
+                    case Polytope polytope:
+                        HandlePolytopeCollision(polytope, color);                  
+                        break;
+                    case Capsule Capsule:
+                        HandleCapsuleCollision(Capsule, actor, center, transform, color);
+                        break;
+                }
+            }
+        }
+        public static Vector3 RotatePoint(Vector3 point, float angleDeg)
+        {
+            float radians = MathF.PI * angleDeg / 180f;
 
-                                float bestDist = float.MaxValue;
-                                VP.mHoveredObject = null;
+            float cos = MathF.Cos(radians);
+            float sin = MathF.Sin(radians);
 
-                                foreach (var vertex in poly.Vertices)
-                                {
-                                    Vector3 worldVertex = Vector3.Transform(new Vector3(vertex.X, vertex.Y, vertex.Z), transform);
+            float xRot = point.X * cos - point.Y * sin;
+            float yRot = point.X * sin + point.Y * cos;
 
-                                    float depth3;
-                                    Vector2 screenPos = VP.WorldToScreen(worldVertex, out depth3);
-
-                                    VP.mDrawList.AddCircleFilled(screenPos, pointSize,
-                                        ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)));
-
-                                    float dist = (ImGui.GetMousePos() - screenPos).Length();
-                                    if (dist < 10.0f && dist < bestDist)
-                                    {
-                                        Console.WriteLine(j);
-                                        bestDist = dist;
-                                        VP.mHoveredObject = vertex;
-                                    }
-                                }
-                                j++;
+            return new Vector3(xRot, yRot, point.Z); 
+        }
 
 
-                                foreach (var vertex in poly.Vertices)
-                                {
-                                    var match = poly.Vertices.FirstOrDefault(v =>
-                                        Math.Abs(v.X - vertex.X) < 0.001f &&
-                                        Math.Abs(v.Y - vertex.Y) < 0.001f &&
-                                        v != vertex);
+        public static Vector3 translatePoint(Vector3 point, Capsule capsule)
+        {
+            point = RotatePoint(point, capsule.OffsetRotation.Z); 
 
-                                    if (match != null)
-                                    {
-                                        Vector3 A = Vector3.Transform(new Vector3(vertex.X, vertex.Y, vertex.Z), transform);
-                                        Vector3 B = Vector3.Transform(new Vector3(match.X, match.Y, match.Z), transform);
-
-                                        float d1, d2;
-                                        Vector2 p1 = VP.WorldToScreen(A, out d1);
-                                        Vector2 p2 = VP.WorldToScreen(B, out d2);
-
-                                        VP.mDrawList.AddLine(p1, p2, color);
-                                    }
-                                }
+            point += capsule.OffsetTranslation;
+            return point;
+        }
 
 
-                                var groupsByZ = poly.Vertices
-                                    .GroupBy(v => v.Z)
-                                    .ToDictionary(g => g.Key, g => g.ToList());
+      
+        internal Vector2 DrawCapsulePoint(Capsule Capsule, CourseActor actor, Vector3 center, Matrix4x4 transform, uint color, bool point)
+        {
+            var capsulePoint = Capsule.mCenterA;
 
-                                foreach (var kv in groupsByZ)
-                                {
-                                    float z = kv.Key;
-                                    var verts = kv.Value;
+            if(point)
+               capsulePoint = Capsule.mCenterB;
 
-                                    Vector2 centroid = Vector2.Zero;
-                                    foreach (var v in verts)
-                                        centroid += new Vector2(v.X, v.Y);
-                                    centroid /= verts.Count;
+            capsulePoint.Parent = Capsule;
+            var centerPoint = translatePoint(capsulePoint.Center, Capsule);
+            Vector3 worldCenter = Vector3.Transform(centerPoint, transform);
+            float worldRadius = actor.mScale.X * Capsule.Radius;
+            var camForward = Vector3.Transform(-Vector3.UnitZ, viewport.Camera.Rotation);
+            var camUp = Vector3.Transform(Vector3.UnitY, viewport.Camera.Rotation);
+            var camRight = Vector3.Normalize(Vector3.Cross(camUp, camForward));
 
-                                    var ordered = verts
-                                        .Where(v => Vector2.Distance(new(v.X, v.Y), centroid) > 0.01f)
-                                        .OrderBy(v => MathF.Atan2(v.Y - centroid.Y, v.X - centroid.X))
-                                        .ToList();
+            Vector2 screenCenter = viewport.WorldToScreen(worldCenter);
+            Vector3 worldOffset = worldCenter + camRight * worldRadius;
 
-                                    for (int i = 0; i < ordered.Count; i++)
-                                    {
-                                        var a = ordered[i];
-                                        var b = ordered[(i + 1) % ordered.Count];
+            Vector2 screenOffset = viewport.WorldToScreen(worldOffset);
+            float screenRadius = Vector2.Distance(screenCenter, screenOffset);
+            viewport.mDrawList.AddCircle(screenCenter, screenRadius, color);
+            Capsule.screenRadius = screenRadius;
+            bool hovered = Vector2.Distance(ImGui.GetMousePos(), screenCenter) <= screenRadius;
 
-                                        Vector3 A = Vector3.Transform(new Vector3(a.X, a.Y, z), transform);
-                                        Vector3 B = Vector3.Transform(new Vector3(b.X, b.Y, z), transform);
+            if (hovered)
+                viewport.mHoveredObject = capsulePoint;
 
-                                        float d1, d2;
-                                        Vector2 p1 = VP.WorldToScreen(A, out d1);
-                                        Vector2 p2 = VP.WorldToScreen(B, out d2);
+            return screenCenter;
+        }
+        internal void HandleCapsuleCollision(Capsule Capsule, CourseActor actor, Vector3 center, Matrix4x4 transform, uint color)
+        {
+            if (mEditContext.IsSelected(Capsule))
+                color = Color.BlueViolet.ToAbgr();
 
-                                        VP.mDrawList.AddLine(p1, p2, color);
-                                    }
-                                }
-                            }
+            var pointA = DrawCapsulePoint(Capsule, actor, center, transform, color, false);
+            var pointB = DrawCapsulePoint(Capsule, actor, center, transform, color, true);
+            viewport.mDrawList.AddLine(pointA, pointB, capsuleColor, Capsule.screenRadius * 2f);
+        }
 
-                            break;
-                        }
+        public static Vector3 InverseTranslatePoint(Vector3 worldPoint, Capsule capsule)
+        {
+            worldPoint -= capsule.OffsetTranslation;
+            worldPoint = RotatePoint(worldPoint, -capsule.OffsetRotation.Z);
+            return worldPoint;
+        }
 
 
+
+        public static double cross(PolytopeVertex O, PolytopeVertex A, PolytopeVertex B)
+            {
+                return (A.X - O.X) * (B.Y - O.Y) - (A.Y - O.Y) * (B.X - O.X);
+            }
+
+            public static List<PolytopeVertex> GetConvexHull(List<PolytopeVertex> points)
+            {
+                if (points == null)
+                    return null;
+
+                if (points.Count() <= 1)
+                    return points;
+
+                int n = points.Count(), k = 0;
+                List<PolytopeVertex> H = new List<PolytopeVertex>(new PolytopeVertex[2 * n]);
+
+                points.Sort((a, b) =>
+                     a.X == b.X ? a.Y.CompareTo(b.Y) : a.X.CompareTo(b.X));
+
+                // Build lower hull
+                for (int i = 0; i < n; ++i)
+                {
+                    while (k >= 2 && cross(H[k - 2], H[k - 1], points[i]) <= 0)
+                        k--;
+                    H[k++] = points[i];
                 }
 
-                //if (ImGui.IsMouseClicked(0) && mHoveredObject != null)
-                //{
-                //    mEditContext.Select(mHoveredObject);
-                //}
+                // Build upper hull
+                for (int i = n - 2, t = k + 1; i >= 0; i--)
+                {
+                    while (k >= t && cross(H[k - 2], H[k - 1], points[i]) <= 0)
+                        k--;
+                    H[k++] = points[i];
+                }
 
+                return H.Take(k - 1).ToList();
+            }
 
-                //if (mEditContext.IsSelected(actor))
-                //{
-                //    for (int i = 0; i < 4; i++)
-                //    {
-                //        VP.mDrawList.AddCircleFilled(s_actorRectPolygon[i],
-                //            pointSize, color);
-                //        if (drawing == "sphere")
-                //        {
-                //            mDrawList.AddLine(
-                //            s_actorRectPolygon[i],
-                //            s_actorRectPolygon[(i + 1) % 4],
-                //            color, isHovered ? 2.5f : 1.5f);
-                //        }
-                //    }
-                //    mDrawList.AddEllipse(WorldToScreen(transform.Translation), pointSize * 3, pointSize * 3, color, -actor.mRotation.Z, 4, 2);
-                //}
+        public List<Vector2> calcPos(Polytope Polytope, List<PolytopeVertex> vectors, bool zOverride)
+        {
+            var posList = new List<Vector2>();
+
+            var zValue = Polytope.zBack;
+            foreach (var vertex in vectors)
+            {
+                if(!zOverride)
+                    zValue = vertex.Center.Z;
+                
+                posList.Add(viewport.WorldToScreen(new(vertex.Center.X, vertex.Center.Y, zValue)));
+            }
+
+            return posList;
+        }
+
+        public void DrawPolytope(Polytope Polytope, List<Vector2> points, uint color)
+        {
+            int i = 0;
+            foreach (var point in points)
+            {
+                color = Color.PaleGreen.ToAbgr();
+                if (mEditContext.IsSelected(Polytope.mergeList[i]))
+                {
+                    color = Color.BlueViolet.ToAbgr();
+                    Polytope.mergeList[i].Parent = Polytope;
+                }
+
+                Vector2 pnt = new(point.X, point.Y);
+
+                viewport.mDrawList.AddCircleFilled(pnt, 7, color);
+
+                if ((ImGui.GetMousePos() - pnt).Length() < 10.0f)
+                    viewport.mHoveredObject = Polytope.mergeList[i];
+
+                i++;
+            }
+        }
+
+        public void DrawZ(List<Vector2> front, List<Vector2> back, uint color)
+        {
+            for (int i = 0; i < front.Count; i++)
+            {
+                var frontPnt = front[i];
+                var backPnt = back[i];
+                viewport.mDrawList.AddLine(frontPnt, backPnt, color);
 
             }
+        }
+        public void DrawLine(List<Vector2> vectors, uint color)
+        {
+            for (int i = 0; i < vectors.Count; i++)
+            {
+                if (i != (vectors.Count - 1))
+                {
+                    var pnt1 = vectors[i];
+                    var pnt2 = vectors[i + 1];
+                    viewport.mDrawList.AddLine(pnt1, pnt2, color);
+                }
+                else
+                {
+                    var pnt1 = vectors[0];
+                    var pnt2 = vectors[i];
+                    viewport.mDrawList.AddLine(pnt1, pnt2, color);
+                }
+            }
+        }
+
+        public static void Save(string savePath)
+        {
+            var actor = CollisionActor;
+            BymlHashTable root = new();
+  
+            var shapeParams = actor.mActorPack?.ShapeParams;
+
+            var mCalc = shapeParams.mCalc;
+            var autoCalc = DefaultShape.AutoCalc(mCalc);
+            root.AddNode(BymlNodeId.Hash, autoCalc, "AutoCalc");
+
+            if (shapeParams == null)
+                return;
+
+                if (shapeParams.mBox?.Count > 0)
+                {
+                    root.AddNode(BymlNodeId.Array, Box.SerializeToArray(shapeParams), "Box");
+                }
+
+                if (shapeParams.mSphere?.Count > 0)
+                {
+                    root.AddNode(BymlNodeId.Array, Sphere.SerializeToArray(shapeParams), "Sphere");
+                }
+
+                if (shapeParams.mPoly?.Count > 0)
+                {
+                    root.AddNode(BymlNodeId.Array, Polytope.SerializeToArray(shapeParams), "Polytope");
+                }
+
+
+
+            var byml = new Byml.Byml(root);
+            var mem = new MemoryStream();
+            byml.Save(mem);
+            File.WriteAllBytes(savePath, FileUtil.CompressData(mem.ToArray()));
+            Console.WriteLine("saved");
+        }
+
+
+        public List<PolytopeVertex> MergeVerticies(Polytope Polytope)
+        {
+            List<PolytopeVertex> merged = new();
+            float eps = 0.0001f;
+            var max = -20f;
+
+            foreach (var v in Polytope.Vertices)
+            {
+                bool exists = false;
+
+                if (v.Z > max)
+                    max = v.Z;
+
+                foreach (var m in merged)
+                {
+                    if (MathF.Abs(m.X - v.X) < eps &&
+                        MathF.Abs(m.Y - v.Y) < eps)
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+
+                if (!exists)
+                    merged.Add(v);
+            }
+
+            foreach (var v in merged)
+                v.Z = max;
+
+            Polytope.zFront = max;
+            Polytope.Merged = true;
+            return merged;
+        }
+        internal void HandlePolytopeCollision(Polytope Polytope, uint color)
+        {
+
+            if (!Polytope.Merged)
+              Polytope.mergeList = MergeVerticies(Polytope); 
+
+            var organizedList = GetConvexHull(Polytope.mergeList);
+            var verticies = calcPos(Polytope, Polytope.mergeList, false);
+            var organized = calcPos(Polytope, organizedList, false);
+            DrawPolytope(Polytope, verticies, color);
+            DrawLine(organized, color);
+
+            verticies = calcPos(Polytope, Polytope.mergeList, true);
+            var organizedBack = calcPos(Polytope, organizedList, true);
+            DrawPolytope(Polytope, verticies, color);
+            DrawLine(organizedBack, color);
+            DrawZ(organized, organizedBack, color);
 
         }
         internal void HandleSphereCollision(Sphere Sphere, CourseActor actor, Vector3 center, Matrix4x4 transform, uint color)
         {
+            if (mEditContext.IsSelected(Sphere))
+                color = Color.BlueViolet.ToAbgr();
+
             Vector3 worldCenter = Vector3.Transform(Sphere.Center, transform);
             float worldRadius = actor.mScale.X * Sphere.Radius;
             var camForward = Vector3.Transform(-Vector3.UnitZ, viewport.Camera.Rotation);
             var camUp = Vector3.Transform(Vector3.UnitY, viewport.Camera.Rotation);
             var camRight = Vector3.Normalize(Vector3.Cross(camUp, camForward));
 
-            float depth;
-            Vector2 screenCenter = viewport.WorldToScreen(worldCenter, out depth);
+            Vector2 screenCenter = viewport.WorldToScreen(worldCenter);
             Vector3 worldOffset = worldCenter + camRight * worldRadius;
 
-            float depth2;
-            Vector2 screenOffset = viewport.WorldToScreen(worldOffset, out depth2);
+            Vector2 screenOffset = viewport.WorldToScreen(worldOffset);
             float screenRadius = Vector2.Distance(screenCenter, screenOffset);
             viewport.mDrawList.AddCircle(screenCenter, screenRadius, color);
 
@@ -498,7 +746,10 @@ namespace Fushigi.ui.widgets
                     ImGui.TableNextColumn();
                     ImGui.Selectable(actor);
                     if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+                    {
                         CollisionActor = new CourseActor(actor, 0, "PlayArea");
+                        mEditContext.DeselectAll();
+                    }
                 }
 
                 ImGui.EndTable();

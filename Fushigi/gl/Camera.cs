@@ -43,7 +43,7 @@ namespace Fushigi.gl
             if (IsOrthographic)
             {
                 ProjectionMatrix = Matrix4x4.CreateOrthographic(AspectRatio * tanFOV * 2 * Distance, tanFOV * 2 * Distance,
-                        -10000, 10000);
+                        -12000, 12000);
 
                 ViewMatrix =
                     Matrix4x4.CreateTranslation(-Target) *

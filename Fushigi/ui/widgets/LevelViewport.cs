@@ -72,13 +72,24 @@ namespace Fushigi.ui.widgets
             foreach (FushigiCursor cursor in ctx.GetSelectedObjects<FushigiCursor>())
                 cursor.mStartingTrans = cursor.mTranslate;
 
-            foreach (PolytopeVertex vertex in ctx.GetSelectedObjects<PolytopeVertex>())
-                vertex.mStartingTrans = vertex.mTranslation;
+            foreach (DefaultShape shape in ctx.GetSelectedObjects<DefaultShape>())
+            {
+                if (shape is PolytopeVertex vertex)
+                    vertex.mStartingTrans = vertex.Center;
+                else if (shape is CapsulePoint point)
+                {
+                    var capsule = point.Parent;
+                    point.mStartingTrans = CollisionEditor.translatePoint(point.Center, capsule);
+                }
+                else
+                    shape.mStartingTrans = shape.Center;
 
-            foreach (Sphere sphere in ctx.GetSelectedObjects<Sphere>())
-                sphere.mStartingTrans = sphere.Center;
+            }
+
         }
     }
+
+
     #endregion
     [Flags]
     enum KeyboardModifier
@@ -96,7 +107,7 @@ namespace Fushigi.ui.widgets
 
         public readonly CourseArea mArea = area;
         private readonly CourseAreaEditContext mEditContext = areaScene.EditContext;
-        private LevelViewportWM mWM = new LevelViewportWM();
+        private LevelViewportWM mWorldMapVP = new LevelViewportWM();
         private Sprites sprite = new Sprites(gl);
         public Vector2 mSize = Vector2.Zero;
         public Vector2 mTopLeft = Vector2.Zero;
@@ -272,7 +283,6 @@ namespace Fushigi.ui.widgets
             this.Camera.Target = new Vector3(comment.mTranslation.X, comment.mTranslation.Y, 0);
         }
 
-
         public void SelectedActor(CourseActor actor)
         {
             if (ImGui.GetIO().KeyShift || ImGui.GetIO().KeyCtrl)
@@ -362,7 +372,8 @@ namespace Fushigi.ui.widgets
         public bool IsTransformableSelected()
         {
             return mEditContext.IsAnySelected<CourseActor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPoint>() ||
-                   mEditContext.IsAnySelected<FushigiCursor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPointControl>() || mEditContext.IsAnySelected<PolytopeVertex>() || mEditContext.IsAnySelected<Sphere>();
+                   mEditContext.IsAnySelected<FushigiCursor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPointControl>() ||
+                   mEditContext.IsAnySelected<DefaultShape>();
         }
 
 
@@ -386,12 +397,10 @@ namespace Fushigi.ui.widgets
                 case FushigiCursor:
                     HandleCursorTranslation(StartingTrans, CurrentTrans);
                     break;
-                case PolytopeVertex:
-                    HandleVertexTranslation(StartingTrans, CurrentTrans);
+                case DefaultShape:
+                    HandleShapeTranslation(StartingTrans, CurrentTrans);
                     break;
-                case Sphere:
-                    HandleSphereTranslation(StartingTrans, CurrentTrans);
-                    break;
+                
             }
         }
         public void ApplyTranslation(object obj)
@@ -425,11 +434,46 @@ namespace Fushigi.ui.widgets
             foreach (PolytopeVertex vertex in mEditContext.GetSelectedObjects<PolytopeVertex>())
             {
                 Vector3 relativePos = vertex.mStartingTrans - StartingTrans;
-                vertex.X = CurrentTrans.X - relativePos.X;
-                vertex.Y = CurrentTrans.Y - relativePos.Y;
-                vertex.Z = CurrentTrans.Z - relativePos.Z;
+                vertex.X = CurrentTrans.X + relativePos.X;
+                vertex.Y = CurrentTrans.Y + relativePos.Y;
+                vertex.Z = CurrentTrans.Z + relativePos.Z;
             }
         }
+
+        public void HandleShapeTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
+        {
+            foreach (var shape in mEditContext.GetSelectedObjects<DefaultShape>())
+            {
+                Vector3 relativePos = shape.mStartingTrans - StartingTrans;
+
+                if (shape is PolytopeVertex vertex)
+                {           
+                    vertex.X = CurrentTrans.X + relativePos.X;
+                    vertex.Y = CurrentTrans.Y + relativePos.Y;
+                }
+                else if (shape is CapsulePoint point)
+                {
+                    var capsule = (Capsule)point.Parent; // however you access the parent capsule
+
+                    Vector3 worldTarget = CurrentTrans + relativePos;
+                    Vector3 localTarget = CollisionEditor.InverseTranslatePoint(worldTarget, capsule);
+
+                    point.X = localTarget.X;
+                    point.Y = localTarget.Y;
+                    point.Z = localTarget.Z;
+                }
+
+                else
+                {
+                    var shapeCenter = shape.Center;
+                    shapeCenter.X = CurrentTrans.X + relativePos.X;
+                    shapeCenter.Y = CurrentTrans.Y + relativePos.Y;
+                    shapeCenter.Z = CurrentTrans.Z + relativePos.Z;
+                    shape.Center = shapeCenter;
+                }
+            }
+        }
+
 
         public void HandleSphereTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
         {
@@ -544,13 +588,13 @@ namespace Fushigi.ui.widgets
             {
                 posVec.X = MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2;
                 posVec.Y = MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2;
-                if (Course.IsWorldMap)
+                if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                     posVec.Z = MathF.Round(posVec.Z * 2, MidpointRounding.AwayFromZero) / 2;
                 if (!ImGui.GetIO().KeyAlt)
                 {
                     posVec.X += startingTrans.X - MathF.Round(startingTrans.X * 2, MidpointRounding.AwayFromZero) / 2;
                     posVec.Y += startingTrans.Y - MathF.Round(startingTrans.Y * 2, MidpointRounding.AwayFromZero) / 2;
-                    if (Course.IsWorldMap)
+                    if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                         posVec.Z += startingTrans.Z - MathF.Round(startingTrans.Z * 2, MidpointRounding.AwayFromZero) / 2;
                 }
             }
@@ -564,7 +608,7 @@ namespace Fushigi.ui.widgets
         public void DrawWM(Vector2 size, double deltaSeconds, IDictionary<string, bool> layersVisibility)
         {
             mLayersVisibility = layersVisibility;
-            mWM.Draw(size, deltaSeconds, this, mEditContext, areaScene);
+            mWorldMapVP.Draw(size, deltaSeconds, this, mEditContext, areaScene);
         }
 
         public void DrawCollisionVP(Vector2 size, double deltaSeconds, CourseActor actor, CollisionEditor colEditor)
@@ -573,6 +617,7 @@ namespace Fushigi.ui.widgets
             colEditor.SelectionPanel(mEditContext);
             var io = ImGui.GetIO();
             float fps = 1.0f / io.DeltaTime;
+
 
             Vector2 mouse = ImGui.GetMousePos();
             Vector3 world = ScreenToWorld(mouse);
@@ -607,7 +652,7 @@ namespace Fushigi.ui.widgets
             this.DrawScene3D(size, actor);
 
             if (ShowGrid)
-                DrawGrid();
+                DrawGrid2();
 
    
             colEditor.vp3D.Gizmos(IsViewportHovered, isViewportLeftClicked, out bool isAnyGizmoHovered, this);
@@ -616,6 +661,26 @@ namespace Fushigi.ui.widgets
 
             colEditor.DrawActorCollisionPoop(actor, mEditContext, this);
 
+                if (ImGui.IsKeyPressed(ImGuiKey.Delete))
+                {
+                var actorPack = actor.mActorPack.ShapeParams;
+                foreach(var shape in mEditContext.GetSelectedObjects<DefaultShape>().ToArray())
+                {
+                    switch (shape)
+                    {
+                        case Box Box:
+                            actorPack.mBox.Remove(Box);
+                            break;
+                        case Sphere Sphere:
+                            actorPack.mSphere.Remove(Sphere);
+                            break;
+                        case PolytopeVertex vertex:
+                            vertex.Parent.mergeList.Remove(vertex);
+                            break;
+                    }
+                }
+              
+            }
         }
         public void Draw(Vector2 size, double deltaSeconds, IDictionary<string, bool> layersVisibility)
         {
@@ -1302,7 +1367,7 @@ namespace Fushigi.ui.widgets
                     }
                     else if ((shapes.mPoly?.Count ?? 0) > 0)
                     {
-                        calc = shapes.mPoly[0].mCalc;
+                        calc = shapes.mCalc;
                     }
 
                     if (calc != null)
@@ -1535,8 +1600,26 @@ namespace Fushigi.ui.widgets
             DrawGridLines(true, 20f, 10);
         }
 
+        void DrawGrid2()
+        {
+            var camForward = Vector3.Transform(-Vector3.UnitZ, Camera.Rotation);
+            var camUp = Vector3.Transform(Vector3.UnitY, Camera.Rotation);
+
+            if ((camForward.X < -0.7 && camForward.X > -0.8) || (camForward.X > 0.7 && camForward.X < 0.8) || 
+                (camForward.Y < -0.7 && camForward.Y > -0.8) || (camForward.Y > 0.7 && camForward.Y < 0.8))
+                Viewport3D.CameraSnapped = false;
+
+            if (Viewport3D.CameraSnapped)
+            {
+                DrawGridLines(false, 20f, 10);
+                DrawGridLines(true, 20f, 10);
+            }
+        }
+
         void DrawGridLines(bool is_vertical, float min_minor_tick_size, int major_tick_interval)
         {
+            var camForward = Vector3.Transform(-Vector3.UnitZ, Camera.Rotation);
+            var camUp = Vector3.Transform(Vector3.UnitY, Camera.Rotation);
             // grid lines are drawn in intervals from a to b
             // the 0 and 1 coordinates represent the line ends at a and b
             Vector2 a0, a1, b0, b1;
@@ -1548,10 +1631,24 @@ namespace Fushigi.ui.widgets
             Vector3 minWorld = ScreenToWorld(min);
             Vector3 maxWorld = ScreenToWorld(max);
 
+
             if (is_vertical)
             {
-                min_value = maxWorld.Y;
-                max_value = minWorld.Y;
+                if (camUp.Z > -0.9 && camUp.Z < 0.9) {
+                    if (minWorld.Y > maxWorld.Y)
+                        (minWorld.Y, maxWorld.Y) = (maxWorld.Y, minWorld.Y);
+
+                    min_value = minWorld.Y;
+                    max_value = maxWorld.Y;
+                }
+                else
+                {
+                    if (minWorld.Z > maxWorld.Z)
+                       (minWorld.Z, maxWorld.Z) = (maxWorld.Z, minWorld.Z);
+
+                       min_value = minWorld.Z;
+                       max_value = maxWorld.Z;
+                }
 
                 a = max.Y;
                 b = min.Y;
@@ -1563,17 +1660,44 @@ namespace Fushigi.ui.widgets
             }
             else
             {
-                min_value = minWorld.X;
-                max_value = maxWorld.X;
+                if (camForward.X > -0.9 && camForward.X < 0.9) 
+                {
+                    if (minWorld.X > maxWorld.X)
+                        (minWorld.X, maxWorld.X) = (maxWorld.X, minWorld.X);
 
-                a = min.X;
-                b = max.X;
+                    min_value = minWorld.X;
+                    max_value = maxWorld.X;
+                }
+                else
+                {
+                    if (minWorld.Z > maxWorld.Z)
+                        (minWorld.Z, maxWorld.Z) = (maxWorld.Z, minWorld.Z);
 
-                a0 = new Vector2(a, min.Y);
-                a1 = new Vector2(a, max.Y);
-                b0 = new Vector2(b, min.Y);
-                b1 = new Vector2(b, max.Y);
+                    min_value = minWorld.Z;
+                    max_value = maxWorld.Z;
+                }
+                    a = min.X;
+                    b = max.X;
+
+                    a0 = new Vector2(a, min.Y);
+                    a1 = new Vector2(a, max.Y);
+                    b0 = new Vector2(b, min.Y);
+                    b1 = new Vector2(b, max.Y);
+                
             }
+            //   else
+            //{
+            //    min_value = minWorld.X;
+            //    max_value = maxWorld.X;
+
+            //    a = min.X;
+            //    b = max.X;
+
+            //    a0 = new Vector2(a, min.Y);
+            //    a1 = new Vector2(a, max.Y);
+            //    b0 = new Vector2(b, min.Y);
+            //    b1 = new Vector2(b, max.Y);
+            //}
 
             float ideal_tick_interval =
                 min_minor_tick_size * (max_value - min_value) / MathF.Abs(b - a);
@@ -2558,19 +2682,32 @@ namespace Fushigi.ui.widgets
                                 CurrentTrans = actor.mTranslation;
                                 tileRebuild = true;
                                 break;
-
                             case CourseRail.CourseRailPoint mPoint:
                                 StartingTrans = mPoint.mStartingTrans;
                                 CurrentTrans = mPoint.mTranslation;
                                 break;
-                            case PolytopeVertex mVertex:
-                                StartingTrans = mVertex.mStartingTrans;
-                                CurrentTrans = mVertex.mTranslation;
-                                break;
-                            case Sphere sphere:
-                                StartingTrans = sphere.Center;
-                                CurrentTrans = sphere.mStartingTrans;
-                                break;
+                            case DefaultShape shape:
+                                StartingTrans = shape.Center;
+                                CurrentTrans = shape.mStartingTrans;
+
+                                if(shape is PolytopeVertex vertex)
+                                {
+                                StartingTrans = vertex.Center;
+                                CurrentTrans = shape.mStartingTrans;
+                                }
+
+                            if (shape is CapsulePoint point)
+                            {
+                                var capsule = point.Parent;
+
+                                // Convert local → world for drag start
+                                StartingTrans = CollisionEditor.translatePoint(point.mStartingTrans, capsule);
+
+                                // Convert local → world for current
+                                CurrentTrans = CollisionEditor.translatePoint(point.Center, capsule);
+                            }
+
+                            break;
                         }
 
                     if (Camera.IsOrthographic)
@@ -2589,7 +2726,7 @@ namespace Fushigi.ui.widgets
 
                     }
                     else 
-                        mWM.HandleDrag3D();
+                        mWorldMapVP.HandleDrag3D();
                 }
             }
 

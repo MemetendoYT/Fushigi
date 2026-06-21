@@ -87,7 +87,6 @@ namespace Fushigi.ui.widgets
         bool showCourseSettings = false;
         bool showPaletteWindow = false;
         public bool hasOpened;
-        bool showCollisionWindow = false;
         public static bool showGlobalLinkWindow = false;
         private int linkNumb;
         CourseLink gLink;
@@ -1480,11 +1479,6 @@ namespace Fushigi.ui.widgets
                 if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
                     showCourseSettings = true;
                 ImGui.SetItemTooltip("Edit Course Settings");
-                ImGui.SameLine();
-
-                if (ImGui.Button(IconUtil.ICON_HAMBURGER, icon_size))
-                    showActorVisibility = true;
-                ImGui.SetItemTooltip("Edit Actor Visibility");
 
                 ImGui.SameLine();
 
@@ -1620,12 +1614,9 @@ namespace Fushigi.ui.widgets
 
                 ImGui.SameLine();
 
-                if (ImguiHelper.DrawTextToggle(IconUtil.ICON_SQUARE, true, icon_size))
-                {
-                    showCollisionWindow = true;
-                }
-
-                ImGui.SetItemTooltip("Collision Editor [Experimental]");
+                if (ImGui.Button(IconUtil.ICON_EYE, icon_size))
+                    showActorVisibility = true;
+                ImGui.SetItemTooltip("Edit Actor Visibility");
 
                 ImGui.PopStyleColor(1);
                 ImGui.EndChild();

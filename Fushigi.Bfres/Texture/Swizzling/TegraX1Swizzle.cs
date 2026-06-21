@@ -146,6 +146,8 @@ namespace Fushigi.Bfres
             { SurfaceFormat.ASTC_5x5_SRGB,       new FormatInfo(16, 5, 5) },
             { SurfaceFormat.ASTC_6x5_UNORM,       new FormatInfo(16, 6, 5) },
             { SurfaceFormat.ASTC_6x5_SRGB,       new FormatInfo(16, 6, 5) },
+            { SurfaceFormat.ASTC_6x6_SRGB,          new FormatInfo(16, 6, 6) },
+            { SurfaceFormat.ASTC_6x6_UNORM,       new FormatInfo(16, 6, 6) },
             { SurfaceFormat.ASTC_8x5_UNORM,       new FormatInfo(16, 8, 5) },
             { SurfaceFormat.ASTC_8x5_SRGB,       new FormatInfo(16, 8, 5) },
             { SurfaceFormat.ASTC_8x6_UNORM,       new FormatInfo(16, 8, 6) },

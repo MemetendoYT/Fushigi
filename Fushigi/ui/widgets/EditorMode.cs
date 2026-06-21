@@ -44,11 +44,6 @@ namespace Fushigi.ui.widgets
                     }
                 }
 
-                if (ImGui.Button("AINB Node Editor"))
-                {
-                    editMode = "AINB";
-                }
-
                 if (ImGui.Button("Collision Editor"))
                 {
                     editMode = "Collision";
@@ -57,6 +52,11 @@ namespace Fushigi.ui.widgets
                 if (ImGui.Button("MSBT Editor"))
                 {
                     editMode = "MSBT";
+                }
+
+                if (ImGui.Button("Save Data Editor"))
+                {
+                    editMode = "SaveData";
                 }
 
             }

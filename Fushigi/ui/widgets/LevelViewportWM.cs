@@ -15,6 +15,7 @@ using System.Drawing;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using ZstdSharp.Unsafe;
+
 internal class LevelViewportWM()
 {
     public event Action? ActiveToolChanged;
@@ -182,8 +183,10 @@ internal class LevelViewportWM()
             if (Vector3.Dot(worldNormal, camForward) <= 0)
                 return;
 
-            hovered |= MathUtil.HitTestConvexPolygonPoint(points2D, ImGui.GetMousePos());
-
+            if (!actor.mPackName.Contains("Area") && !actor.mPackName.Contains("Frustum"))
+                hovered |= MathUtil.HitTestConvexPolygonPoint(points2D, ImGui.GetMousePos());
+            else
+                hovered |= MathUtil.HitTestLineLoopPoint(points2D, 4f, ImGui.GetMousePos());
             if (Math.Asin(Vector3.Dot(Vector3.Transform(normal, quat), -camForward)) > Math.PI / 4)
             {
                 if (
@@ -223,7 +226,7 @@ internal class LevelViewportWM()
 
         if (hovered && VP.mHoveredObject == null)
         {
-            color = Color.DarkGray.ToAbgr();
+            color = Color.LightPink.ToAbgr();
             hitPoint = this.HitPointOnPlane(actor.mTranslation, this.GetCameraForwardDirection());
             VP.mHoveredObject = actor;
 

@@ -19,5 +19,12 @@ namespace Fushigi.ui.widgets
             SelectedPath = dialogResult.Path;
             return dialogResult.IsOk;
         }
+
+        public bool ShowSaveDialog(string title = "Save File")
+        {
+            DialogResult dialogResult = Dialog.FileSave("bgyml");
+            SelectedPath = dialogResult.Path;
+            return dialogResult.IsOk;
+        }
     }
 }
