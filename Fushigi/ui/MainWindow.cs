@@ -804,10 +804,6 @@ namespace Fushigi.ui
 
             if(EditorMode.editMode != "")
             {
-                if (EditorMode.editMode == "AINB")
-                {
-                    nodeEditor.Draw();
-                }
 
                 if (EditorMode.editMode == "Collision")
                 {
@@ -858,7 +854,6 @@ namespace Fushigi.ui
         public static string? mCurrentCourseName;
         public static string mCurrentLevelName = "";
         CourseScene? mSelectedCourseScene;
-        DrawNodeEditor? nodeEditor = new DrawNodeEditor();
         CollisionEditor? collisionEditor = new CollisionEditor();
         MsbtEditor? msbtEditor = new MsbtEditor();
         SaveEditor? saveEditor = new SaveEditor();

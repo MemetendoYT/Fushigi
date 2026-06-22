@@ -37,9 +37,11 @@ namespace Fushigi.ui.widgets
         public bool PurpleCoin2 { get; set; }
         public bool PurpleCoin3 { get; set; }
         public int ClapperGate { get; set; }
+        public int ClapperGateBit { get; set; }
         public bool ClapperGateVal { get; set; }
         public int PurpleCoinOffset { get; set; }
         public bool SkipOffset { get; set; }
+        public bool LinkCourseClearAndGoalSeed { get; set; }
 
     }
     public static class Byte_Patterns
@@ -89,6 +91,23 @@ namespace Fushigi.ui.widgets
         }
     }
 
+
+    public class RegBoolOffset : SaveFile
+    {
+        public int OffsetValue;
+        public bool value;
+
+        public RegBoolOffset(byte[] offset)
+        {
+            OffsetValue = FindBytePatternOffset(offset);
+
+            if (OffsetValue >= 0)
+                value = SaveFile.ReadBool(OffsetValue);
+            else
+                value = false;
+        }
+    }
+
     public class SaveEditor
     {
         private static readonly Dictionary<string, int> W1CourseClearOffsets = new Dictionary<string, int>()
@@ -128,6 +147,7 @@ namespace Fushigi.ui.widgets
         };
 
         private Dictionary<string, RegOffset> MiscInfo = new();
+        private Dictionary<string, RegBoolOffset> GameProgress = new();
         private static Dictionary<string, LevelInfo> World1Levels = new();
         private static Dictionary<string, LevelInfo> World2Levels = new();
         private Dictionary<string, LevelInfo>[] Worlds =
@@ -139,10 +159,23 @@ namespace Fushigi.ui.widgets
 
         public void InitializeOffsets()
         {
+            MiscInfo.Clear();
+            GameProgress.Clear();
+            World1Levels.Clear();
+            World2Levels.Clear();
+
             MiscInfo["Coin Count"] = new RegOffset(Byte_Patterns.COINS_PATTERN, false, 99);
             MiscInfo["Purple Coin Count"] = new RegOffset(Byte_Patterns.PURPLE_COINS_PATTERN, true, 999);
             MiscInfo["Lives"] = new RegOffset(Byte_Patterns.LIVES, 99);
-       
+
+            GameProgress["Complete Game"] = new RegBoolOffset(Byte_Patterns.COMPLETE_GAME);
+            GameProgress["World 1 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD1);
+            GameProgress["World 2 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD2);
+            GameProgress["World 3 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD3);
+            GameProgress["World 4 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD4);
+            GameProgress["World 5 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD5);
+            GameProgress["World 6 Grand Seed"] = new RegBoolOffset(Byte_Patterns.GRAND_SEED_WORLD6);
+
             World1Levels["COURSE_001"] = new LevelInfo("Welcome to the Flower Kingdom!");
             World1Levels["COURSE_002"] = new LevelInfo("Piranha Plants on Parade");
             World1Levels["COURSE_004"] = new LevelInfo("Scram, Skedaddlers!");
@@ -172,6 +205,101 @@ namespace Fushigi.ui.widgets
             WriteOffset(World1Levels, W1GoalSeedOffsets, "GoalWonderSeed");
             WriteOffset(World1Levels, W1GateOffsets, "ClapperGate");
             WriteOffset(World1Levels, W1PurpleCoinOffsets, "PurpleCoin");
+
+            // World 2 / Fluff-Puff Peaks
+            // I added these manually because I think World 2 uses an internal table order
+            World2Levels["COURSE_022"] = new LevelInfo("Outmaway Valley");
+            World2Levels["COURSE_020"] = new LevelInfo("Pokipede Pass");
+            World2Levels["COURSE_025"] = new LevelInfo("Condarts Away!");
+            World2Levels["COURSE_024"] = new LevelInfo("Pole Block Passage");
+            World2Levels["COURSE_021"] = new LevelInfo("Up 'n' Down with Puffy Lifts");
+            World2Levels["COURSE_027"] = new LevelInfo("Jump! Jump! Jump!");
+            World2Levels["COURSE_023"] = new LevelInfo("Countdown to Drop Down");
+            World2Levels["COURSE_026"] = new LevelInfo("Cruising with Linking Lifts");
+            World2Levels["COURSE_305"] = new LevelInfo("Badge Challenge Wall-Climb Jump II");
+            World2Levels["COURSE_302"] = new LevelInfo("Badge Challenge Floating High Jump I");
+            World2Levels["COURSE_314"] = new LevelInfo("Expert Badge Challenge Spring Feet I");
+            World2Levels["COURSE_100"] = new LevelInfo("Fluff-Puff Peaks Flying Battleship");
+            World2Levels["COURSE_151"] = new LevelInfo("Fluff-Puff Peaks Palace");
+            World2Levels["COURSE_251"] = new LevelInfo("KO Arena Fluff-Puff Kerfuff");
+            World2Levels["COURSE_450"] = new LevelInfo("Search Party Puzzling Park");
+            World2Levels["COURSE_401"] = new LevelInfo("Break Time! Kick It, Outmaway");
+            World2Levels["COURSE_402"] = new LevelInfo("Break Time! Cloud Cover");
+            World2Levels["COURSE_403"] = new LevelInfo("Break Time! Zip-Go-Round");
+            World2Levels["COURSE_520"] = new LevelInfo("Fluff-Puff Peaks Cabin");
+
+            // World 2 Offsets
+            SetWorld2("COURSE_020", 0x4CE4, 0x415C, 0x19A4, 0x2A4C);
+            SetWorld2("COURSE_022", 0x4D5C, 0x41D4, 0x1A1C, 0x2AC4);
+            SetWorld2("COURSE_023", 0x4D04, 0x417C, 0x19C4, 0x2A6C);
+            SetWorld2("COURSE_025", 0x4CEC, 0x4164, 0x19AC, 0x2A54, 0x10FC, 8);
+            SetWorld2("COURSE_026", 0x4D70, 0x41E8, 0x1A30, 0x2AD8);
+            SetWorld2("COURSE_024", 0x4D00, 0x4178, 0x19C0, 0x2A68);
+            SetWorld2("COURSE_401", 0x4CE8, 0x4160, -1, -1);
+            SetWorld2("COURSE_402", 0x4D20, 0x4198, -1, -1);
+            SetWorld2("COURSE_027", 0x4D08, 0x4180, 0x19C8, 0x2A70);
+            SetWorld2("COURSE_021", 0x4CF8, 0x4170, 0x19B8, 0x2A60, 0x10FC, 64);
+            SetWorld2("COURSE_100", 0x41CC, 0x41CC, 0x1A14, 0x2ABC);
+            SetWorld2("COURSE_151", 0x418C, 0x418C, 0x19D4, 0x2A7C, 0x10FD, 32);
+            SetWorld2("COURSE_251", 0x4D68, 0x41E0, -1, 0x2AD0);
+            SetWorld2("COURSE_302", 0x4D4C, 0x41C4, -1, 0x2AB4);
+            SetWorld2("COURSE_305", 0x4D64, 0x41DC, -1, 0x2ACC);
+            SetWorld2("COURSE_314", 0x4D6C, 0x41E4, -1, 0x2AD4);
+            SetWorld2("COURSE_403", 0x4D2C, 0x41A4, -1, -1);
+            SetWorld2("COURSE_450", 0x4D28, 0x41A0, -1, -1);
+            SetWorld2("COURSE_520", 0x4D58, 0x41D0, -1, -1);
+
+            // Battleship and Palace use the same internal progression flag for both the
+            // Course Clear and Goal Wonder Seed columns I am keeping both UI boxes visible
+            // but syncing them so they look correct visually and cannot interfere with eachother
+            World2Levels["COURSE_100"].LinkCourseClearAndGoalSeed = true;
+            World2Levels["COURSE_151"].LinkCourseClearAndGoalSeed = true;
+        }
+
+        private void SetWorld2(string course, int clear, int goal, int wonder, int purple, int gate = -1, int gateBit = 0)
+        {
+            if (!World2Levels.TryGetValue(course, out LevelInfo level))
+                return;
+
+            level.CourseClear = clear;
+            if (clear > 0)
+                level.CourseClearVal = SaveFile.ReadBool(clear);
+
+            level.GoalWonderSeed = goal;
+            if (goal > 0)
+                level.GoalWonderSeedVal = SaveFile.ReadBool(goal);
+
+            level.WonderSeed = wonder;
+            if (wonder > 0)
+                level.WonderSeedVal = SaveFile.ReadBool(wonder);
+
+            level.PurpleCoin = purple;
+            if (purple > 0)
+                ReadBigCoin(purple, level);
+
+            level.ClapperGate = gate;
+            level.ClapperGateBit = gateBit;
+            if (gate > 0)
+                level.ClapperGateVal = ReadBitFlag(gate, gateBit);
+        }
+
+        private static bool ReadBitFlag(int offset, int bit)
+        {
+            if (offset < 0 || bit <= 0)
+                return false;
+
+            return (SaveFile._Data[offset] & bit) != 0;
+        }
+
+        private static void WriteBitFlag(int offset, int bit, bool enabled)
+        {
+            if (offset < 0 || bit <= 0)
+                return;
+
+            if (enabled)
+                SaveFile._Data[offset] = (byte)(SaveFile._Data[offset] | bit);
+            else
+                SaveFile._Data[offset] = (byte)(SaveFile._Data[offset] & ~bit);
         }
 
         private void WriteOffset(Dictionary<string, LevelInfo> Levels, Dictionary<string, int> offsets, string property)
@@ -185,13 +313,13 @@ namespace Fushigi.ui.widgets
 
                 foreach ((var name, var level) in Levels)
                 {
-                    var split = name.Split("COURSE_")[1];;
+                    var split = name.Split("COURSE_")[1]; ;
                     if (split.StartsWith(CourseValue))
                     {
                         if (level.SkipOffset)
                             offset += 4;
 
-                            prop.SetValue(level, offset);
+                        prop.SetValue(level, offset);
 
                         if (property == "PurpleCoin")
                         {
@@ -261,6 +389,14 @@ namespace Fushigi.ui.widgets
                     }
                 }
 
+                foreach (var file in GameProgress)
+                {
+                    var data = file.Value;
+
+                    if (data.OffsetValue >= 0)
+                        SaveFile.WriteBool(data.OffsetValue, data.value);
+                }
+
                 foreach (var world in Worlds)
                 {
                     foreach (var file in world)
@@ -270,14 +406,19 @@ namespace Fushigi.ui.widgets
                         if (level.CourseClear > 0)
                             SaveFile.WriteBool(level.CourseClear, level.CourseClearVal);
 
-                        if (level.GoalWonderSeed > 0)
+                        if (level.GoalWonderSeed > 0 && !level.LinkCourseClearAndGoalSeed)
                             SaveFile.WriteBool(level.GoalWonderSeed, level.GoalWonderSeedVal);
 
                         if (level.WonderSeed > 0)
                             SaveFile.WriteBool(level.WonderSeed, level.WonderSeedVal);
 
                         if (level.ClapperGate > 0)
-                            SaveFile.WriteBool(level.ClapperGate, level.ClapperGateVal);
+                        {
+                            if (level.ClapperGateBit > 0)
+                                WriteBitFlag(level.ClapperGate, level.ClapperGateBit, level.ClapperGateVal);
+                            else
+                                SaveFile.WriteBool(level.ClapperGate, level.ClapperGateVal);
+                        }
 
                         if (level.PurpleCoin > 0)
                         {
@@ -320,6 +461,40 @@ namespace Fushigi.ui.widgets
                     ImGui.EndTabItem();
                 }
 
+                if (ImGui.BeginTabItem("Game Progress"))
+                {
+                    if (ImGui.BeginTable("##GameProgress", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                    {
+                        ImGui.TableSetupColumn("Game Progress");
+                        ImGui.TableSetupColumn("Toggle");
+                        ImGui.TableHeadersRow();
+
+                        foreach ((string label, RegBoolOffset offset) in GameProgress)
+                        {
+                            ImGui.TableNextRow();
+                            ImGui.TableSetColumnIndex(0);
+                            ImGui.Text(label);
+
+                            ImGui.TableNextColumn();
+                            bool val = offset.value;
+
+                            if (offset.OffsetValue >= 0)
+                            {
+                                ImGui.Checkbox($"##GameProgress{label}", ref val);
+                                offset.value = val;
+                            }
+                            else
+                            {
+                                ImGui.TextDisabled("Pattern not found");
+                            }
+                        }
+
+                        ImGui.EndTable();
+                    }
+
+                    ImGui.EndTabItem();
+                }
+
                 for (int i = 0; i < Worlds.Length; i++)
                 {
                     if (ImGui.BeginTabItem($"World {i + 1}"))
@@ -344,8 +519,18 @@ namespace Fushigi.ui.widgets
                                 ImGui.TableNextColumn();
 
                                 var val = offset.CourseClearVal;
-                                ImGui.Checkbox($"##Clear{label}", ref val);
-                                offset.CourseClearVal = val;
+                                if (offset.CourseClear > 0)
+                                {
+                                    ImGui.Checkbox($"##Clear{label}", ref val);
+                                    offset.CourseClearVal = val;
+
+                                    if (offset.LinkCourseClearAndGoalSeed)
+                                        offset.GoalWonderSeedVal = val;
+                                }
+                                else
+                                {
+                                    ImGui.TextDisabled("-");
+                                }
 
                                 ImGui.TableNextColumn();
                                 if (offset.WonderSeed > 0)
@@ -361,6 +546,9 @@ namespace Fushigi.ui.widgets
                                     val = offset.GoalWonderSeedVal;
                                     ImGui.Checkbox($"##GoalSeed{label}", ref val);
                                     offset.GoalWonderSeedVal = val;
+
+                                    if (offset.LinkCourseClearAndGoalSeed)
+                                        offset.CourseClearVal = val;
                                 }
 
                                 ImGui.TableNextColumn();
@@ -401,8 +589,8 @@ namespace Fushigi.ui.widgets
                         ImGui.EndTabItem();
                     }
                 }
-                    ImGui.EndTabBar();
-                
+                ImGui.EndTabBar();
+
             }
             ImGui.End();
         }
