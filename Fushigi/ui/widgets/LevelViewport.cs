@@ -2725,8 +2725,6 @@ namespace Fushigi.ui.widgets
                             DoTranslateObjects = true;
 
                     }
-                    else 
-                        mWorldMapVP.HandleDrag3D();
                 }
             }
 
