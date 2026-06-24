@@ -2464,6 +2464,7 @@ namespace Fushigi.ui.widgets
                 }
               
             }
+            Console.WriteLine(mSelectedLayer);
             if (mSelectedLayer != null && mSelectedActor != null)
                 AddSelectedActorWithLayer();
             else if (mSelectedLayer != null)

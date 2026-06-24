@@ -144,6 +144,7 @@ namespace Fushigi.ui.widgets
             //}
         }
 
+
         internal void TestDrawActor(Box Box, LevelViewport viewport, CourseAreaEditContext mEditContext)
         {
             var hitPoint = HitPointOnPlane(Box.Center, GetCameraForwardDirection(viewport), viewport);
@@ -242,6 +243,126 @@ namespace Fushigi.ui.widgets
                 //var label = actor.mPackName ?? actor.mName;
                 //if (!string.IsNullOrEmpty(label))
                 //    ImGui.SetTooltip(label);
+            }
+
+            //if(ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+            //{
+            //    ctx.DeselectAll();
+            //    ctx.Select(VP.mHoveredObject);
+            //}
+
+
+            int i = 0;
+            foreach (var face in allFaces)
+            {
+                ProcessFace(face, allNormals[i], color);
+                i++;
+            }
+        }
+
+        internal void TestDrawActor2(CourseActor actor, LevelViewport viewport, CourseAreaEditContext mEditContext)
+        {
+            var hitPoint = HitPointOnPlane(actor.mTranslation, GetCameraForwardDirection(viewport), viewport);
+            //if (!IsVisible || !_visibilityParent.IsVisible)
+            //    return;
+            uint color = CourseActor.CourseActorColors[CourseActorType.None];
+            CourseActor.CourseActorColors.TryGetValue(actor.mType, out color);
+
+            if (mEditContext.IsSelected(actor))
+                color = Color.White.ToAbgr();
+
+            bool hovered = false;
+            Quaternion quat = MathUtil.QuatFromEulerXYZ(actor.mRotation);
+
+            var mtx =
+                Matrix4x4.CreateScale(actor.mScale) *
+                Matrix4x4.CreateFromQuaternion(quat) *
+                Matrix4x4.CreateTranslation(actor.mTranslation);
+
+
+            List<Vector2[]> allFaces = new();
+            List<Vector3> allNormals = new();
+            void BuildFaces(Vector3 normal, Vector3 rightVec, ref Vector3? hitPoint)
+
+            {
+                Vector3 upVec = Vector3.Cross(rightVec, normal);
+
+                Span<Vector3> points =
+                [
+                        Vector3.Transform(normal*.5f+rightVec*-.5f+upVec*+.5f, mtx),
+                    Vector3.Transform(normal*.5f+rightVec*+.5f+upVec*+.5f, mtx),
+                    Vector3.Transform(normal*.5f+rightVec*-.5f+upVec*-.5f, mtx),
+                    Vector3.Transform(normal*.5f+rightVec*+.5f+upVec*-.5f, mtx),
+                ];
+
+                Span<Vector2> points2D =
+                [
+                   viewport.WorldToScreen(points[1]),
+                   viewport.WorldToScreen(points[0]),
+                   viewport.WorldToScreen(points[2]),
+                   viewport.WorldToScreen(points[3]),
+            ];
+
+                var camForward = -GetCameraForwardDirection(viewport); // note the minus
+                var worldNormal = Vector3.TransformNormal(normal, mtx);
+
+                // cull when the face is pointing away from the camera
+                if (Vector3.Dot(worldNormal, camForward) <= 0)
+                    return;
+
+                if (viewport.IsViewportHovered)
+                {
+                    if (!actor.mPackName.Contains("Area") && !actor.mPackName.Contains("Frustum"))
+                        hovered |= MathUtil.HitTestConvexPolygonPoint(points2D, ImGui.GetMousePos());
+                    else
+                        hovered |= MathUtil.HitTestLineLoopPoint(points2D, 4f, ImGui.GetMousePos());
+                }
+                if (Math.Asin(Vector3.Dot(Vector3.Transform(normal, quat), -camForward)) > Math.PI / 4)
+                {
+                    if (
+                    Vector2.DistanceSquared(points2D[0], ImGui.GetMousePos()) < 4 * 4 ||
+                    Vector2.DistanceSquared(points2D[1], ImGui.GetMousePos()) < 4 * 4 ||
+                    Vector2.DistanceSquared(points2D[2], ImGui.GetMousePos()) < 4 * 4 ||
+                    Vector2.DistanceSquared(points2D[3], ImGui.GetMousePos()) < 4 * 4)
+                    {
+                        hovered = true;
+                    }
+                }
+                allFaces.Add(points2D.ToArray());
+                allNormals.Add(normal);
+            }
+
+            void ProcessFace(Vector2[] points2D, Vector3 normal, uint color)
+            {
+                viewport.mDrawList.AddPolyline(ref points2D[0], points2D.Length,
+                color, ImDrawFlags.Closed, 1.5f);
+
+                var camForward = GetCameraForwardDirection(viewport);
+                if (Math.Asin(Vector3.Dot(Vector3.Transform(normal, quat), -camForward)) > Math.PI / 4)
+                {
+                    viewport.mDrawList.AddCircleFilled(points2D[0], 4, color);
+                    viewport.mDrawList.AddCircleFilled(points2D[1], 4, color);
+                    viewport.mDrawList.AddCircleFilled(points2D[2], 4, color);
+                    viewport.mDrawList.AddCircleFilled(points2D[3], 4, color);
+                }
+            }
+
+            BuildFaces(Vector3.UnitX, Vector3.UnitZ, ref hitPoint);
+            BuildFaces(-Vector3.UnitX, -Vector3.UnitZ, ref hitPoint);
+            BuildFaces(Vector3.UnitY, Vector3.UnitX, ref hitPoint);
+            BuildFaces(-Vector3.UnitY, -Vector3.UnitX, ref hitPoint);
+            BuildFaces(Vector3.UnitZ, Vector3.UnitX, ref hitPoint);
+            BuildFaces(-Vector3.UnitZ, -Vector3.UnitX, ref hitPoint);
+
+            if (hovered && viewport.mHoveredObject == null)
+            {
+                color = Color.LightPink.ToAbgr();
+                hitPoint = HitPointOnPlane(actor.mTranslation, GetCameraForwardDirection(viewport), viewport);
+                viewport.mHoveredObject = actor;
+
+                var label = actor.mPackName ?? actor.mName;
+                if (!string.IsNullOrEmpty(label))
+                    ImGui.SetTooltip(label);
             }
 
             //if(ImGui.IsMouseClicked(ImGuiMouseButton.Left))
