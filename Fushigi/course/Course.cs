@@ -12,16 +12,19 @@ namespace Fushigi.course
 {
     public class Course
     {
-        public Course(string courseName, bool isWorldMap)
+        public Course(string courseName)
         {
             mCourseName = courseName;
 
-            if (!isWorldMap)
+            if (!IsWorldMap)
             {
-                mCourseInfo = new CourseInfo(mCourseName, isWorldMap);
+                mCourseInfo = new CourseInfo(mCourseName, IsWorldMap);
                 mMapAnalysisInfo = new MapAnalysisInfo(mCourseName);
             }
-
+            else
+            {
+                mWorldInfo = new WorldMapInfo(mCourseName);
+            }
             mStageLoadInfo = new StageLoadInfo(courseName);
             mAreas = [];
             LoadFromRomFS();
@@ -330,6 +333,7 @@ namespace Fushigi.course
         BymlArrayNode mStageReferences;
         CourseLinkHolder? mGlobalLinks;
         public CourseInfo mCourseInfo;
+        public WorldMapInfo mWorldInfo;
         public MapAnalysisInfo mMapAnalysisInfo;
         public StageLoadInfo mStageLoadInfo;
         public static bool IsOneAreaCourse;

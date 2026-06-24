@@ -70,7 +70,7 @@ namespace Fushigi.ui.widgets
                 point.mStartingTrans = point.mTranslation;
 
             foreach (FushigiCursor cursor in ctx.GetSelectedObjects<FushigiCursor>())
-                cursor.mStartingTrans = cursor.mTranslate;
+                cursor.mStartingTrans = cursor.mTranslation;
 
             foreach (DefaultShape shape in ctx.GetSelectedObjects<DefaultShape>())
             {
@@ -371,8 +371,7 @@ namespace Fushigi.ui.widgets
         // Handle Translation for all objects 
         public bool IsTransformableSelected()
         {
-            return mEditContext.IsAnySelected<CourseActor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPoint>() ||
-                   mEditContext.IsAnySelected<FushigiCursor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPointControl>() ||
+            return mEditContext.IsAnySelected<Transformable>() ||
                    mEditContext.IsAnySelected<DefaultShape>();
         }
 
@@ -385,60 +384,25 @@ namespace Fushigi.ui.widgets
         {
             switch (obj)
             {
-                case CourseActor:
-                    HandleActorTranslation(StartingTrans, CurrentTrans);
-                    break;
-                case CourseRail.CourseRailPoint:
-                    HandleCourseRailPointTranslation(StartingTrans, CurrentTrans);
+                case Transformable:
+                    foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
+                    {
+                        HandleTransform(transformable, StartingTrans, CurrentTrans);
+                        if(transformable is CourseRail.CourseRailPoint point)
+                        {
+                            if(point.mIsCurve)
+                                HandleTransform(point.mControl, StartingTrans, CurrentTrans);
+                        }
+                    }
                         break;
-                case CourseRail.CourseRailPointControl:
-                    HandleCourseRailPointControlTranslation(StartingTrans, CurrentTrans);
-                    break;
-                case FushigiCursor:
-                    HandleCursorTranslation(StartingTrans, CurrentTrans);
-                    break;
                 case DefaultShape:
                     HandleShapeTranslation(StartingTrans, CurrentTrans);
                     break;
                 
             }
         }
-        public void ApplyTranslation(object obj)
-        {
-            switch (obj)
-            {
-                case CourseActor actor:
-                    CommitTranslation(actor);
-                    actor.mStartingTrans = actor.mTranslation;
-                    break;
-                case CourseRail.CourseRailPoint point:
-                    if(point.mIsCurve)
-                    //{
-                    //    var batch = mEditContext.BeginBatchAction();
-                    //}
+        
 
-                    CommitTranslation(point.mControl);
-                    CommitTranslation(point);
-                    break;
-                case CourseRail.CourseRailPointControl point:
-                    CommitTranslation(point);
-                    break;
-                    //case FushigiCursor:
-                    //    ApplyCursorTranslation(StartingTrans, CurrentTrans);
-                    //    break;
-            }
-        }
-
-        public void HandleVertexTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
-        {
-            foreach (PolytopeVertex vertex in mEditContext.GetSelectedObjects<PolytopeVertex>())
-            {
-                Vector3 relativePos = vertex.mStartingTrans - StartingTrans;
-                vertex.X = CurrentTrans.X + relativePos.X;
-                vertex.Y = CurrentTrans.Y + relativePos.Y;
-                vertex.Z = CurrentTrans.Z + relativePos.Z;
-            }
-        }
 
         public void HandleShapeTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
         {
@@ -475,86 +439,21 @@ namespace Fushigi.ui.widgets
         }
 
 
-        public void HandleSphereTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
+        public void HandleTransform(Transformable transformable, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
-            foreach (var sphere in mEditContext.GetSelectedObjects<Sphere>())
-            {
-                Vector3 relativePos = sphere.mStartingTrans - StartingTrans;
-                var sphereCenter = sphere.Center;
-                sphereCenter.X = CurrentTrans.X + relativePos.X;
-                sphereCenter.Y = CurrentTrans.Y + relativePos.Y;
-                sphereCenter.Z = CurrentTrans.Z + relativePos.Z;
-
-                sphere.Center = sphereCenter;
-            }
+            Vector3 relativePos = transformable.mStartingTrans - StartingTrans;
+            transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
+            transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
         }
 
-        public void HandleActorTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
-        {
-            foreach (CourseActor actor in mEditContext.GetSelectedObjects<CourseActor>())
-            {
-                Vector3 relativePos = actor.mStartingTrans - StartingTrans;
-                actor.mTranslation.X = CurrentTrans.X + relativePos.X;
-                actor.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
-                
-                if(Course.IsWorldMap)
-                    actor.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
-            }
-        }
-
-        public void HandleCourseRailPointTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
-        {
-            foreach (CourseRail.CourseRailPoint p in mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>())
-            {
-                Vector3 relativePos = p.mStartingTrans - StartingTrans;
-                p.mTranslation.X = CurrentTrans.X + relativePos.X;
-                p.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
-
-                if (Course.IsWorldMap)
-                    p.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
-
-                if (p.mIsCurve)
-                {
-                    Vector3 relativePosCtrl = p.mControl.mStartingTrans - p.mStartingTrans;
-                    p.mControl.mTranslation.X = p.mTranslation.X + relativePosCtrl.X;
-                    p.mControl.mTranslation.Y = p.mTranslation.Y + relativePosCtrl.Y;
-
-                    if (Course.IsWorldMap)
-                        p.mControl.mTranslation.Y = p.mTranslation.Y + relativePosCtrl.Y;
-                }
-            }
-        }
-
-        public void HandleCourseRailPointControlTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
-        {
-            foreach (CourseRail.CourseRailPointControl p in mEditContext.GetSelectedObjects<CourseRail.CourseRailPointControl>())
-            {
-                Vector3 relativePos = p.mStartingTrans - StartingTrans;
-                p.mTranslation.X = CurrentTrans.X + relativePos.X;
-                p.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
-
-                if (Course.IsWorldMap)
-                    p.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
-            }
-        }
-
-        public void HandleCursorTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
-        {
-            if (mEditContext.IsAnySelected<FushigiCursor>())
-            {
-                Vector3 relativePos = cursor.mStartingTrans - StartingTrans;
-                cursor.mTranslate.X = CurrentTrans.X + relativePos.X;
-                cursor.mTranslate.Y = CurrentTrans.Y + relativePos.Y;
-            }
-        }
-
-        public void CommitTranslation(object obj)
+ 
+        public void CommitTranslation(Transformable transformable)
         {
             string label = "";
-            switch (obj)
+            switch (transformable)
             {
                 case CourseActor actor:
-                    label = obj.GetFieldValue("mPackName").ToString();
+                    label = actor.GetFieldValue("mPackName").ToString();
                     break;
                 case CourseRail.CourseRailPoint point:
                     label = "Rail Point";
@@ -565,8 +464,8 @@ namespace Fushigi.ui.widgets
             }
 
             mEditContext.CommitAction(new PropertyFieldsSetUndo(
-                 obj,
-                 [("mTranslation", obj.GetFieldValue("mStartingTrans"))],
+                 transformable,
+                 [("mTranslation", transformable.GetFieldValue("mStartingTrans"))],
                  $"{IconUtil.ICON_ARROWS_ALT} Move {label}"));
         }
 
@@ -995,11 +894,15 @@ namespace Fushigi.ui.widgets
                             continue;
 
 
-
                         if (!HiddenModels.Contains(actor.mType.ToString()))
                         {
                             RenderActor(actor, actor.mActorPack.ModelInfoRef);
                             RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
+                        }
+                        
+                        if(HiddenModels.Contains(actor.mType.ToString()))
+                        {
+                            Console.WriteLine("skipping" + actor.mType.ToString() + " because it is hidden");
                         }
 
                     }
@@ -2677,14 +2580,9 @@ namespace Fushigi.ui.widgets
 
                         switch (lastHoveredObject)
                         {
-                            case CourseActor actor:
-                                StartingTrans = actor.mStartingTrans;
-                                CurrentTrans = actor.mTranslation;
-                                tileRebuild = true;
-                                break;
-                            case CourseRail.CourseRailPoint mPoint:
-                                StartingTrans = mPoint.mStartingTrans;
-                                CurrentTrans = mPoint.mTranslation;
+                            case Transformable transformable:
+                                StartingTrans = transformable.mStartingTrans;
+                                CurrentTrans = transformable.mTranslation;
                                 break;
                             case DefaultShape shape:
                                 StartingTrans = shape.Center;
@@ -2696,16 +2594,14 @@ namespace Fushigi.ui.widgets
                                 CurrentTrans = shape.mStartingTrans;
                                 }
 
-                            if (shape is CapsulePoint point)
-                            {
-                                var capsule = point.Parent;
+                                if (shape is CapsulePoint point)
+                                {
+                                    var capsule = point.Parent;
 
-                                // Convert local → world for drag start
-                                StartingTrans = CollisionEditor.translatePoint(point.mStartingTrans, capsule);
+                                    StartingTrans = CollisionEditor.translatePoint(point.mStartingTrans, capsule);
 
-                                // Convert local → world for current
-                                CurrentTrans = CollisionEditor.translatePoint(point.Center, capsule);
-                            }
+                                    CurrentTrans = CollisionEditor.translatePoint(point.Center, capsule);
+                                }
 
                             break;
                         }
@@ -2737,25 +2633,36 @@ namespace Fushigi.ui.widgets
                 {
                     var batch = mEditContext.BeginBatchAction();
 
-                    foreach (object obj in mEditContext.GetSelectedObjects<object>())
+                    foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                     {
-                        ApplyTranslation(obj);
+                        CommitTranslation(transformable);
+                        if (transformable is CourseRail.CourseRailPoint point)
+                        {
+                            if (point.mIsCurve)
+                                CommitTranslation(point.mControl);
+                        }
                     }
 
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} Objects");
                 }
                 else
                 {
-                    if (mEditContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint point) && point.mIsCurve) {
-                        var batch = mEditContext.BeginBatchAction();
-                        ApplyTranslation(point);
-                        ApplyTranslation(point.mControl);
-                        batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move Rail Point");
+                    var transformable = mEditContext.GetFirstObjectOfType<Transformable>();
+                    if (transformable is CourseRail.CourseRailPoint point)
+                    {
+                        if (point.mIsCurve)
+                        {
+                            var batch = mEditContext.BeginBatchAction();
+                            CommitTranslation(point.mControl);
+                            CommitTranslation(transformable);
+                            batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {transformable.GetType().Name}");
+                        }
                     }
-                    else       
-                        ApplyTranslation(mEditContext.GetFirstObject());
-                }
+                    else
+                        CommitTranslation(transformable);
 
+                }
+               
                 DoTranslateObjects = false;
             }
         }
@@ -2795,7 +2702,7 @@ namespace Fushigi.ui.widgets
                         Vector2 delta = ImGui.GetIO().MouseDelta;
                         float rotationSpeed = 0.05f;
                         float deltaAngle = ImGui.GetIO().MouseDelta.X * rotationSpeed;
-                        Vector3 cursorTrans = cursor.mTranslate;
+                        Vector3 cursorTrans = cursor.mTranslation;
                         actor.mRotation.Z += deltaAngle;
                         actor.mTranslation = cursorTrans + Vector3.Transform(actor.mTranslation - cursorTrans, Matrix4x4.CreateRotationZ(deltaAngle));
 
@@ -2834,7 +2741,7 @@ namespace Fushigi.ui.widgets
         {
             if (cursor != null)
             {
-                var cursorPos2D = this.WorldToScreen(new(cursor.mTranslate.X, cursor.mTranslate.Y, cursor.mTranslate.Z));
+                var cursorPos2D = this.WorldToScreen(new(cursor.mTranslation.X, cursor.mTranslation.Y, cursor.mTranslation.Z));
                 Vector2 pnt = new(cursorPos2D.X, cursorPos2D.Y);
                 bool isHovered = (ImGui.GetMousePos() - pnt).Length() < 10.0f;
 
@@ -2846,7 +2753,7 @@ namespace Fushigi.ui.widgets
                 var rail_point_color = point_selected ? ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) : color;
                 var size = 10.0f;
 
-                var pos2D = WorldToScreen(cursor.mTranslate);
+                var pos2D = WorldToScreen(cursor.mTranslation);
                 mDrawList.AddCircleFilled(pos2D, size, rail_point_color);
 
                 if (mHoveredObject == cursor)
@@ -2858,9 +2765,9 @@ namespace Fushigi.ui.widgets
         public void CursorPlacement()
         {
             var pos = ScreenToWorld(storedMousePos);
-            cursor.mTranslate.X = MathF.Round(pos.X * 2, MidpointRounding.AwayFromZero) / 2;
-            cursor.mTranslate.Y = MathF.Round(pos.Y * 2, MidpointRounding.AwayFromZero) / 2;
-            cursor.mTranslate.Z = 0.0f;
+            cursor.mTranslation.X = MathF.Round(pos.X * 2, MidpointRounding.AwayFromZero) / 2;
+            cursor.mTranslation.Y = MathF.Round(pos.Y * 2, MidpointRounding.AwayFromZero) / 2;
+            cursor.mTranslation.Z = 0.0f;
         }
 
         #endregion

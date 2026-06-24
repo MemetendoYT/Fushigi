@@ -436,7 +436,7 @@ namespace Fushigi.ui
                             isWorldMap = true;
                             Course.SetIsWorldMap(true);
                         }
-                        var course = new Course(name, isWorldMap);
+                        var course = new Course(name);
                         p.Report(("Loading other resources (this temporarily freezes the app)", null));
                         await mModalHost.WaitTick();
 

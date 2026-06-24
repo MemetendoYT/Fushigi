@@ -85,6 +85,7 @@ namespace Fushigi.ui.widgets
         bool showAreaSettings = false;
         bool showTalkingFlower = false;
         bool showCourseSettings = false;
+        bool showWorldMapSettings = false;
         bool showPaletteWindow = false;
         public bool hasOpened;
         public static bool showGlobalLinkWindow = false;
@@ -1481,11 +1482,20 @@ namespace Fushigi.ui.widgets
 
                 ImGui.PushStyleColor(ImGuiCol.Button, 0);
 
-                if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
-                    showCourseSettings = true;
-                ImGui.SetItemTooltip("Edit Course Settings");
+                if (!Course.IsWorldMap)
+                {
+                    if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
+                        showCourseSettings = true;
+                    ImGui.SetItemTooltip("Edit Course Settings");
 
-                ImGui.SameLine();
+                }
+                else
+                {
+                    if (ImGui.Button(IconUtil.ICON_ARCHIVE, icon_size))
+                        showWorldMapSettings = true;
+                    ImGui.SetItemTooltip("Edit World Map Settings");
+                }
+                    ImGui.SameLine();
 
                 if (ImGui.Button(IconUtil.ICON_FILE_IMPORT, icon_size))
                     showAreaSettings = true;
@@ -1529,6 +1539,9 @@ namespace Fushigi.ui.widgets
 
                 if (showCourseSettings)
                     CourseSettings.Draw(ref showCourseSettings, mPopupModalHost, course.mCourseInfo, course.mMapAnalysisInfo, course.mStageLoadInfo);
+
+                if (showWorldMapSettings)
+                    WorldMapSettings.Draw(ref showWorldMapSettings, mPopupModalHost, course.mWorldInfo);
 
                 if (showActorVisibility)
                     ActorVisibility.Draw(ref showActorVisibility, mPopupModalHost);
@@ -2385,11 +2398,13 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginTabItem("Add Layer"))
             {
-                    ImGui.InputText("##LayerSearch", ref mLayerSearch, 0x100);
+                ImGui.InputText("##LayerSearch", ref mLayerSearch, 0x100);
                 ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
 
                 if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                     ImGui.SetWindowFocus(null);
+
+
                 if (ImGui.BeginTable("##Layers", 1, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
                 {
                     var layers = LayerTypes
@@ -2439,6 +2454,12 @@ namespace Fushigi.ui.widgets
                 }
                 prevCallFrom = callFrom;
             }
+            if (filteredLayers.Count == 0)
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+                ImGui.Text("No layers found");
+            }
 
             for (var i = 0; i < filteredLayers.Count; i++)
             {
@@ -2464,7 +2485,7 @@ namespace Fushigi.ui.widgets
                 }
               
             }
-            Console.WriteLine(mSelectedLayer);
+
             if (mSelectedLayer != null && mSelectedActor != null)
                 AddSelectedActorWithLayer();
             else if (mSelectedLayer != null)
@@ -2489,6 +2510,9 @@ namespace Fushigi.ui.widgets
             }
 
             bool isSearch = !string.IsNullOrWhiteSpace(mActorSearchAll);
+
+            if (mSelectedActor != null && mSelectedLayer != null)
+                ImGui.Text($"Placing {mSelectedActor} on {mSelectedLayer}");
 
             if (prevSearch != mActorSearchAll)
             {
@@ -2517,6 +2541,9 @@ namespace Fushigi.ui.widgets
             if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                 ImGui.SetWindowFocus(null);
 
+            if (filteredActors.Count == 0)
+                ImGui.Text("No Actors found");
+
             if (ImGui.BeginTable("##ActorsAndLayers", columnCount, flags))
             {
 
@@ -2525,7 +2552,6 @@ namespace Fushigi.ui.widgets
                     int i = 0;
                     foreach (string actor in filteredActors)
                     {
-
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
                         if (UserSettings.GetEnableTranslation())
@@ -2553,6 +2579,7 @@ namespace Fushigi.ui.widgets
                         }
                         i++;
                     }
+
                 }
                 else if (mSelectedLayer == null)
                 {
@@ -2560,13 +2587,12 @@ namespace Fushigi.ui.widgets
                     layerSearch(layers, 1);
                 }
 
-                    ImGui.EndTable();
+                ImGui.EndTable();
         }
         ImGui.EndChild();
     }
         private async Task AddSelectedActorWithLayer()
         {
-
             var viewport = activeViewport;
             var area = selectedArea;
 
@@ -4352,8 +4378,8 @@ namespace Fushigi.ui.widgets
                     for (int i = 0; i < count; i++)
                     {
                         newActor = new CourseActor(pickActor.mPackName, selectedArea.mRootHash, pickActor.mLayer);
-                        newActor.mTranslation.X = (float)(cursor.mTranslate.X - radius * Math.Sin(angle * (Math.PI / 180)));
-                        newActor.mTranslation.Y = (float)(cursor.mTranslate.Y + radius * Math.Cos(angle * (Math.PI / 180)));
+                        newActor.mTranslation.X = (float)(cursor.mTranslation.X - radius * Math.Sin(angle * (Math.PI / 180)));
+                        newActor.mTranslation.Y = (float)(cursor.mTranslation.Y + radius * Math.Cos(angle * (Math.PI / 180)));
 
                         if (doRotate)
                             newActor.mRotation.Z = angle * (MathF.PI / 180f);
@@ -4405,7 +4431,7 @@ namespace Fushigi.ui.widgets
                         actor.mTranslation = actor.mStartingTrans;
 
                         Vector2 delta = ImGui.GetIO().MouseDelta;
-                        System.Numerics.Vector3 cursorTrans = cursor.mTranslate;
+                        System.Numerics.Vector3 cursorTrans = cursor.mTranslation;
                         actor.mRotation.Z += cursor.delta * (MathF.PI / 180f);
                         actor.mTranslation = cursorTrans + System.Numerics.Vector3.Transform(actor.mTranslation -
                                              cursorTrans, Matrix4x4.CreateRotationZ(cursor.delta * (MathF.PI / 180f)));

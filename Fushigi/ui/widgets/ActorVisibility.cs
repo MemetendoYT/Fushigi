@@ -42,15 +42,7 @@ namespace Fushigi.ui.widgets
         private static readonly Dictionary<string, string> BackgroundActors = new Dictionary<string, string>()
         {
             {"DV", "" },
-        };
-
-        private static readonly Dictionary<string, string> Actors = new Dictionary<string, string>()
-        {
-            {"Camera", "No Model"},
-            {"Area", "No Model" },
-            {"MapObj", "" },
-            {"Enemy", "" },
-            {"DV", "" }
+            {"Cloud", "" }
         };
 
         public static void DrawDropdown(Dictionary<string, string> DropDownObjects, string ObjectName)
@@ -103,7 +95,7 @@ namespace Fushigi.ui.widgets
         {
             var visibilityList = LevelViewport.HiddenActors;
 
-            if(listToUse == "Model")
+            if (listToUse == "Model")
                 visibilityList = LevelViewport.HiddenModels;
 
             bool contains = visibilityList.Contains(objectName) || HiddenAll.Contains(objectName);
@@ -112,19 +104,19 @@ namespace Fushigi.ui.widgets
             if (contains)
                 icon = IconUtil.ICON_EYE_SLASH;
 
-                if (ImGui.Button($"{icon}##EyeButton_{objectName}_{listToUse}", icon_size))
+            if (ImGui.Button($"{icon}##EyeButton_{objectName}_{listToUse}", icon_size))
+            {
+                switch (parentObjectName)
                 {
-                    switch (parentObjectName)
-                    {
-                        case "Rails":
+                    case "Rails":
                         AddToList("Rails", HiddenAll);
                         LevelViewport.ShowRails = !LevelViewport.ShowRails;
-                            break;
-                        case "Actor":
-                            AddToList(objectName, visibilityList);
-                            break;
-                    }
+                        break;
+                    case "Actor":
+                        AddToList(objectName, visibilityList);
+                        break;
                 }
+            }
         }
 
         public static void AddToList(string name, List<string> list)
@@ -145,14 +137,12 @@ namespace Fushigi.ui.widgets
         public static void Draw(ref bool continueDisplay, IPopupModalHost modalHost)
         {
             ImGui.SetNextWindowSize(new Vector2(500 * MainWindow.dpiScale, 500 * MainWindow.dpiScale), ImGuiCond.Once);
-            // Window
-            if (ImGui.Begin("Visibility Options", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse))
+            if (ImGui.Begin("Visibility Options", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoNavInputs))
             {
-                // Close Button
                 if (ImGui.Button("Close"))
                     continueDisplay = false;
 
-                if (ImGui.BeginTable("ActorVisibility", 3, ImGuiTableFlags.BordersInnerV))
+                if(ImGui.BeginTable("ActorVisibility", 3, ImGuiTableFlags.BordersInnerV))
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
@@ -168,10 +158,10 @@ namespace Fushigi.ui.widgets
                     var i = 0;
                     foreach (var setting in ViewingSettings)
                     {
-                        DrawFirstColumn(setting.Key);
-
                         if (setting.Value == "Dropdown")
                         {
+                            ImGui.TableNextRow();
+
                             switch (setting.Key)
                             {
                                 case "ForegroundActors":
@@ -183,7 +173,8 @@ namespace Fushigi.ui.widgets
 
                             }
 
-                            if (ImGui.TreeNode($"##Node{i}"))
+                            ImGui.TableSetColumnIndex(0);
+                            if (ImGui.TreeNode($"{setting.Key}##Node{i}"))
                             {
                                 switch (setting.Key)
                                 {
@@ -202,19 +193,18 @@ namespace Fushigi.ui.widgets
                         }
                         else
                         {
+                            DrawFirstColumn(setting.Key);
                             ImGui.TableSetColumnIndex(1);
                             DrawVisibilityToggle(setting.Key, setting.Key, "Tag");
 
                             if (setting.Value != "No Model")
                             {
                                 ImGui.TableSetColumnIndex(2);
-                                ImGui.SameLine();
                                 DrawVisibilityToggle(setting.Key, setting.Key, "Model");
                             }
                         }
-                        //ImGui.TableSetColumnIndex(0);
-                        //ImGui.Separator();
                     }
+
                     ImGui.EndTable();
                 }
                 ImGui.End();

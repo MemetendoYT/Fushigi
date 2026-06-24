@@ -9,17 +9,15 @@ using System.Diagnostics.CodeAnalysis;
 namespace Fushigi.course
 {
 
-    public class FushigiCursor
+    public class FushigiCursor : Transformable
     {
       
         public FushigiCursor()
         {
-            mTranslate = new System.Numerics.Vector3(0.0f);
+            mTranslation = new System.Numerics.Vector3(0.0f);
             delta = 0;
         }
 
-        public System.Numerics.Vector3 mStartingTrans;
-        public System.Numerics.Vector3 mTranslate;
         public float delta;
     }
 }

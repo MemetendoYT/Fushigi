@@ -228,7 +228,7 @@ namespace Fushigi.course
         public List<CourseRailPoint> mPoints = new();
         public Dictionary<string, object> mParameters = new();
 
-        public class CourseRailPoint
+        public class CourseRailPoint : Transformable
         {
             public CourseRailPoint(string type, CourseRail rail)
             {
@@ -355,13 +355,11 @@ namespace Fushigi.course
 
             public ulong mHash;
             public Dictionary<string, object> mParameters = new();
-            public System.Numerics.Vector3 mStartingTrans;
-            public System.Numerics.Vector3 mTranslation;
             public CourseRailPointControl mControl;
             public CourseRail mParent;
             public bool mIsCurve;
         }
-        public class CourseRailPointControl
+        public class CourseRailPointControl : Transformable
         {
             public CourseRailPointControl(CourseRail.CourseRailPoint point, System.Numerics.Vector3 pos)
             {
@@ -369,8 +367,6 @@ namespace Fushigi.course
                 this.mTranslation = pos;
             }
             public CourseRail.CourseRailPoint point;
-            public System.Numerics.Vector3 mTranslation;
-            public System.Numerics.Vector3 mStartingTrans;
         }
     }
     public class CourseRailHolder

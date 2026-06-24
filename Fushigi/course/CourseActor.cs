@@ -33,13 +33,14 @@ namespace Fushigi.course
         WMap,
         WObj,
         WorldMap,
-        Camera
+        Camera,
+        Cloud
     }
 
 
 
 
-    public class CourseActor
+    public class CourseActor : Transformable
     {
         public CourseActor(BymlHashTable actorNode)
         {
@@ -261,6 +262,8 @@ namespace Fushigi.course
                 return CourseActorType.DV;
             if (gyaml.StartsWith("camera"))
                 return CourseActorType.Camera;
+            if (gyaml.StartsWith("cloud"))
+                return CourseActorType.Cloud;
             if (gyaml.EndsWith("tag"))
                 return CourseActorType.Tag;
             if (gyaml.Contains("area"))
@@ -351,9 +354,7 @@ namespace Fushigi.course
         public WonderViewType mWonderView = WonderViewType.Normal;
         public CourseActorType mType = CourseActorType.None;
         public bool wonderVisible = true;
-        public System.Numerics.Vector3 mStartingTrans;
         public System.Numerics.Vector3 mStartingRot;
-        public System.Numerics.Vector3 mTranslation;
         public System.Numerics.Vector3 mRotation;
         public System.Numerics.Vector3 mScale;
         public uint mAreaHash;
@@ -384,6 +385,7 @@ namespace Fushigi.course
             { CourseActorType.Object, ImGui.ColorConvertFloat4ToU32(new(0.125f, 0.976f, 0.988f, 1)) },
             { CourseActorType.Sound, ImGui.ColorConvertFloat4ToU32(new(0.36f, 0.25f, 0.83f, 1)) },
             { CourseActorType.Camera, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) },
+            { CourseActorType.Cloud, ImGui.ColorConvertFloat4ToU32(new(0, 0, 0.7f, 1)) },
         };
 
         public static uint ColorShift(uint color)
