@@ -296,7 +296,7 @@ namespace Fushigi.ui.widgets
             }
         }
 
-        public void isInMultiSelectBox(Vector2 pos, object obj)
+        public void isInMultiSelectBox(Vector2 pos, Transformable obj)
         {
             bool inBox = pos.X > startPosWorld.X &&
                    pos.X < currentPosWorld.X &&
@@ -310,8 +310,7 @@ namespace Fushigi.ui.widgets
         }
 
         public void HandleCameraControls(double deltaSeconds)
-        {
-
+        { 
             isPanGesture = ImGui.IsMouseDragging(ImGuiMouseButton.Middle) && !ImGui.GetIO().KeyCtrl ||
                 (ImGui.IsMouseDragging(ImGuiMouseButton.Left) && ImGui.GetIO().KeyShift &&
                 mHoveredObject == null && !mEditContext.IsSelected(mHoveredObject) && !dragRelease);
@@ -388,11 +387,8 @@ namespace Fushigi.ui.widgets
                     foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                     {
                         HandleTransform(transformable, StartingTrans, CurrentTrans);
-                        if(transformable is CourseRail.CourseRailPoint point)
-                        {
-                            if(point.mIsCurve)
-                                HandleTransform(point.mControl, StartingTrans, CurrentTrans);
-                        }
+                        if(transformable is CourseRail.CourseRailPoint point && point.mIsCurve)
+                            HandleTransform(point.mControl, StartingTrans, CurrentTrans);
                     }
                         break;
                 case DefaultShape:
@@ -444,9 +440,10 @@ namespace Fushigi.ui.widgets
             Vector3 relativePos = transformable.mStartingTrans - StartingTrans;
             transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
             transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+            if (Course.IsWorldMap)
+                transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
         }
 
- 
         public void CommitTranslation(Transformable transformable)
         {
             string label = "";
@@ -898,11 +895,6 @@ namespace Fushigi.ui.widgets
                         {
                             RenderActor(actor, actor.mActorPack.ModelInfoRef);
                             RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
-                        }
-                        
-                        if(HiddenModels.Contains(actor.mType.ToString()))
-                        {
-                            Console.WriteLine("skipping" + actor.mType.ToString() + " because it is hidden");
                         }
 
                     }

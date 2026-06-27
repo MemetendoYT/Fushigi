@@ -45,21 +45,51 @@ namespace Fushigi.ui.widgets
 
         }
 
+
         private static void DrawWorldMapAppearanceSettings(WorldMapInfo worldMapInfo)
         {
-            if (ImGui.BeginTable("##WorldMapSettings", 2))
+            foreach (var gate in worldMapInfo.Gates)
             {
-                ImGui.TableNextRow();
-                ImGui.TableSetColumnIndex(0);
 
-                foreach(var course in worldMapInfo.Courses)
+                if (ImGui.TreeNodeEx($"Gate_{gate.GateNo}", ImGuiTreeNodeFlags.SpanFullWidth, $"Gate {gate.GateNo}"))
                 {
-                    ImGui.Text($"Course: {course.Key}");
-                    ImGui.TableNextRow();
+       
+                    if (ImGui.BeginTable($"GateTable_{gate.GateNo}", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                    {
+        
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Gate No");
+
+                        ImGui.TableSetColumnIndex(1);
+                        ImGui.Text($"{gate.GateNo}");
+
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Initial Message:");
+
+                        ImGui.TableSetColumnIndex(1);
+                        var msg = gate.BalloonMsgLabel;
+                        ImGui.InputText($"##Msg_{gate.GateNo}", ref msg, 256);
+                        gate.BalloonMsgLabel = msg;
+
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text("Price:");
+
+                        ImGui.TableSetColumnIndex(1);
+                        int price = gate.Price;
+                        ImGui.DragInt($"##Price_{gate.GateNo}", ref price);
+                        gate.Price = price;
+
+  
+                        ImGui.EndTable();
+                    }
+
+                    ImGui.TreePop();
                 }
             }
-            ImGui.EndTable();
-        }
 
+          }
+        }
     }
-}

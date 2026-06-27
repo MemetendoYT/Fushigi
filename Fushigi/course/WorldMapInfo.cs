@@ -37,8 +37,11 @@ namespace Fushigi.course
         //public string SuggestBadgeReplaceLabel { get; set; } //
         //public List<string> TipsTags { get; set; } //
         //public List<TipInfo> TipsInfo { get; set; } //
-
+        [BymlProperty("CourseTable")]
         public List<CourseTable> Courses { get; set; }
+
+        [BymlProperty("GateTable")]
+        public List<GateTable> Gates { get; set; }
 
 
         public WorldMapInfo(string name)
@@ -79,6 +82,13 @@ namespace Fushigi.course
         public class CourseTable
         {
             public string Key { get; set; }
+        }
+
+        public class GateTable
+        {
+            public int GateNo { get; set; }
+            public int Price { get; set; }
+            public string BalloonMsgLabel { get; set; }
         }
     }
 }

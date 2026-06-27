@@ -305,10 +305,12 @@ namespace Fushigi.ui.widgets
                 //Not currently used by area, dispose
                 if (!resourceFiles.Contains(bfres.Key))
                 {
-                    bfres.Value.Dispose();
+
+                    if (bfres.Value.IsCompleted)
+                        bfres.Value.Result?.Dispose();
+
                     removed.Add(bfres.Key);
 
-                    Logger.Logger.LogMessage("CourseScene", $"Disposing resource {bfres.Key}");
                 }
             }
 
@@ -952,6 +954,8 @@ namespace Fushigi.ui.widgets
 
             LocalLinksPanel();
 
+            SelectActorAndLayerPanel();
+
             if (!Course.IsWorldMap)
             {
                 SimultaneousGroupPanel();
@@ -959,8 +963,6 @@ namespace Fushigi.ui.widgets
                 BGUnitPanel();
 
                 CourseMiniView();
-
-                SelectActorAndLayerPanel();
             }
 
             backupTime += deltaSeconds;
@@ -1918,8 +1920,7 @@ namespace Fushigi.ui.widgets
                         ImGui.Indent();
 
                         ImGui.Text(param);
-                        ImGui.Separator();
-
+                        ImGui.Separator();                    
                         ImGui.Indent();
 
                         if (ImGui.BeginTable("DynamProps", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
@@ -1970,8 +1971,8 @@ namespace Fushigi.ui.widgets
 
                                     ImGui.AlignTextToFramePadding();
                                     ImGui.Text(pair.Key);
+                                    //keyPair = pair.Value;
                                     ImGui.TableNextColumn();
-
                                     ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
 
                                     if (actor.mActorParameters.ContainsKey(pair.Key))
@@ -1984,6 +1985,10 @@ namespace Fushigi.ui.widgets
                                             if (ImGui.InputInt(id, ref val_int))
                                             {
                                                 actor.mActorParameters[pair.Key] = Math.Clamp(val_int, minValue, maxValue);
+                                            }
+                                            if (pair.Key == "GateId")
+                                            {
+                                                gateID = val_int;
                                             }
                                         }
                                         else if (pair.Value.IsUnsignedInt(out minValue, out maxValue))
@@ -2037,8 +2042,48 @@ namespace Fushigi.ui.widgets
 
                             ImGui.EndTable();
                         }
+
+                 
+                        if (param == "WorldMapCoursePointGate")
+                        {
+                            if (ImGui.BeginTable("FixedProps", 2,
+                                ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                            {
+                                ImGui.TableNextRow();
+                                ImGui.TableSetColumnIndex(0);
+                                ImGui.AlignTextToFramePadding();
+                             
+                                if (gateID <= course.mWorldInfo.Gates.Count && gateID > 0)
+                                {
+                                    ImGui.Text("Price");
+
+                                    ImGui.TableSetColumnIndex(1);
+                                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+                                    var Gate = course.mWorldInfo.Gates[gateID - 1];
+                                    var price = Gate.Price;
+                                    if (ImGui.InputInt("##price", ref price))
+                                    {
+                                        course.mWorldInfo.Gates[gateID - 1].Price = price;
+                                    }
+                                }
+                                else
+                                {
+                                    if(ImGui.Button("makey new gatey"))
+                                    {
+                                        course.mWorldInfo.Gates.Add(new WorldMapInfo.GateTable
+                                        {
+                                            GateNo = course.mWorldInfo.Gates.Count + 1
+                                        });
+                                    }
+                                }
+                                ImGui.PopItemWidth();
+
+                                ImGui.EndTable();
+                            }
+                        }
                         ImGui.Unindent();
                         ImGui.Unindent();
+
                     }
                 }
             }
@@ -4985,6 +5030,8 @@ namespace Fushigi.ui.widgets
         private int prevCallFrom = 0;
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
         private bool showActorVisibility;
+        private string keyPair;
+        private int gateID;
 
         public bool attemptSave()
         {

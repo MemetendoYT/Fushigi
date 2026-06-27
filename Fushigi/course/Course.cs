@@ -14,6 +14,7 @@ namespace Fushigi.course
     {
         public Course(string courseName)
         {
+            Console.WriteLine("running?");
             mCourseName = courseName;
 
             if (!IsWorldMap)
