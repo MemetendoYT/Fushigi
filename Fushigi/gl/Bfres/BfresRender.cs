@@ -152,28 +152,6 @@ namespace Fushigi.gl.Bfres
                     if (this.Skeleton.Bones[mesh.BoneIndex].Name == "Bonecap_Model")
                         continue;
 
-                    //bool shaderSettings = true;
-                    //switch (UserSettings.GetShaders())
-                    //{
-                    //    case 1:
-                    //        shaderSettings = VanillaActors.Contains(name);
-                    //        break;
-
-                    //    case 2:
-                    //        shaderSettings = VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV");
-                    //        break;
-
-                    //    case 3:
-                    //        shaderSettings = VanillaActors.Contains(name) && !name.StartsWith("DV") && !name.StartsWith("RichDV") && !name.StartsWith("Unit");
-                    //        break;
-                    //    case 4:
-                    //        shaderSettings = false;
-                    //        break;
-                    //    default:
-                    //        shaderSettings = true;
-                    //        break;
-                    //}
-
                     if (UserSettings.UseGameShaders())
                         mesh.RenderGameShaders(gl, render, this, transform, camera);
                     else

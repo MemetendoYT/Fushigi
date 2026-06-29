@@ -172,17 +172,20 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             for (int i = 0; i < segmentCount; i++)
             {
-                pointA = rail.Points[i].Position;
-                pointB = rail.Points.GetWrapped(i + 1).Position;
+                pointA = rail.Points[i].mTranslation;
+                pointB = rail.Points.GetWrapped(i + 1).mTranslation;
 
-                var length = (pointB - pointA).Length();
-                var dir = (pointB - pointA) / length;
-                var t = Vector3.Dot(pos - pointA, dir) / length;
-                if (t < 0 || t > 1)
+                var seg = pointB - pointA;
+                float segLenSq = seg.LengthSquared();
+                if (segLenSq < 0.0001f)
                     continue;
 
-                var normal = Vector3.Normalize(Vector3.Cross(dir, Vector3.UnitZ));
-                float distance = MathF.Abs(Vector3.Dot(pos - pointA, normal));
+                float t = Vector3.Dot(pos - pointA, seg) / segLenSq;
+                float tClamped = Math.Clamp(t, 0f, 1f);
+
+                var closest = pointA + seg * tClamped;
+                float distance = Vector3.Distance(pos, closest);
+
 
                 var delta = distance;
                 if (delta <= min.distance)
@@ -205,8 +208,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 return (pos, min.index);
 
 
-            pointA = rail.Points[0].Position;
-            pointB = rail.Points[^1].Position;
+            pointA = rail.Points[0].mTranslation;
+            pointB = rail.Points[^1].mTranslation;
             if (Vector3.Distance(pointA, pos) < Vector3.Distance(pointB, pos))
                 return (pos, 0);
             else
@@ -240,7 +243,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
             Vector2[] points = new Vector2[rail.Points.Count];
             for (int i = 0; i < rail.Points.Count; i++)
             {
-                Vector3 p = rail.Points[i].Position;
+                Vector3 p = rail.Points[i].mTranslation;
                 points[i] = viewport.WorldToScreen(new(p.X, p.Y, p.Z));
             }
             return points;
@@ -302,7 +305,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                         diff.X = MathF.Round(diff.X, MidpointRounding.AwayFromZero);
                         diff.Y = MathF.Round(diff.Y, MidpointRounding.AwayFromZero);
                     }
-                    posVec.Z = rail.Points[i].Position.Z;
+                    posVec.Z = rail.Points[i].mTranslation.Z;
 
                     var newPos = childPoint.PreviousPosition + diff;
 
@@ -313,7 +316,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                             childPoint.PreviousPosition, 
                             newPos));
 
-                        rail.Points[i].Position = newPos;
+                        rail.Points[i].mTranslation = newPos;
                     }
 
                     anyTransformed = true;
@@ -352,16 +355,16 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             for (int i = 0; i < rail.Points.Count; i++)
             {
-                Vector3 pos = rail.Points[i].Position;
+                Vector3 pos = rail.Points[i].mTranslation;
 
                 Vector3 nextPos;
                 if (i < rail.Points.Count - 1) //is not last point
                 {
-                    nextPos = rail.Points[i + 1].Position;
+                    nextPos = rail.Points[i + 1].mTranslation;
                 }
                 else if (rail.IsClosed) //last point to first if closed
                 {
-                    nextPos = rail.Points[0].Position;
+                    nextPos = rail.Points[0].mTranslation;
                 }
                 else //last point but not closed, draw no line
                     continue;
@@ -395,8 +398,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 if (isSelected)
                 {
                     //Arrow display
-                    Vector3 next = i < rail.Points.Count - 1 ? rail.Points[i + 1].Position : rail.Points[0].Position;
-                    Vector3 dist = next - rail.Points[i].Position;
+                    Vector3 next = i < rail.Points.Count - 1 ? rail.Points[i + 1].mTranslation : rail.Points[0].mTranslation;
+                    Vector3 dist = next - rail.Points[i].mTranslation;
                     var angleInRadian = MathF.Atan2(dist.Y, dist.X); //angle in radian
                     var rotation = Matrix4x4.CreateRotationZ(angleInRadian);
 
@@ -406,8 +409,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
                     Vector2[] arrow =
                     [
-                        viewport.WorldToScreen(rail.Points[i].Position + dist / 2f),
-                        viewport.WorldToScreen(rail.Points[i].Position + dist / 2f + line),
+                        viewport.WorldToScreen(rail.Points[i].mTranslation + dist / 2f),
+                        viewport.WorldToScreen(rail.Points[i].mTranslation + dist / 2f + line),
                     ];
                     float alpha = 0.5f;
 
@@ -423,12 +426,12 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 if(rail.Points.Count > 0)
                 {
                     int index = addPos.index;
-                    var pointA = viewport.WorldToScreen(rail.Points.GetWrapped(index - 1).Position);
-                    var pointB = viewport.WorldToScreen(rail.Points.GetWrapped(index).Position);
+                    var pointA = viewport.WorldToScreen(rail.Points.GetWrapped(index - 1).mTranslation);
+                    var pointB = viewport.WorldToScreen(rail.Points.GetWrapped(index).mTranslation);
                     var pointC = pos2D;
 
-                    var pointAVec = rail.Points.GetWrapped(index - 1).Position;
-                    var pointBVec = rail.Points.GetWrapped(index).Position;
+                    var pointAVec = rail.Points.GetWrapped(index - 1).mTranslation;
+                    var pointBVec = rail.Points.GetWrapped(index).mTranslation;
                     ImGui.SetTooltip("X: " + (addPos.pos.X - pointAVec.X) + ", Y: " + (addPos.pos.Y - pointAVec.Y));
                     if(!isBelt)
                         dl.AddTriangleFilled(pointA, pointB, pointC, 0x99FFFFFF);
@@ -499,8 +502,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 if (neighborIndex < 0)
                     neighborIndex += rail.Points.Count;
 
-                Vector2 neighborPos = new(rail.Points[neighborIndex].Position.X,
-                    rail.Points[neighborIndex].Position.Y);
+                Vector2 neighborPos = new(rail.Points[neighborIndex].mTranslation.X,
+                    rail.Points[neighborIndex].mTranslation.Y);
 
                 if (!IsValidAngle(newPos, neighborPos))
                     return false;
@@ -522,7 +525,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 //TODO remove this as soon as we have an ITransformable interface with a SetTransform
                 Transform.Update += () =>
                 {
-                    point.Position = Transform.Position;
+                    point.mTranslation = Transform.Position;
                 };
             }
 
@@ -535,7 +538,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             private bool HitTest(LevelViewport viewport)
             {
-                var pos2D = viewport.WorldToScreen(point.Position);
+                var pos2D = viewport.WorldToScreen(point.mTranslation);
                 Vector2 pnt = new(pos2D.X, pos2D.Y);
                 return (ImGui.GetMousePos() - pnt).Length() < 10.0f;
             }
@@ -543,7 +546,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
             void ISceneObject.Update(ISceneUpdateContext ctx, bool isSelected)
             {
                 //TODO don't do this when only the selection has changed
-                PreviousPosition = point.Position;
+                PreviousPosition = point.mTranslation;
             }
 
             void IViewportSelectable.OnSelect(CourseAreaEditContext ctx)
@@ -557,7 +560,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             void IViewportDrawable.Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, ref bool isNewHoveredObj)
             {
-                var pos2D = viewport.WorldToScreen(point.Position);
+                var pos2D = viewport.WorldToScreen(point.mTranslation);
 
                 //Display point color
                 uint color = 0xFFFFFFFF;

@@ -101,7 +101,7 @@ namespace Fushigi.course
 
             foreach (BGUnitRail.RailPoint point in rail.Points)
             {
-                var position = point.Position;
+                var position = point.mTranslation;
                 BymlHashTable pointDict = new();
                 BymlArrayNode translateNode = new(3);
                 translateNode.AddNodeToArray(BymlUtil.CreateNode<float>(position.X));
@@ -232,10 +232,10 @@ namespace Fushigi.course
             Points = newPoints;
         }
 
-        public class RailPoint(BGUnitRail rail, Vector3 position)
+        public class RailPoint(BGUnitRail rail, Vector3 position) : Transformable
         {
             public readonly BGUnitRail mRail = rail;
-            public Vector3 Position = position;
+            public Vector3 mTranslation = position;
         }
     }
 

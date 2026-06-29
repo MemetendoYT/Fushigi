@@ -102,7 +102,7 @@ namespace Fushigi.course.terrain_processing
 
             for (int i = 0; i < rail.Points.Count; i++)
             {
-                Vector3 point = rail.Points[i].Position;
+                Vector3 point = rail.Points[i].mTranslation;
                 points[i] = new Vector2(point.X, point.Y);
                 bb.Include(point);
             }

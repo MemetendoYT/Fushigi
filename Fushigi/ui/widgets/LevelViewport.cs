@@ -11,18 +11,12 @@ using Fushigi.param;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.GraphmapsWithMesh;
-using Microsoft.Msagl.Layout.Incremental;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
-using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using System;
 using System.Data;
 using System.Drawing;
-using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using static Fushigi.course.CourseUnit;
 using Vector3 = System.Numerics.Vector3;
 
@@ -39,7 +33,6 @@ namespace Fushigi.ui.widgets
     {
         void OnSelect(CourseAreaEditContext editContext);
 
-
         public static void DefaultSelect(CourseAreaEditContext ctx, object selectable)
         {
             if (ImGui.GetIO().KeyShift || ImGui.GetIO().KeyCtrl)
@@ -54,24 +47,21 @@ namespace Fushigi.ui.widgets
                 });
             }
 
-            foreach (CourseActor act in ctx.GetSelectedObjects<CourseActor>())
+            foreach(Transformable transformable in ctx.GetSelectedObjects<Transformable>())
             {
-                act.mStartingTrans = act.mTranslation;
-                act.mStartingRot = act.mRotation;
+                transformable.mStartingTrans = transformable.mTranslation;
+                
+                switch(transformable)
+                {
+                    case CourseActor actor:
+                        actor.mStartingRot = actor.mRotation;
+                        break;
+                    case CourseRail.CourseRailPoint point:
+                        if (point.mIsCurve)
+                            point.mControl.mStartingTrans = point.mControl.mTranslation;
+                        break;
+                }
             }
-
-            foreach (CourseRail.CourseRailPoint point in ctx.GetSelectedObjects<CourseRail.CourseRailPoint>())
-            {
-                point.mStartingTrans = point.mTranslation;
-                if (point.mIsCurve)
-                    point.mControl.mStartingTrans = point.mControl.mTranslation;
-            }
-
-            foreach (CourseRail.CourseRailPointControl point in ctx.GetSelectedObjects<CourseRail.CourseRailPointControl>())
-                point.mStartingTrans = point.mTranslation;
-
-            foreach (FushigiCursor cursor in ctx.GetSelectedObjects<FushigiCursor>())
-                cursor.mStartingTrans = cursor.mTranslation;
 
             foreach (DefaultShape shape in ctx.GetSelectedObjects<DefaultShape>())
             {
@@ -89,7 +79,6 @@ namespace Fushigi.ui.widgets
 
         }
     }
-
 
     #endregion
     [Flags]
@@ -391,7 +380,7 @@ namespace Fushigi.ui.widgets
                         if(transformable is CourseRail.CourseRailPoint point && point.mIsCurve)
                             HandleTransform(point.mControl, StartingTrans, CurrentTrans);
                     }
-                        break;
+                    break;
                 case DefaultShape:
                     HandleShapeTranslation(StartingTrans, CurrentTrans);
                     break;
@@ -399,8 +388,6 @@ namespace Fushigi.ui.widgets
             }
         }
         
-
-
         public void HandleShapeTranslation(Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             foreach (var shape in mEditContext.GetSelectedObjects<DefaultShape>())
@@ -474,7 +461,6 @@ namespace Fushigi.ui.widgets
                 [("mRotation", actor.GetFieldValue("mStartingRot"))],
                 $"{IconUtil.ICON_ARROWS_ALT} Pivot {string.Join(", ", actor.mPackName)}"));
         }
-
 
         public Vector3 CalcPosVec(Vector3 startingTrans)
         {
@@ -1489,7 +1475,6 @@ namespace Fushigi.ui.widgets
             drawList.AddText(pos, textCol, text);
         }
 
-
         void DrawGrid()
         {
             DrawGridLines(false, 20f, 10);
@@ -1981,29 +1966,36 @@ namespace Fushigi.ui.widgets
                 if (_pos == null) return;
 
                 var batchAction = mEditContext.BeginBatchAction();
+                var offset = (Vector3)_pos - CopiedMedianPosition;
+
+                offset.X = MathF.Round(offset.X * 2) / 2;
+                offset.Y = MathF.Round(offset.Y * 2) / 2;
+
                 for (var i = 0; i < actors.Length; i++)
                 {
                     var actor = actors[i];
                     CourseActor newActor;
+
                     AddLayer(actor.mLayer);
+
                     if (freshCopy)
                         newActor = new CourseActor(actor.mPackName, actor.mAreaHash, actor.mLayer);
                     else
                         newActor = actor.Clone(mArea);
 
-                    newActor.mTranslation = (Vector3)_pos + (actor.mTranslation - CopiedMedianPosition);
-                    newActor.mTranslation.X = MathF.Round(newActor.mTranslation.X * 2) / 2;
-                    newActor.mTranslation.Y = MathF.Round(newActor.mTranslation.Y * 2) / 2;
+                    newActor.mTranslation = actor.mTranslation + offset;
+
                     newActor.mTranslation.Z = actor.mTranslation.Z;
+
                     var n = 0;
-                    do
-                    {
-                        n++;
-                    } while (area.GetActors().Any(x => x.mName == $"{actor.mPackName}{n}"));
+                    do { n++; }
+                    while (area.GetActors().Any(x => x.mName == $"{actor.mPackName}{n}"));
+
                     newActor.mName = $"{actor.mPackName}" + (n == 0 ? "" : n);
 
                     mEditContext.AddActor(newActor);
                 }
+
                 batchAction.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Paste {actors.Length} Actor{(actors.Length > 1 ? "s" : "")}");
 
                 mEditContext.Select(actors);

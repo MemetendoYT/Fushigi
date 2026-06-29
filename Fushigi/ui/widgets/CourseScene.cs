@@ -305,7 +305,6 @@ namespace Fushigi.ui.widgets
                 //Not currently used by area, dispose
                 if (!resourceFiles.Contains(bfres.Key))
                 {
-
                     if (bfres.Value.IsCompleted)
                         bfres.Value.Result?.Dispose();
 
@@ -1442,11 +1441,11 @@ namespace Fushigi.ui.widgets
                 {
                     foreach (var wall in foregroundTileUnits
                         .SelectMany(x => x.Walls)
-                        .Where(x => x.ExternalRail.Points.FirstOrDefault()?.Position.Z == subUnit.mOrigin.Z))
+                        .Where(x => x.ExternalRail.Points.FirstOrDefault()?.mTranslation.Z == subUnit.mOrigin.Z))
                     {
                         var rail = wall.ExternalRail;
 
-                        var pos = rail.Points.Select(x => MapPointPixelAligned(new(x.Position.X, x.Position.Y))).ToArray();
+                        var pos = rail.Points.Select(x => MapPointPixelAligned(new(x.mTranslation.X, x.mTranslation.Y))).ToArray();
                         dl.AddPolyline(ref pos[0],
                             rail.Points.Count,
                             edgeColor,
@@ -3404,8 +3403,8 @@ namespace Fushigi.ui.widgets
 
                         for (int i = 0; i < rail.Points.Count; i++)
                         {
-                            var point0 = rail.Points[i].Position;
-                            var point1 = rail.Points.GetWrapped(i + 1).Position;
+                            var point0 = rail.Points[i].mTranslation;
+                            var point1 = rail.Points.GetWrapped(i + 1).mTranslation;
 
                             if (point0.X >= point1.X)
                                 continue;
@@ -3429,13 +3428,13 @@ namespace Fushigi.ui.widgets
 
                         if (firstBeltRail is not null && lastBeltRail is not null &&
                             firstBeltRail != lastBeltRail &&
-                            lastBeltRail.Points[^1].Position == firstBeltRail.Points[0].Position)
+                            lastBeltRail.Points[^1].mTranslation == firstBeltRail.Points[0].mTranslation)
                         {
                             //connect first and last rail
 
                             for (int i = 0; i < lastBeltRail.Points.Count - 1; i++)
                             {
-                                var position = lastBeltRail.Points[i].Position;
+                                var position = lastBeltRail.Points[i].mTranslation;
                                 firstBeltRail.Points.Insert(i, new BGUnitRail.RailPoint(firstBeltRail, position));
                             }
                         }
@@ -3567,14 +3566,14 @@ namespace Fushigi.ui.widgets
                                 CourseUnit.ModelType.Bridge => -2,
                                 _ => 0
                             }
-                            : mSelectedUnitRail.Points[0].Position.Z;
+                            : mSelectedUnitRail.Points[0].mTranslation.Z;
 
                         ImGui.Text("Z Depth"); ImGui.TableNextColumn();
                         if (ImGui.DragFloat("##Depth", ref depth, 0.1f))
                         {
                             //Update depth to all points
                             foreach (var p in mSelectedUnitRail.Points)
-                                p.Position = new System.Numerics.Vector3(p.Position.X, p.Position.Y, depth);
+                                p.mTranslation = new System.Numerics.Vector3(p.mTranslation.X, p.mTranslation.Y, depth);
                             mSelectedUnitRail.mCourseUnit.GenerateTileSubUnits();
                         }
 
