@@ -369,6 +369,7 @@ namespace Fushigi.ui.widgets
         {
             return mEditContext.IsAnySelected<BGUnitRail.RailPoint>();
         }
+
         public void HandleTranslation(object obj, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             switch (obj)
@@ -2556,7 +2557,6 @@ namespace Fushigi.ui.widgets
                     if (!IsViewportActive)
                         return;
 
-
                     Vector3 StartingTrans = new Vector3();
                     Vector3 CurrentTrans = new Vector3();
 
@@ -2599,14 +2599,16 @@ namespace Fushigi.ui.widgets
                         if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                             CurrentTrans.Z = posVec.Z;
 
-                        foreach (object obj in mEditContext.GetSelectedObjects<object>())
-                            HandleTranslation(obj, StartingTrans, CurrentTrans);
+                        foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
+                            HandleTranslation(transformable, StartingTrans, CurrentTrans);
 
                         if (StartingTrans != CurrentTrans)
                             DoTranslateObjects = true;
 
                     }
                 }
+                else
+                    DoTranslateObjects = false;
             }
 
             // Save Object Translation to history
@@ -2632,6 +2634,7 @@ namespace Fushigi.ui.widgets
                 }
                 else
                 {
+
                     var transformable = mEditContext.GetFirstObjectOfType<Transformable>();
                     if (transformable is CourseRail.CourseRailPoint point)
                     {
