@@ -2,6 +2,7 @@
 using Fushigi.course;
 using Fushigi.gl.Bfres;
 using Fushigi.Logger;
+using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using System;
@@ -217,9 +218,10 @@ namespace Fushigi.ui
 
         public void DeleteUnitRailPoint(BGUnitRail rail, BGUnitRail.RailPoint point)
         {
-
             var batchAction = BeginBatchAction();
+            CommitAction(new TileRebuildRevertable(rail.mCourseUnit));
             CommitAction(rail.Points.RevertableRemove(point));
+
 
             batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Unit Rail Point");
         }

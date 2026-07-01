@@ -172,6 +172,7 @@ namespace Fushigi.ui.widgets
         private CourseRail.CourseRailPoint closestSelected;
         private List<(CourseRail rail, CourseRail.CourseRailPoint point)> deleteList;
         private List<(BGUnitRail Rail, BGUnitRail.RailPoint Point)> deleteList2;
+        private List<CourseUnit> rebuildList;
         private bool multiRailDelete;
         public bool applyRotation;
         private bool DoTranslateObjects;
@@ -382,7 +383,11 @@ namespace Fushigi.ui.widgets
                             TransformObjects(point.mControl, StartingTrans, CurrentTrans);
                         if (transformable is BGUnitRail.RailPoint unitRail)
                         {
-                            BGUnitRailSceneObj.rebuildUnit(unitRail.mRail.mCourseUnit);
+                            tileRebuild = true;
+                            var unit = unitRail.mRail.mCourseUnit;
+
+                            if (!rebuildList.Contains(unit))
+                                rebuildList.Add(unit);
                         }
                     }
                     break;
@@ -1280,8 +1285,10 @@ namespace Fushigi.ui.widgets
 
                 foreach (var (rail2, point) in deleteList2)
                 {
+                    mEditContext.CommitAction(new TileRebuildRevertable(rail2.mCourseUnit));
                     var revertible = rail2.Points.RevertableRemove(point);
                     mEditContext.CommitAction(revertible);
+                    BGUnitRailSceneObj.rebuildUnit(rail2.mCourseUnit);
                 }
 
                 batch.Commit($"{IconUtil.ICON_TRASH} Delete Unit Rail Points");
@@ -1331,6 +1338,14 @@ namespace Fushigi.ui.widgets
                 {
                     mHoveredObject = point;
                 }
+
+                if (mMultiSelecting)
+                {
+                    float pntX = point.mTranslation.X;
+                    float pntY = point.mTranslation.Y;
+
+                    isInMultiSelectBox(new Vector2(pntX, pntY), point);
+                }
             }
 
             if (selectedPoint != null && (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace))))
@@ -1346,9 +1361,11 @@ namespace Fushigi.ui.widgets
                     }
                 }
                 else
+                {
                     mEditContext.DeleteUnitRailPoint(rail, selectedPoint);
-                
-                BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
+                    BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
+                }
+            
             }
 
             if (selectedPoint != null && ImGui.GetIO().KeyAlt)
@@ -2696,7 +2713,7 @@ namespace Fushigi.ui.widgets
             {
                 if (IsTransformableSelected() && mMultiSelectEnded)
                     mMultiSelecting = false;
-                else if (mMultiSelectStartPos != null && !ImGui.IsWindowHovered() && !IsNonTransformableSelected())
+                else if (mMultiSelectStartPos != null && !ImGui.IsWindowHovered())
                 {
                     mMultiSelectCurrentPos = ImGui.GetMousePos();
                     mMultiSelecting = true;
@@ -2768,8 +2785,19 @@ namespace Fushigi.ui.widgets
                         if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                             CurrentTrans.Z = posVec.Z;
 
+                        rebuildList = new();
+
                         foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                             HandleTranslation(transformable, StartingTrans, CurrentTrans);
+                        if (rebuildList.Count > 0)
+
+                        {
+                            foreach (var unit in rebuildList)
+                            {
+                                BGUnitRailSceneObj.rebuildUnit(unit);
+                            }
+                        }
+ 
 
                         if (StartingTrans != CurrentTrans)
                             DoTranslateObjects = true;
@@ -2795,7 +2823,20 @@ namespace Fushigi.ui.widgets
                         {
                             if (point.mIsCurve)
                                 CommitTranslation(point.mControl);
+                            
                         }
+                        if (transformable is BGUnitRail.RailPoint)
+                        {
+                            foreach (var unit in rebuildList)
+                            {
+                                BGUnitRailSceneObj.rebuildUnit(unit);
+                                mEditContext.CommitAction(new TileRebuildRevertable(unit));
+                            }
+
+                            rebuildList.Clear();
+                            CommitTranslation(transformable);
+                        }
+
                     }
 
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} Objects");
@@ -2815,6 +2856,19 @@ namespace Fushigi.ui.widgets
                         }
                         else
                             CommitTranslation(point);
+
+                    }
+                    else if (transformable is BGUnitRail.RailPoint)
+                    {
+                        var batch = mEditContext.BeginBatchAction();
+                        var unit = rebuildList.FirstOrDefault();
+                        
+                        BGUnitRailSceneObj.rebuildUnit(unit);
+                        mEditContext.CommitAction(new TileRebuildRevertable(unit));
+                        
+                        rebuildList.Clear();
+                        CommitTranslation(transformable);
+                        batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {transformable.GetType().Name}");
                     }
                     else
                         CommitTranslation(transformable);

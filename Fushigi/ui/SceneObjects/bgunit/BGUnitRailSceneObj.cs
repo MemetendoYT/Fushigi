@@ -4,6 +4,7 @@ using Fushigi.ui.undo;
 using Fushigi.ui.widgets;
 using Fushigi.util;
 using ImGuiNET;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using System.Numerics;
 
 namespace Fushigi.ui.SceneObjects.bgunit
@@ -55,11 +56,15 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
         public static void InsertPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point, int index, BGUnitRail rail)
         {
+            var batch = ctx.BeginBatchAction();
             var revertible = rail.Points.RevertableInsert(point, index,
                 $"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
 
+            ctx.CommitAction(new TileRebuildRevertable(rail.mCourseUnit));
             ctx.CommitAction(revertible);
+            batch.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
             ctx.Select(point);
+
         }
 
         public void AddPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point)

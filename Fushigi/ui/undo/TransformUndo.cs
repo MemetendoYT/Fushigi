@@ -1,4 +1,6 @@
-﻿using Fushigi.util;
+﻿using Fushigi.course;
+using Fushigi.ui.SceneObjects.bgunit;
+using Fushigi.util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,33 +12,26 @@ using System.Xml.Linq;
 
 namespace Fushigi.ui
 {
-    public class TransformUndo : IRevertable
+
+    public class TileRebuildRevertable : IRevertable
     {
-        public string Name { get; set; }
+        public string Name { get; }
 
-        Transform Transform;
-        Vector3 OldPos;
-        Vector3 NewPos;
+        private readonly CourseUnit unit;
 
-        public TransformUndo(Transform transform, Vector3 oldPos, Vector3 newPos, string name = $"{IconUtil.ICON_ARROWS_ALT} Transform")
+        public TileRebuildRevertable(CourseUnit unit, string name = "Tile Rebuild")
         {
-            //Undo display name
+            this.unit = unit;
             Name = name;
-            Transform = transform;
-            OldPos = oldPos;
-            NewPos = newPos;
         }
 
         public IRevertable Revert()
         {
-            //Revert transform instance
-
-            var redo = new TransformUndo(Transform, NewPos, OldPos);
-
-            Transform.Position = OldPos;
-            Transform.OnUpdate();
-            //Create revert stack
-            return redo;
+            BGUnitRailSceneObj.rebuildUnit(unit);
+            return this;
         }
     }
+
+
+
 }
