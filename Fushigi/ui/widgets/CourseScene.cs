@@ -622,305 +622,305 @@ namespace Fushigi.ui.widgets
 
         #region UI
 
-        private void CourseUnitView(CourseUnitHolder unitHolder)
-        {
-            var editContext = areaScenes[selectedArea].EditContext;
+        //private void CourseUnitView(CourseUnitHolder unitHolder)
+        //{
+        //    var editContext = areaScenes[selectedArea].EditContext;
 
-            BGUnitRailSceneObj GetRailSceneObj(object courseObject)
-            {
-                if (!areaScenes[selectedArea].TryGetObjFor(courseObject, out var sceneObj))
-                    return null;
-                return (BGUnitRailSceneObj)sceneObj;
-            }
+        //    BGUnitRailSceneObj GetRailSceneObj(object courseObject)
+        //    {
+        //        if (!areaScenes[selectedArea].TryGetObjFor(courseObject, out var sceneObj))
+        //            return null;
+        //        return (BGUnitRailSceneObj)sceneObj;
+        //    }
 
-            ImGui.Text("Select a Wall");
-            ImGui.Text("Alt + Left Click to add point");
-            ImGui.Text("Delete to remove point");
-            ImGui.Text("Right Click to add Internal Rails");
+        //    ImGui.Text("Select a Wall");
+        //    ImGui.Text("Alt + Left Click to add point");
+        //    ImGui.Text("Delete to remove point");
+        //    ImGui.Text("Right Click to add Internal Rails");
 
-            ImGui.Checkbox("Hide Walls", ref HideWalls);
+        //    ImGui.Checkbox("Hide Walls", ref HideWalls);
 
-            if (ImGui.Button("Add Tile Unit", new Vector2(100 * MainWindow.dpiScale, 22 * MainWindow.dpiScale)))
-            {
-                editContext.AddBgUnit(new CourseUnit());
-            }
+        //    if (ImGui.Button("Add Tile Unit", new Vector2(100 * MainWindow.dpiScale, 22 * MainWindow.dpiScale)))
+        //    {
+        //        editContext.AddBgUnit(new CourseUnit());
+        //    }
 
-            List<CourseUnit> removed_tile_units = new List<CourseUnit>();
+        //    List<CourseUnit> removed_tile_units = new List<CourseUnit>();
 
-            foreach (var unit in unitHolder.mUnits)
-            {
-                var tree_flags = ImGuiTreeNodeFlags.None;
-                string name = $"Tile Unit {unitHolder.mUnits.IndexOf(unit)}";
+        //    foreach (var unit in unitHolder.mUnits)
+        //    {
+        //        var tree_flags = ImGuiTreeNodeFlags.None;
+        //        string name = $"Tile Unit {unitHolder.mUnits.IndexOf(unit)}";
 
-                ImGui.AlignTextToFramePadding();
-                bool expanded = ImGui.TreeNodeEx($"##{name}", ImGuiTreeNodeFlags.DefaultOpen);
+        //        ImGui.AlignTextToFramePadding();
+        //        bool expanded = ImGui.TreeNodeEx($"##{name}", ImGuiTreeNodeFlags.DefaultOpen);
 
-                ImGui.SameLine();
-                ImGui.SetNextItemAllowOverlap();
-                if (ImGui.Checkbox($"##Visible{name}", ref unit.Visible))
-                {
-                    foreach (var wall in unit.Walls)
-                    {
-                        BGUnitRailSceneObj railObj = GetRailSceneObj(wall.ExternalRail);
-                        if (railObj == null)
-                            continue;
+        //        ImGui.SameLine();
+        //        ImGui.SetNextItemAllowOverlap();
+        //        if (ImGui.Checkbox($"##Visible{name}", ref unit.Visible))
+        //        {
+        //            foreach (var wall in unit.Walls)
+        //            {
+        //                BGUnitRailSceneObj railObj = GetRailSceneObj(wall.ExternalRail);
+        //                if (railObj == null)
+        //                    continue;
 
-                        railObj.Visible = unit.Visible;
-                        foreach (var rail in wall.InternalRails)
-                        {
-                            GetRailSceneObj(rail).Visible = unit.Visible;
-                        }
-                    }
-                    editContext.DeselectAll();
-                    editContext.Select(unit);
-                }
-                ImGui.SameLine();
+        //                railObj.Visible = unit.Visible;
+        //                foreach (var rail in wall.InternalRails)
+        //                {
+        //                    GetRailSceneObj(rail).Visible = unit.Visible;
+        //                }
+        //            }
+        //            editContext.DeselectAll();
+        //            editContext.Select(unit);
+        //        }
+        //        ImGui.SameLine();
 
-                if (ImGui.Selectable(name, editContext.IsSelected(unit)))
-                {
-                    editContext.DeselectAll();
-                    editContext.Select(unit);
-                }
-                if (expanded)
-                {
-                    void RailListItem(string type, BGUnitRail rail, int id)
-                    {
-                        bool isSelected = editContext.IsSelected(rail);
-                        string wallname = $"{type} {id}";
+        //        if (ImGui.Selectable(name, editContext.IsSelected(unit)))
+        //        {
+        //            editContext.DeselectAll();
+        //            editContext.Select(unit);
+        //        }
+        //        if (expanded)
+        //        {
+        //            void RailListItem(string type, BGUnitRail rail, int id)
+        //            {
+        //                bool isSelected = editContext.IsSelected(rail);
+        //                string wallname = $"{type} {id}";
 
-                        ImGui.Indent();
+        //                ImGui.Indent();
 
-                        BGUnitRailSceneObj railObj = GetRailSceneObj(rail);
-                        if (railObj == null)
-                            return;
+        //                BGUnitRailSceneObj railObj = GetRailSceneObj(rail);
+        //                if (railObj == null)
+        //                    return;
 
-                        if (ImGui.Checkbox($"##Visible{wallname}", ref railObj.Visible))
-                        {
+        //                if (ImGui.Checkbox($"##Visible{wallname}", ref railObj.Visible))
+        //                {
 
-                        }
-                        ImGui.SameLine();
+        //                }
+        //                ImGui.SameLine();
 
-                        if (ImGui.BeginTable("Rails", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                        {
-                            ImGui.TableNextRow();
-                            ImGui.TableSetColumnIndex(0);
+        //                if (ImGui.BeginTable("Rails", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+        //                {
+        //                    ImGui.TableNextRow();
+        //                    ImGui.TableSetColumnIndex(0);
 
-                            void SelectRail()
-                            {
-                                editContext.DeselectAll();
-                                editContext.Select(rail);
-                            }
+        //                    void SelectRail()
+        //                    {
+        //                        editContext.DeselectAll();
+        //                        editContext.Select(rail);
+        //                    }
 
-                            if (ImGui.Selectable($"##{name}{wallname}", isSelected, ImGuiSelectableFlags.SpanAllColumns))
-                            {
-                                SelectRail();
-                            }
-                            if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
-                            {
-                                SelectRail();
-                                ImGui.OpenPopup("WallMenu");
-                            }
+        //                    if (ImGui.Selectable($"##{name}{wallname}", isSelected, ImGuiSelectableFlags.SpanAllColumns))
+        //                    {
+        //                        SelectRail();
+        //                    }
+        //                    if (ImGui.IsItemHovered() && ImGui.IsMouseClicked(ImGuiMouseButton.Right))
+        //                    {
+        //                        SelectRail();
+        //                        ImGui.OpenPopup("WallMenu");
+        //                    }
 
-                            ImGui.SameLine();
+        //                    ImGui.SameLine();
 
-                            //Shift text from selection
-                            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (22 * MainWindow.dpiScale));
-                            ImGui.Text(wallname);
+        //                    //Shift text from selection
+        //                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (22 * MainWindow.dpiScale));
+        //                    ImGui.Text(wallname);
 
-                            ImGui.TableNextColumn();
+        //                    ImGui.TableNextColumn();
 
-                            ImGui.TextDisabled($"(Num Points: {rail.Points.Count})");
+        //                    ImGui.TextDisabled($"(Num Points: {rail.Points.Count})");
 
-                            ImGui.EndTable();
-                        }
+        //                    ImGui.EndTable();
+        //                }
 
-                        ImGui.Unindent();
-                    }
-                    if (reloadUnit)
-                    {
-                        editContext.DeselectAll();
-                        editContext.Select(unit);
-                        reloadUnit = false;
-                    }
-                    if (editContext.IsSelected(unit))
-                    {
-                        if (ImGui.BeginPopupContextWindow("RailMenu", ImGuiPopupFlags.MouseButtonRight))
-                        {
-                            if (ImGui.MenuItem("Add Wall"))
-                            {
-                                editContext.AddWall(unit, new Wall(unit));
-                                editContext.DeselectAll();
-                                editContext.Select(unit);
-                            }
+        //                ImGui.Unindent();
+        //            }
+        //            if (reloadUnit)
+        //            {
+        //                editContext.DeselectAll();
+        //                editContext.Select(unit);
+        //                reloadUnit = false;
+        //            }
+        //            if (editContext.IsSelected(unit))
+        //            {
+        //                if (ImGui.BeginPopupContextWindow("RailMenu", ImGuiPopupFlags.MouseButtonRight))
+        //                {
+        //                    if (ImGui.MenuItem("Add Wall"))
+        //                    {
+        //                        editContext.AddWall(unit, new Wall(unit));
+        //                        editContext.DeselectAll();
+        //                        editContext.Select(unit);
+        //                    }
 
-                            if (ImGui.MenuItem($"Remove {name}"))
-                            {
-                                removed_tile_units.Add(unit);
-                                reloadUnit = true;
-                            }
+        //                    if (ImGui.MenuItem($"Remove {name}"))
+        //                    {
+        //                        removed_tile_units.Add(unit);
+        //                        reloadUnit = true;
+        //                    }
 
-                            ImGui.EndPopup();
-                        }
-                    }
+        //                    ImGui.EndPopup();
+        //                }
+        //            }
 
-                    if (unit.mModelType is not CourseUnit.ModelType.Bridge)
-                    {
-                        if (ImGui.Button("Add Wall"))
-                        {
-                            editContext.AddWall(unit, new Wall(unit));
-                            reloadUnit = true;
-                        }
-                        ImGui.SameLine();
+        //            if (unit.mModelType is not CourseUnit.ModelType.Bridge)
+        //            {
+        //                if (ImGui.Button("Add Wall"))
+        //                {
+        //                    editContext.AddWall(unit, new Wall(unit));
+        //                    reloadUnit = true;
+        //                }
+        //                ImGui.SameLine();
 
-                        if (ImGui.Button("Remove Wall") || (ImGui.IsKeyPressed(ImGuiKey.Delete) && ImGui.GetIO().KeyShift))
-                        {
-                            editContext.WithSuspendUpdateDo(() =>
-                            {
-                                for (int i = unit.Walls.Count - 1; i >= 0; i--)
-                                {
-                                    //TODO is that REALLY how we want to do this?
-                                    if (editContext.IsSelected(unit.Walls[i].ExternalRail))
-                                    {
-                                        editContext.DeleteWall(unit, unit.Walls[i]);
-                                        reloadUnit = true;
+        //                if (ImGui.Button("Remove Wall") || (ImGui.IsKeyPressed(ImGuiKey.Delete) && ImGui.GetIO().KeyShift))
+        //                {
+        //                    editContext.WithSuspendUpdateDo(() =>
+        //                    {
+        //                        for (int i = unit.Walls.Count - 1; i >= 0; i--)
+        //                        {
+        //                            //TODO is that REALLY how we want to do this?
+        //                            if (editContext.IsSelected(unit.Walls[i].ExternalRail))
+        //                            {
+        //                                editContext.DeleteWall(unit, unit.Walls[i]);
+        //                                reloadUnit = true;
 
-                                    }
+        //                            }
 
-                                }
-                            });
-                        }
+        //                        }
+        //                    });
+        //                }
 
-                        for (int iWall = 0; iWall < unit.Walls.Count; iWall++)
-                        {
-                            Wall wall = unit.Walls[iWall];
-                            if (editContext.IsSelected(wall.ExternalRail))
-                            {
-                                if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
-                                {
-                                    if (ImGui.MenuItem("Select All Rail Points"))
-                                    {
-                                        foreach (var point in wall.ExternalRail.Points)
-                                        {
-                                            editContext.Select(point);
-                                        }
-                                        foreach (var iRail in wall.InternalRails)
-                                        {
-                                            editContext.Select(iRail);
-                                            foreach (var point in iRail.Points)
-                                            {
-                                                editContext.Select(point);
-                                            }
-                                        }
-                                    }
+        //                for (int iWall = 0; iWall < unit.Walls.Count; iWall++)
+        //                {
+        //                    Wall wall = unit.Walls[iWall];
+        //                    if (editContext.IsSelected(wall.ExternalRail))
+        //                    {
+        //                        if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
+        //                        {
+        //                            if (ImGui.MenuItem("Select All Rail Points"))
+        //                            {
+        //                                foreach (var point in wall.ExternalRail.Points)
+        //                                {
+        //                                    editContext.Select(point);
+        //                                }
+        //                                foreach (var iRail in wall.InternalRails)
+        //                                {
+        //                                    editContext.Select(iRail);
+        //                                    foreach (var point in iRail.Points)
+        //                                    {
+        //                                        editContext.Select(point);
+        //                                    }
+        //                                }
+        //                            }
 
-                                    ImGui.Separator();
+        //                            ImGui.Separator();
 
-                                    if (ImGui.MenuItem("Add Internal Rail"))
-                                    {
-                                        editContext.AddInternalRail(wall, new BGUnitRail(unit) { IsInternal = true });
-                                        reloadUnit = true;
+        //                            if (ImGui.MenuItem("Add Internal Rail"))
+        //                            {
+        //                                editContext.AddInternalRail(wall, new BGUnitRail(unit) { IsInternal = true });
+        //                                reloadUnit = true;
 
-                                    }
+        //                            }
 
-                                    if (ImGui.MenuItem("Reverse Rail Points"))
-                                        editContext.ReverseBgUnitRailPoints(wall);
+        //                            if (ImGui.MenuItem("Reverse Rail Points"))
+        //                                editContext.ReverseBgUnitRailPoints(wall);
 
-                                    if (ImGui.MenuItem("Remove Rail"))
-                                    {
-                                        editContext.DeleteWall(unit, wall);
-                                        reloadUnit = true;
+        //                            if (ImGui.MenuItem("Remove Rail"))
+        //                            {
+        //                                editContext.DeleteWall(unit, wall);
+        //                                reloadUnit = true;
 
-                                    }
+        //                            }
 
-                                    ImGui.EndPopup();
-                                }
-                            }
+        //                            ImGui.EndPopup();
+        //                        }
+        //                    }
 
-                            if (wall.InternalRails.Count > 0)
-                            {
-                                ImGui.Unindent();
-                                bool ex = ImGui.TreeNodeEx($"##{name}Wall{iWall}", ImGuiTreeNodeFlags.DefaultOpen);
-                                ImGui.SameLine();
+        //                    if (wall.InternalRails.Count > 0)
+        //                    {
+        //                        ImGui.Unindent();
+        //                        bool ex = ImGui.TreeNodeEx($"##{name}Wall{iWall}", ImGuiTreeNodeFlags.DefaultOpen);
+        //                        ImGui.SameLine();
 
-                                RailListItem("Wall", wall.ExternalRail, unit.Walls.IndexOf(wall));
+        //                        RailListItem("Wall", wall.ExternalRail, unit.Walls.IndexOf(wall));
 
-                                ImGui.Indent();
+        //                        ImGui.Indent();
 
-                                if (ex)
-                                {
-                                    for (int iInternal = 0; iInternal < wall.InternalRails.Count; iInternal++)
-                                    {
-                                        BGUnitRail? rail = wall.InternalRails[iInternal];
-                                        if (editContext.IsSelected(rail))
-                                        {
-                                            if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
-                                            {
-                                                if (ImGui.MenuItem($"Remove Internal Rail {iInternal}"))
-                                                    editContext.DeleteInternalRail(wall, rail);
+        //                        if (ex)
+        //                        {
+        //                            for (int iInternal = 0; iInternal < wall.InternalRails.Count; iInternal++)
+        //                            {
+        //                                BGUnitRail? rail = wall.InternalRails[iInternal];
+        //                                if (editContext.IsSelected(rail))
+        //                                {
+        //                                    if (ImGui.BeginPopupContextWindow("WallMenu", ImGuiPopupFlags.MouseButtonRight))
+        //                                    {
+        //                                        if (ImGui.MenuItem($"Remove Internal Rail {iInternal}"))
+        //                                            editContext.DeleteInternalRail(wall, rail);
 
-                                                ImGui.EndPopup();
-                                            }
-                                        }
-                                        RailListItem("Internal Rail", rail, iInternal);
-                                    }
-                                }
+        //                                        ImGui.EndPopup();
+        //                                    }
+        //                                }
+        //                                RailListItem("Internal Rail", rail, iInternal);
+        //                            }
+        //                        }
 
-                                ImGui.TreePop();
-                            }
-                            else
-                            {
-                                RailListItem("Wall", wall.ExternalRail, iWall);
-                            }
-                        }
-                    }
+        //                        ImGui.TreePop();
+        //                    }
+        //                    else
+        //                    {
+        //                        RailListItem("Wall", wall.ExternalRail, iWall);
+        //                    }
+        //                }
+        //            }
 
-                    if (unit.mModelType is CourseUnit.ModelType.SemiSolid or CourseUnit.ModelType.Bridge)
-                    {
-                        if (ImGui.Button("Add Belt"))
-                        {
-                            editContext.AddBeltRail(unit, new BGUnitRail(unit) { IsClosed = false });
-                            editContext.DeselectAll();
-                            editContext.Select(unit);
-                        }
-                        ImGui.SameLine();
-                        if (ImGui.Button("Remove Belt"))
-                        {
-                            editContext.WithSuspendUpdateDo(() =>
-                            {
-                                for (int i = unit.mBeltRails.Count - 1; i >= 0; i--)
-                                {
-                                    if (editContext.IsSelected(unit.mBeltRails[i]))
-                                    {
-                                        editContext.DeleteBeltRail(unit, unit.mBeltRails[i]);
-                                        editContext.DeselectAll();
-                                        editContext.Select(unit);
-                                    }
-                                }
-                            });
-                        }
+        //            if (unit.mModelType is CourseUnit.ModelType.SemiSolid or CourseUnit.ModelType.Bridge)
+        //            {
+        //                if (ImGui.Button("Add Belt"))
+        //                {
+        //                    editContext.AddBeltRail(unit, new BGUnitRail(unit) { IsClosed = false });
+        //                    editContext.DeselectAll();
+        //                    editContext.Select(unit);
+        //                }
+        //                ImGui.SameLine();
+        //                if (ImGui.Button("Remove Belt"))
+        //                {
+        //                    editContext.WithSuspendUpdateDo(() =>
+        //                    {
+        //                        for (int i = unit.mBeltRails.Count - 1; i >= 0; i--)
+        //                        {
+        //                            if (editContext.IsSelected(unit.mBeltRails[i]))
+        //                            {
+        //                                editContext.DeleteBeltRail(unit, unit.mBeltRails[i]);
+        //                                editContext.DeselectAll();
+        //                                editContext.Select(unit);
+        //                            }
+        //                        }
+        //                    });
+        //                }
 
-                        for (int iBeltRail = 0; iBeltRail < unit.mBeltRails.Count; iBeltRail++)
-                        {
-                            BGUnitRail beltRail = unit.mBeltRails[iBeltRail];
-                            RailListItem("Belt", beltRail, iBeltRail);
-                        }
-                    }
-                    ImGui.TreePop();
-                }
-            }
+        //                for (int iBeltRail = 0; iBeltRail < unit.mBeltRails.Count; iBeltRail++)
+        //                {
+        //                    BGUnitRail beltRail = unit.mBeltRails[iBeltRail];
+        //                    RailListItem("Belt", beltRail, iBeltRail);
+        //                }
+        //            }
+        //            ImGui.TreePop();
+        //        }
+        //    }
 
-            if (removed_tile_units.Count > 0)
-            {
-                foreach (var tile in removed_tile_units)
-                {
-                    areaScenes[selectedArea].RemoveSceneObjectsForUnit(tile);
-                    editContext.DeleteBgUnit(tile);
-                }
+        //    if (removed_tile_units.Count > 0)
+        //    {
+        //        foreach (var tile in removed_tile_units)
+        //        {
+        //            areaScenes[selectedArea].RemoveSceneObjectsForUnit(tile);
+        //            editContext.DeleteBgUnit(tile);
+        //        }
 
-                removed_tile_units.Clear();
-                editContext.DeselectAll();
-            }
-        }
+        //        removed_tile_units.Clear();
+        //        editContext.DeselectAll();
+        //    }
+        //}
 
         interface IToolWindow
         {
@@ -4558,7 +4558,7 @@ namespace Fushigi.ui.widgets
         {
             ImGui.Begin("Terrain Units");
 
-            CourseUnitView(selectedArea.mUnitHolder);
+            //CourseUnitView(selectedArea.mUnitHolder);
 
             ImGui.End();
         }

@@ -232,10 +232,15 @@ namespace Fushigi.course
             Points = newPoints;
         }
 
-        public class RailPoint(BGUnitRail rail, Vector3 position) : Transformable
+        public class RailPoint : Transformable
         {
-            public readonly BGUnitRail mRail = rail;
-            public Vector3 mTranslation = position;
+            public readonly BGUnitRail mRail;
+
+            public RailPoint(BGUnitRail rail, Vector3 position)
+            {
+                mRail = rail;
+                mTranslation = position;
+            }
         }
     }
 

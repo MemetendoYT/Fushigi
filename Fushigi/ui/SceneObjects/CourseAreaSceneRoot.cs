@@ -11,10 +11,10 @@ namespace Fushigi.ui.SceneObjects
             //for every object (actor/rail/etc.) that should be part of the scene
             //the scene object classes for these objects should go in SceneObjects
 
-            foreach (var unit in area.mUnitHolder.mUnits)
-            {
-                ctx.UpdateOrCreateObjFor(unit, () => new BGUnitSceneObj(unit));
-            }
+            //foreach (var unit in area.mUnitHolder.mUnits)
+            //{
+            //    ctx.UpdateOrCreateObjFor(unit, () => new BGUnitSceneObj(unit));
+            //}
         }
     }
 

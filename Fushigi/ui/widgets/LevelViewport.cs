@@ -11,6 +11,7 @@ using Fushigi.param;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Silk.NET.OpenGL;
 using System;
 using System.Data;
@@ -380,6 +381,8 @@ namespace Fushigi.ui.widgets
                         HandleTransform(transformable, StartingTrans, CurrentTrans);
                         if(transformable is CourseRail.CourseRailPoint point && point.mIsCurve)
                             HandleTransform(point.mControl, StartingTrans, CurrentTrans);
+                        if (transformable is BGUnitRail.RailPoint)
+                            tileRebuild = true;
                     }
                     break;
                 case DefaultShape:
@@ -402,7 +405,7 @@ namespace Fushigi.ui.widgets
                 }
                 else if (shape is CapsulePoint point)
                 {
-                    var capsule = (Capsule)point.Parent; // however you access the parent capsule
+                    var capsule = point.Parent;
 
                     Vector3 worldTarget = CurrentTrans + relativePos;
                     Vector3 localTarget = CollisionEditor.InverseTranslatePoint(worldTarget, capsule);
@@ -431,6 +434,8 @@ namespace Fushigi.ui.widgets
             transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
             if (Course.IsWorldMap)
                 transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
+
+            Console.WriteLine($"Transforming {transformable} to {transformable.mTranslation}");
         }
 
         public void CommitTranslation(Transformable transformable)
@@ -447,8 +452,12 @@ namespace Fushigi.ui.widgets
                 case CourseRail.CourseRailPointControl point:
                     label = "Rail Point Control";
                     break;
+                case BGUnitRail.RailPoint point:
+                    label = "Terrain point";
+                    break;
             }
 
+            Console.WriteLine(label);
             mEditContext.CommitAction(new PropertyFieldsSetUndo(
                  transformable,
                  [("mTranslation", transformable.GetFieldValue("mStartingTrans"))],
@@ -898,7 +907,7 @@ namespace Fushigi.ui.widgets
 
             Framebuffer.Unbind();
 
-        SKIP_RENDERING:
+            SKIP_RENDERING:
             //Draw framebuffer
             ImGui.SetCursorScreenPos(mTopLeft);
             ImGui.Image((IntPtr)HDRScreenBuffer.GetOutput().ID, new Vector2(size.X, size.Y));
@@ -1212,15 +1221,72 @@ namespace Fushigi.ui.widgets
 
         public void DrawUnits()
         {
-            if (!ScreenshotMode)
+            DrawBGUnits();
+            //if (!ScreenshotMode)
+            //{
+            //    areaScene.ForEach<IViewportDrawable>(obj =>
+            //    {
+            //        bool isNewHoveredObj = false;
+            //        obj.Draw2D(mEditContext, this, mDrawList, ref isNewHoveredObj);
+            //        if (isNewHoveredObj)
+            //            mHoveredObject = obj;
+            //    });
+            //}
+        }
+
+        public void DrawBGUnits()
+        {
+            uint colorDefault = ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1));
+            uint colorSelected = ImGui.ColorConvertFloat4ToU32(new(1, 0, 1, 1));
+
+            foreach (var unit in mArea.mUnitHolder.mUnits)
             {
-                areaScene.ForEach<IViewportDrawable>(obj =>
+                if (!unit.Visible)
+                    continue;
+
+                foreach (var wall in unit.Walls)
                 {
-                    bool isNewHoveredObj = false;
-                    obj.Draw2D(mEditContext, this, mDrawList, ref isNewHoveredObj);
-                    if (isNewHoveredObj)
-                        mHoveredObject = obj;
-                });
+                    DrawRail(wall.ExternalRail, colorDefault, colorSelected);
+
+                    foreach (var internalRail in wall.InternalRails)
+                        DrawRail(internalRail, colorDefault, colorSelected);
+                }
+            }
+        }
+
+        private void DrawRail(BGUnitRail rail, uint colorDefault, uint colorSelected)
+        {
+            var segmentCount = rail.Points.Count;
+
+            for (int i = 0; i < segmentCount; i++)
+            {
+                var pointA = rail.Points[i];
+                var pointB = rail.Points[(i + 1) % rail.Points.Count];
+                var posA2D = WorldToScreen(pointA.mTranslation);
+                var posB2D = WorldToScreen(pointB.mTranslation);
+
+                if (i == 0)
+                    mDrawList.PathLineTo(posA2D); 
+
+                mDrawList.PathLineTo(posB2D);
+            }
+
+            float thickness = mHoveredObject == rail ? 4f : 3.5f;
+            mDrawList.PathStroke(colorDefault, ImDrawFlags.None, thickness);
+
+            foreach (var point in rail.Points)
+            {
+                bool isSelected = mEditContext.IsSelected(point);
+                uint pointColor = isSelected ? colorSelected : colorDefault;
+
+                Vector2 pos2D = WorldToScreen(point.mTranslation);
+                mDrawList.AddCircleFilled(pos2D, 10f, pointColor);
+
+                bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
+                if (isHovered)
+                {
+                    mHoveredObject = point;
+                }
             }
         }
 
@@ -1627,15 +1693,15 @@ namespace Fushigi.ui.widgets
                         return points;
                     }
 
-                    bool hovered = MathUtil.HitTestLineLoopPoint(GetPoints(), 10f, ImGui.GetMousePos());
+
                     CourseRail.CourseRailPoint selectedPoint = null;
 
                     foreach (var point in rail.mPoints)
                     {
                         var pos2D = this.WorldToScreen(new(point.mTranslation.X, point.mTranslation.Y, point.mTranslation.Z));
                         var contPos2D = this.WorldToScreen(point.mControl.mTranslation);
-                        Vector2 pnt = new(pos2D.X, pos2D.Y);
-                        bool isHovered = (ImGui.GetMousePos() - pnt).Length() < 10.0f;
+
+                        bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
 
                         if (isHovered)
                             mHoveredObject = point;
@@ -2128,11 +2194,11 @@ namespace Fushigi.ui.widgets
                     if (!ImGui.IsKeyDown(ImGuiKey.LeftShift))
                         mEditContext.DeselectAll();
                 }
-                else if (mHoveredObject is IViewportSelectable selectable)
-                {
-                    prevSelectVersion = mEditContext.SelectionVersion;
-                    selectable.OnSelect(mEditContext);
-                }
+                //else if (mHoveredObject is IViewportSelectable selectable)
+                //{
+                //    prevSelectVersion = mEditContext.SelectionVersion;
+                //    selectable.OnSelect(mEditContext);
+                //}
                 else
                 {
                     prevSelectVersion = mEditContext.SelectionVersion;
@@ -2614,12 +2680,11 @@ namespace Fushigi.ui.widgets
             // Save Object Translation to history
             if (ImGui.IsMouseReleased(ImGuiMouseButton.Left) && DoTranslateObjects)
             {
-                var objCount = mEditContext.GetObjectCount();
-
+                var objCount = mEditContext.GetSelectedObjects<Transformable>().Count();
+          
                 if (objCount > 1)
                 {
                     var batch = mEditContext.BeginBatchAction();
-
                     foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                     {
                         CommitTranslation(transformable);
@@ -2642,9 +2707,11 @@ namespace Fushigi.ui.widgets
                         {
                             var batch = mEditContext.BeginBatchAction();
                             CommitTranslation(point.mControl);
-                            CommitTranslation(transformable);
+                            CommitTranslation(point);
                             batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {transformable.GetType().Name}");
                         }
+                        else
+                            CommitTranslation(point);
                     }
                     else
                         CommitTranslation(transformable);
