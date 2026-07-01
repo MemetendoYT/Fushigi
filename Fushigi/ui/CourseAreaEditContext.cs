@@ -15,39 +15,6 @@ namespace Fushigi.ui
     class CourseAreaEditContext(CourseArea area) : EditContextBase
     {
 
-        //public void AddActorsBatch(IEnumerable<CourseActor> actors, Dictionary<string, bool> mLayersVisibility, string[] LayerTypes, widgets.CourseScene courseScene)
-        //{
-        //    var batch = BeginBatchAction();
-
-        //    foreach (var actor in actors)
-        //    {
-        //        string[] Layers = LayerTypes
-        //             .Except(mLayersVisibility.Keys)
-        //             .ToArray();
-
-
-        //        if (Layers.Contains(actor.mLayer))
-        //        {
-        //            CommitAction(new PropertyFieldsSetUndo(
-        //            courseScene,
-        //            [("mLayersVisibility", new Dictionary<string, bool>(mLayersVisibility))],
-        //            $"{IconUtil.ICON_LAYER_GROUP} Added Layer: {area}"
-
-        //         ));
-
-        //            mLayersVisibility[courseScene.mSelectedLayer] = true;
-
-        //            courseScene.mSelectedLayer = null;
-        //        }
-
-        //       CommitAction(area.mActorHolder.mActors.RevertableAdd(
-        //            actor,
-        //            $"{IconUtil.ICON_PLUS_CIRCLE} Add {actor.mPackName}"
-        //        ));
-        //    }
-
-        //    batch.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Added Prefab");
-        //}
         public void RemoveComment(CourseComment comment, int commentVal)
         {
             LogDeleting<CourseComment>($"Comment {commentVal}");
@@ -247,6 +214,17 @@ namespace Fushigi.ui
 
             batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail Point");
         }
+
+        public void DeleteUnitRailPoint(BGUnitRail rail, BGUnitRail.RailPoint point)
+        {
+
+            var batchAction = BeginBatchAction();
+            CommitAction(rail.Points.RevertableRemove(point));
+
+            batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Unit Rail Point");
+        }
+
+
 
         public void AddRailLink(CourseActorToRailLink link)
         {

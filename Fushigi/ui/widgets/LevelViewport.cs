@@ -8,10 +8,12 @@ using Fushigi.gl;
 using Fushigi.gl.Bfres;
 using Fushigi.gl.Bfres.AreaData;
 using Fushigi.param;
+using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
 using Microsoft.Msagl.Layout.LargeGraphLayout;
+using Silk.NET.Maths;
 using Silk.NET.OpenGL;
 using System;
 using System.Data;
@@ -24,11 +26,7 @@ using Vector3 = System.Numerics.Vector3;
 
 namespace Fushigi.ui.widgets
 {
-    interface IViewportDrawable
-    {
-        void Draw2D(CourseAreaEditContext editContext, LevelViewport viewport, ImDrawListPtr dl, ref bool isNewHoveredObj);
-    }
-
+  
     #region Selection Logic
     interface IViewportSelectable
     {
@@ -51,7 +49,6 @@ namespace Fushigi.ui.widgets
             foreach(Transformable transformable in ctx.GetSelectedObjects<Transformable>())
             {
                 transformable.mStartingTrans = transformable.mTranslation;
-                
                 switch(transformable)
                 {
                     case CourseActor actor:
@@ -174,6 +171,7 @@ namespace Fushigi.ui.widgets
         public FushigiCursor cursor;
         private CourseRail.CourseRailPoint closestSelected;
         private List<(CourseRail rail, CourseRail.CourseRailPoint point)> deleteList;
+        private List<(BGUnitRail Rail, BGUnitRail.RailPoint Point)> deleteList2;
         private bool multiRailDelete;
         public bool applyRotation;
         private bool DoTranslateObjects;
@@ -190,6 +188,7 @@ namespace Fushigi.ui.widgets
         public bool tileRebuild;
         private bool hasInitialized;
         public KeyboardModifier modifiers;
+        private bool multiRailDelete2;
 
         public Task<(object? picked, KeyboardModifier modifiers)> PickObject(string tooltipMessage,
             Predicate<object?> predicate, CancellationTokenSource tokenSource)
@@ -378,11 +377,13 @@ namespace Fushigi.ui.widgets
                 case Transformable:
                     foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                     {
-                        HandleTransform(transformable, StartingTrans, CurrentTrans);
+                        TransformObjects(transformable, StartingTrans, CurrentTrans);
                         if(transformable is CourseRail.CourseRailPoint point && point.mIsCurve)
-                            HandleTransform(point.mControl, StartingTrans, CurrentTrans);
-                        if (transformable is BGUnitRail.RailPoint)
-                            tileRebuild = true;
+                            TransformObjects(point.mControl, StartingTrans, CurrentTrans);
+                        if (transformable is BGUnitRail.RailPoint unitRail)
+                        {
+                            BGUnitRailSceneObj.rebuildUnit(unitRail.mRail.mCourseUnit);
+                        }
                     }
                     break;
                 case DefaultShape:
@@ -427,15 +428,35 @@ namespace Fushigi.ui.widgets
         }
 
 
-        public void HandleTransform(Transformable transformable, Vector3 StartingTrans, Vector3 CurrentTrans)
+        public void TransformObjects(Transformable transformable, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             Vector3 relativePos = transformable.mStartingTrans - StartingTrans;
-            transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
-            transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
-            if (Course.IsWorldMap)
-                transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
+            if (transformable is BGUnitRail.RailPoint)
+            {
+                float newX = CurrentTrans.X + relativePos.X;
+                float newY = CurrentTrans.Y + relativePos.Y;
 
-            Console.WriteLine($"Transforming {transformable} to {transformable.mTranslation}");
+                //if (UserSettings.GetEnableHalfTile())
+                //{
+                //    newX = MathF.Round(newX * 2, MidpointRounding.AwayFromZero) / 2;
+                //    newY = MathF.Round(newY * 2, MidpointRounding.AwayFromZero) / 2;
+                //}
+                //else
+                //{
+                newX = MathF.Round(newX, MidpointRounding.AwayFromZero);
+                newY = MathF.Round(newY, MidpointRounding.AwayFromZero);
+                //}
+
+                transformable.mTranslation.X = newX;
+                transformable.mTranslation.Y = newY;
+            }
+            else
+            {
+                transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
+                transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+                if (Course.IsWorldMap)
+                    transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
+            }
         }
 
         public void CommitTranslation(Transformable transformable)
@@ -1236,56 +1257,139 @@ namespace Fushigi.ui.widgets
 
         public void DrawBGUnits()
         {
-            uint colorDefault = ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1));
-            uint colorSelected = ImGui.ColorConvertFloat4ToU32(new(1, 0, 1, 1));
 
             foreach (var unit in mArea.mUnitHolder.mUnits)
             {
+
                 if (!unit.Visible)
                     continue;
 
                 foreach (var wall in unit.Walls)
                 {
-                    DrawRail(wall.ExternalRail, colorDefault, colorSelected);
+                    DrawRail(wall.ExternalRail);
 
                     foreach (var internalRail in wall.InternalRails)
-                        DrawRail(internalRail, colorDefault, colorSelected);
+                        DrawRail(internalRail);
                 }
+            }
+
+            if (multiRailDelete2)
+            {
+                Console.WriteLine("Batch deleting " + deleteList.Count + " rail points");
+                var batch = mEditContext.BeginBatchAction();
+
+                foreach (var (rail2, point) in deleteList2)
+                {
+                    var revertible = rail2.Points.RevertableRemove(point);
+                    mEditContext.CommitAction(revertible);
+                }
+
+                batch.Commit($"{IconUtil.ICON_TRASH} Delete Unit Rail Points");
+                multiRailDelete = false;
+                deleteList.Clear();
             }
         }
 
-        private void DrawRail(BGUnitRail rail, uint colorDefault, uint colorSelected)
+        private void DrawRail(BGUnitRail rail)
         {
-            var segmentCount = rail.Points.Count;
-
-            for (int i = 0; i < segmentCount; i++)
-            {
-                var pointA = rail.Points[i];
-                var pointB = rail.Points[(i + 1) % rail.Points.Count];
-                var posA2D = WorldToScreen(pointA.mTranslation);
-                var posB2D = WorldToScreen(pointB.mTranslation);
-
-                if (i == 0)
-                    mDrawList.PathLineTo(posA2D); 
-
-                mDrawList.PathLineTo(posB2D);
-            }
 
             float thickness = mHoveredObject == rail ? 4f : 3.5f;
-            mDrawList.PathStroke(colorDefault, ImDrawFlags.None, thickness);
+            var segmentCount = rail.Points.Count;
+            BGUnitRail.RailPoint selectedPoint = null;
+            //bool add_point = ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(0) && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>();
+            for (int i = 0; i < segmentCount; i++)
+            {
+
+                var pointA = rail.Points[i];
+                var pointB = rail.Points[(i + 1) % rail.Points.Count];
+                var posA = WorldToScreen(pointA.mTranslation);
+                var posB = WorldToScreen(pointB.mTranslation);
+
+                //if (i == 0)
+                //    mDrawList.PathLineTo(posA); 
+
+                //mDrawList.PathLineTo(posB);
+                uint line_color = BGUnitRailSceneObj.IsValidAngle(new Vector2(pointA.mTranslation.X, pointA.mTranslation.Y), new Vector2(pointB.mTranslation.X, pointB.mTranslation.Y)) ? BGUnitRailSceneObj.Color_Default : BGUnitRailSceneObj.Color_SlopeError;
+                mDrawList.AddLine(posA, posB, line_color, thickness);
+            }
+
 
             foreach (var point in rail.Points)
             {
-                bool isSelected = mEditContext.IsSelected(point);
-                uint pointColor = isSelected ? colorSelected : colorDefault;
+                uint color = 0xFFFFFFFF;
+                if (mEditContext.IsSelected(point))
+                {
+                    color = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
+                    selectedPoint = point;
+                }
 
                 Vector2 pos2D = WorldToScreen(point.mTranslation);
-                mDrawList.AddCircleFilled(pos2D, 10f, pointColor);
+                mDrawList.AddCircleFilled(pos2D, 10f, color);
 
                 bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
                 if (isHovered)
                 {
                     mHoveredObject = point;
+                }
+            }
+
+            if (selectedPoint != null && (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace))))
+            {
+                if (mEditContext.GetObjectCountOfType<BGUnitRail.RailPoint>() > 1)
+                {
+                    var railPoints = mEditContext.GetSelectedObjects<BGUnitRail.RailPoint>().ToArray();
+                    multiRailDelete2 = true;
+                    foreach (var point in railPoints)
+                    {
+                        if (rail.Points.Contains(point))
+                            deleteList2.Add((rail, point));
+                    }
+                }
+                else
+                    mEditContext.DeleteUnitRailPoint(rail, selectedPoint);
+                
+                BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
+            }
+
+            if (selectedPoint != null && ImGui.GetIO().KeyAlt)
+            {
+                var index = rail.Points.IndexOf(selectedPoint);
+                var addPointPos = BGUnitRailSceneObj.EvaluateAddPointPos(mEditContext, this, rail);
+                Console.WriteLine(addPointPos + " running");
+
+
+                if (addPointPos.TryGetValue(out var addPos))
+                {
+                    var pos2D = WorldToScreen(addPos.pos);
+
+                    if (rail.Points.Count > 0)
+                    {
+                        int addIndex = addPos.index;
+                        var pointA = WorldToScreen(rail.Points.GetWrapped(addIndex - 1).mTranslation);
+                        var pointB = WorldToScreen(rail.Points.GetWrapped(addIndex).mTranslation);
+                        var pointC = pos2D;
+
+                        var pointAVec = rail.Points.GetWrapped(addIndex - 1).mTranslation;
+                        var pointBVec = rail.Points.GetWrapped(addIndex).mTranslation;
+                        ImGui.SetTooltip("X: " + (addPos.pos.X - pointAVec.X) + ", Y: " + (addPos.pos.Y - pointAVec.Y));
+
+                        if (rail.IsClosed || index > 0)
+                            mDrawList.AddLine(pointA, pointC, 0xFFFFFFFF, 2.5f);
+                        if (rail.IsClosed || index < rail.Points.Count)
+                            mDrawList.AddLine(pointB, pointC, 0xFFFFFFFF, 2.5f);
+
+                        mDrawList.AddCircleFilled(pos2D, 10f, ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1)));
+                        bool add_point = ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(0) && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>();
+                        if (add_point)
+                        {
+                            var newPoint = new BGUnitRail.RailPoint(rail, addPos.pos);
+                            this.mEditContext.DeselectAll();
+                            this.mEditContext.Select(newPoint);
+                            mHoveredObject = newPoint;
+                            BGUnitRailSceneObj.InsertPoint(mEditContext, newPoint, addIndex, rail);
+                            BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
+                        }
+                    }
                 }
             }
         }
@@ -1965,7 +2069,6 @@ namespace Fushigi.ui.widgets
             }
             
 
-
             this.mEditContext.DeselectAll();
             this.mEditContext.Select(newPoint);
             mHoveredObject = newPoint;
@@ -1975,7 +2078,7 @@ namespace Fushigi.ui.widgets
         {
             mHoveredObject = null;
             deleteList = new List<(CourseRail rail, CourseRail.CourseRailPoint point)>();
-
+            deleteList2 = new List<(BGUnitRail rail, BGUnitRail.RailPoint point)>();
             DrawUnits();
             DrawRails();
             DrawCursor();
