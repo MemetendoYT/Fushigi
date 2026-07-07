@@ -25,7 +25,7 @@ namespace Fushigi.ui
 {
     public partial class MainWindow : IPopupModalHost
     {
-        private readonly GLTaskScheduler mGLTaskScheduler = new();
+        public static readonly GLTaskScheduler mGLTaskScheduler = new();
         public static readonly PopupModalHost mModalHost = new();
 
         private ImFontPtr mDefaultFont;
@@ -39,7 +39,8 @@ namespace Fushigi.ui
         public static float dpiScale = 0;
         public static float backupdpiScale = 0;
         private GL _gl;
-        public static GLTexture FushigiIcon;
+        public static GLTexture2D FushigiIcon;
+        public static GLTexture2D FushigiLogo;
 
         public MainWindow()
         {
@@ -71,6 +72,7 @@ namespace Fushigi.ui
                     Logger.Logger.LogMessage("MainWindow", "Initializing Window");
                     unsafe
                     {
+                        SetupImGuiStyle();
                         SetWindowIcon(1);
 
                         var io = ImGui.GetIO();
@@ -102,7 +104,7 @@ namespace Fushigi.ui
                         var native = mWindow.Native;
                         _gl = GL.GetApi(mWindow);
                         FushigiIcon = GLTexture2D.Load(_gl, "res/icon_menu.png");
-
+                        FushigiLogo = GLTexture2D.Load(_gl, "res/icon1.png");
                         IntPtr hwnd = native.Win32!.Value.Hwnd;
 
                         uint dpi = GetDpiForWindow(hwnd);
@@ -128,7 +130,7 @@ namespace Fushigi.ui
                             size, nativeConfig, io.Fonts.GetGlyphRangesDefault());
 
                         io.Fonts.AddFontFromFileTTF(
-                            Path.Combine("res", "NotoSansCJKjp-Medium.otf"),
+                            Path.Combine("res", "NotoSansCJKjp-Medium.ttf"),
                             size, nativeConfigJP, io.Fonts.GetGlyphRangesJapanese());
 
                         io.Fonts.Build();
@@ -355,7 +357,6 @@ namespace Fushigi.ui
                     await mModalHost.WaitTick();
                     
                     await LoadCourseWithProgressBar(latestCourse);
-                    shouldShowPreferenceWindow = false;
                     shouldShowWelcomeDialog = false;
                 }
             }
@@ -369,8 +370,8 @@ namespace Fushigi.ui
                 shouldShowWelcomeDialog = false;
             }
 
-            if(shouldShowPreferenceWindow)
-                mIsShowPreferenceWindow = true;
+            //if(shouldShowPreferenceWindow)
+            //    mIsShowPreferenceWindow = true;
 
              if(shouldShowWelcomeDialog)
                 await WelcomeMessage.ShowDialog(this);
@@ -490,6 +491,104 @@ namespace Fushigi.ui
 
             Console.WriteLine("No translation updates available.");
         }
+        public static void SetupImGuiStyle()
+        {
+            var style = ImGui.GetStyle();
+
+            var colors = style.Colors;
+
+            style.Alpha = 1.0f;
+            style.DisabledAlpha = 1.0f;
+            style.WindowPadding = new Vector2(8f, 8f);
+            style.WindowRounding = 11.5f;
+            style.WindowBorderSize = 0.0f;
+            style.WindowMinSize = new Vector2(20.0f, 20.0f);
+            style.WindowTitleAlign = new Vector2(0.5f, 0.5f);
+            style.WindowMenuButtonPosition = ImGuiDir.None;
+            style.ChildRounding = 10.0f;
+            style.ChildBorderSize = 1.0f;
+            style.PopupRounding = 5.4f;
+            style.PopupBorderSize = 1.0f;
+            style.FrameRounding = 5.9f;
+            style.FrameBorderSize = 0.0f;
+            style.FramePadding = new Vector2(10f, 6f);
+
+            style.ItemInnerSpacing = new Vector2(4f, 4f);
+            style.CellPadding = new Vector2(6f, 3f);
+            style.IndentSpacing = 0.0f;
+            style.ColumnsMinSpacing = 6f;
+            style.ScrollbarSize = 15f;
+            style.ScrollbarRounding = 15f;
+            style.GrabMinSize = 6f;
+            style.GrabRounding = 20.0f;
+
+            style.TabRounding = 6f;
+            style.TabBorderSize = 0.0f;
+            style.TabMinWidthForCloseButton = 0.0f;
+            style.ColorButtonPosition = ImGuiDir.Right;
+            style.ButtonTextAlign = new Vector2(0.5f, 0.5f);
+
+            var midblue = new Vector4(0.15f, 0.30f, 0.62f, 1.0f);
+            var darkblue = new Vector4(0.09f, 0.19f, 0.40f, 1.0f);
+            var lightblue = new Vector4(0.18f, 0.35f, 0.68f, 1.0f);
+            var blue = new Vector4(0.19215686f, 0.41568627f, 0.87058824f, 1.0f);
+            var gray = new Vector4(0.047058824f, 0.05490196f, 0.07058824f, 1.0f);
+            var lightGray = new Vector4(0.16f, 0.17f, 0.20f, 1.0f);
+
+            style.Colors[(int)ImGuiCol.Text] = new Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+            style.Colors[(int)ImGuiCol.TextDisabled] = new Vector4(0.45f, 0.52f, 0.70f, 1.0f);
+            style.Colors[(int)ImGuiCol.WindowBg] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
+            style.Colors[(int)ImGuiCol.ChildBg] = new Vector4(0.09411765f, 0.101960786f, 0.11764706f, 1.0f);
+            style.Colors[(int)ImGuiCol.PopupBg] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
+            style.Colors[(int)ImGuiCol.Border] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
+            style.Colors[(int)ImGuiCol.BorderShadow] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBg] = new Vector4(0.11372549f, 0.1254902f, 0.15294118f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBgHovered] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBgActive] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
+            style.Colors[(int)ImGuiCol.MenuBarBg] = new Vector4(0.09803922f, 0.105882354f, 0.12156863f, 1.0f);
+            style.Colors[(int)ImGuiCol.ScrollbarBg] = new Vector4(0.047058824f, 0.05490196f, 0.07058824f, 1.0f);
+            style.Colors[(int)ImGuiCol.ScrollbarGrab] = new Vector4(0.11764706f, 0.13333334f, 0.14901961f, 1.0f);
+            style.Colors[(int)ImGuiCol.ScrollbarGrabHovered] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
+            style.Colors[(int)ImGuiCol.ScrollbarGrabActive] = new Vector4(0.11764706f, 0.13333334f, 0.14901961f, 1.0f);
+            style.Colors[(int)ImGuiCol.CheckMark] = blue;
+            style.Colors[(int)ImGuiCol.SliderGrab] = blue;
+            style.Colors[(int)ImGuiCol.SliderGrabActive] = blue;
+            style.Colors[(int)ImGuiCol.Button] = blue;
+            style.Colors[(int)ImGuiCol.ButtonHovered] = new Vector4(0.18039216f, 0.1882353f, 0.19607843f, 1.0f);
+            style.Colors[(int)ImGuiCol.ButtonActive] = new Vector4(0.15294118f, 0.15294118f, 0.15294118f, 1.0f);
+            style.Colors[(int)ImGuiCol.Header] = new Vector4(0.14117648f, 0.16470589f, 0.20784314f, 1.0f);
+            style.Colors[(int)ImGuiCol.HeaderHovered] = new Vector4(0.1274510f, 0.1901961f, 0.1856863f, 1.0f);
+            style.Colors[(int)ImGuiCol.HeaderActive] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
+            style.Colors[(int)ImGuiCol.Separator] = new Vector4(0.35f, 0.38f, 0.45f, 1.0f);
+            style.Colors[(int)ImGuiCol.SeparatorHovered] = new Vector4(0.45f, 0.48f, 0.55f, 1.0f);
+            style.Colors[(int)ImGuiCol.SeparatorActive] = new Vector4(0.45f, 0.48f, 0.55f, 1.0f);
+            style.Colors[(int)ImGuiCol.ResizeGrip] = new Vector4(0.14509805f, 0.14509805f, 0.14509805f, 1.0f);
+            style.Colors[(int)ImGuiCol.ResizeGripHovered] = blue;
+            style.Colors[(int)ImGuiCol.ResizeGripActive] = new Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+            style.Colors[(int)ImGuiCol.PlotLines] = new Vector4(0.52156866f, 0.6f, 0.7019608f, 1.0f);
+            style.Colors[(int)ImGuiCol.PlotLinesHovered] = new Vector4(0.039215688f, 0.98039216f, 0.98039216f, 1.0f);
+            style.Colors[(int)ImGuiCol.PlotHistogram] = blue;
+            style.Colors[(int)ImGuiCol.PlotHistogramHovered] = blue;
+            style.Colors[(int)ImGuiCol.TableHeaderBg] = new Vector4(0.047058824f, 0.05490196f, 0.07058824f, 1.0f);
+            style.Colors[(int)ImGuiCol.TableBorderStrong] = new Vector4(0.35f, 0.38f, 0.45f, 1.0f);
+            style.Colors[(int)ImGuiCol.TableBorderLight] = new Vector4(0.45f, 0.48f, 0.55f, 1.0f);
+            style.Colors[(int)ImGuiCol.TableRowBg] = new Vector4(0.11764706f, 0.13333334f, 0.14901961f, 1.0f);
+            style.Colors[(int)ImGuiCol.TableRowBgAlt] = new Vector4(0.09803922f, 0.105882354f, 0.12156863f, 1.0f);
+            style.Colors[(int)ImGuiCol.TextSelectedBg] = new Vector4(0.9372549f, 0.9372549f, 0.9372549f, 1.0f);
+            style.Colors[(int)ImGuiCol.DragDropTarget] = blue;
+            style.Colors[(int)ImGuiCol.NavHighlight] = blue;
+            style.Colors[(int)ImGuiCol.NavWindowingHighlight] = blue;
+            style.Colors[(int)ImGuiCol.NavWindowingDimBg] = new Vector4(0.19607843f, 0.1764706f, 0.54509807f, 0.5019608f);
+            style.Colors[(int)ImGuiCol.ModalWindowDimBg] = new Vector4(0.19607843f, 0.1764706f, 0.54509807f, 0.5019608f);
+            style.Colors[(int)ImGuiCol.TitleBg] = gray;
+            style.Colors[(int)ImGuiCol.TitleBgActive] = gray;
+            style.Colors[(int)ImGuiCol.TitleBgCollapsed] = lightGray;
+            style.Colors[(int)ImGuiCol.Tab] = lightGray;
+            style.Colors[(int)ImGuiCol.TabHovered] = lightblue;
+            style.Colors[(int)ImGuiCol.TabActive] = blue;
+            style.Colors[(int)ImGuiCol.TabUnfocused] = lightGray;
+            style.Colors[(int)ImGuiCol.TabUnfocusedActive] = darkblue;
+        }
 
         void DrawMainMenu()
         {
@@ -557,6 +656,11 @@ namespace Fushigi.ui
                                 }).ConfigureAwait(false); //fire and forget
                             }
 
+
+                            if(ImGui.MenuItem("Make lookey better"))
+                            {
+
+                            }
                             // Reload Course
                             if (ImGui.MenuItem("Reload Course"))
                             {

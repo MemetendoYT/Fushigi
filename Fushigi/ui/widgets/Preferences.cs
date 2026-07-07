@@ -64,8 +64,6 @@ namespace Fushigi.ui.widgets
         private static void DrawBasicSettings(IPopupModalHost modalHost, GLTaskScheduler glTaskScheduler)
         {
 
-            var romfs = UserSettings.GetRomFSPath();
-            var mod = UserSettings.GetModRomFSPath();
             var useGameShaders = UserSettings.UseGameShaders();
             var enableHalfTile = UserSettings.GetEnableHalfTile();
             var enableTranslation = UserSettings.GetEnableTranslation();
@@ -80,67 +78,7 @@ namespace Fushigi.ui.widgets
             }
             ImGui.Indent();
 
-            if (PathSelector.Show(
-                "Wonder Dump Directory",
-                ref romfs,
-                RomFS.IsValidRoot(romfs))
-                )
-            {
-                romfsTouched = true;
-
-                UserSettings.SetRomFSPath(romfs);
-
-                if (!RomFS.IsValidRoot(romfs))
-                {
-                    return;
-                }
-
-                Task.Run(async () =>
-                {
-                    await ProgressBarDialog.ShowDialogForAsyncAction(modalHost,
-                    $"Preloading Thumbnails",
-                    async (p) =>
-                    {
-                        await glTaskScheduler.Schedule(gl => RomFS.SetRoot(romfs, gl));
-                    });
-
-                    ChildActorParam.Load();
-
-                    /* if our parameter database isn't set, set it */
-                    if (!ParamDB.sIsInit)
-                    {
-                        await MainWindow.LoadParamDBWithProgressBar(modalHost);
-                    }
-                });
-
-            }
-
-            Tooltip.Show("The game files which are stored under the romfs folder.\nIf you are using v1.0.1 of Super Mario Bros. Wonder, use a RomFS Game Path with v65536 files in it.");
-
-            if (romfsTouched && !RomFS.IsValidRoot(romfs))
-            {
-                ImGui.TextColored(errCol,
-                    "The path you have selected is invalid. Please select a RomFS path that contains your full Wonder dump.");
-            }
-
-            if (PathSelector.Show("Modded Directory", ref mod, !string.IsNullOrEmpty(mod)))
-            {
-                modRomfsTouched = true;
-
-                UserSettings.SetModRomFSPath(mod);
-                Console.WriteLine("Mod RomFS Path set to: " + mod);
-
-                UserSettings.SetRomfsReload(true);
-
-            }
-
-            Tooltip.Show("The save output where to save modified romfs files.");
-
-            if (modRomfsTouched && string.IsNullOrEmpty(mod))
-            {
-                ImGui.TextColored(errCol,
-                    "The path you have selected is invalid. Directory must not be empty.");
-            }
+            DrawSettings(modalHost, glTaskScheduler);
 
             if (ImGui.Checkbox("Use Game Shaders", ref useGameShaders))
             {
@@ -199,6 +137,75 @@ namespace Fushigi.ui.widgets
             }
 
             Tooltip.Show("Change the UI theme.");
+        }
+
+        public static void DrawSettings(IPopupModalHost modalHost, GLTaskScheduler glTaskScheduler)
+        {
+            var romfs = UserSettings.GetRomFSPath();
+            var mod = UserSettings.GetModRomFSPath();
+
+            if (PathSelector.Show(
+               "Wonder Dump Directory",
+               ref romfs,
+               RomFS.IsValidRoot(romfs))
+               )
+            {
+                romfsTouched = true;
+
+                UserSettings.SetRomFSPath(romfs);
+
+                if (!RomFS.IsValidRoot(romfs))
+                {
+                    return;
+                }
+
+                Task.Run(async () =>
+                {
+                    await ProgressBarDialog.ShowDialogForAsyncAction(modalHost,
+                    $"Preloading Thumbnails",
+                    async (p) =>
+                    {
+                        await glTaskScheduler.Schedule(gl => RomFS.SetRoot(romfs, gl));
+                    });
+
+                    ChildActorParam.Load();
+
+                    /* if our parameter database isn't set, set it */
+                    if (!ParamDB.sIsInit)
+                    {
+                        await MainWindow.LoadParamDBWithProgressBar(modalHost);
+                    }
+                });
+
+            }
+
+            Tooltip.Show("The game files which are stored under the romfs folder.\nIf you are using v1.0.1 of Super Mario Bros. Wonder, use a RomFS Game Path with v65536 files in it.");
+
+            if (romfsTouched && !RomFS.IsValidRoot(romfs))
+            {
+                ImGui.TextColored(errCol,
+                    "The path you have selected is invalid. Please select a RomFS path that contains your full Wonder dump.");
+            }
+
+            if (PathSelector.Show("Modded Directory", ref mod, !string.IsNullOrEmpty(mod)))
+            {
+                modRomfsTouched = true;
+
+                UserSettings.SetModRomFSPath(mod);
+                Console.WriteLine("Mod RomFS Path set to: " + mod);
+
+                UserSettings.SetRomfsReload(true);
+
+            }
+
+            Tooltip.Show("The save output where to save modified romfs files.");
+
+            if (modRomfsTouched && string.IsNullOrEmpty(mod))
+            {
+                ImGui.TextColored(errCol,
+                    "The path you have selected is invalid. Directory must not be empty.");
+            }
+
         }
 
         private static void DrawAdvancedSettings(IPopupModalHost modalHost)

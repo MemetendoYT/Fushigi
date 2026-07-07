@@ -1,70 +1,37 @@
 ﻿using DiscordRPC;
+using Fushigi.actor_pack.components;
 using Fushigi.course;
+using Fushigi.gl;
 using Fushigi.ui.undo;
 using Fushigi.ui.widgets;
 using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
+using System;
+using System.Drawing;
 using System.Numerics;
 
 namespace Fushigi.ui.SceneObjects.bgunit
 {
-    internal class BGUnitRailSceneObj(CourseUnit unit, BGUnitRail rail, bool isBelt) : ISceneObject
+    internal class BGUnitRailSceneObj(CourseUnit unit, BGUnitRail rail, bool isBelt)
     {
-
-        public List<BGUnitRail.RailPoint> GetSelected(CourseAreaEditContext ctx) => rail.Points.Where(ctx.IsSelected).ToList();
-
-        public bool mouseDown = false;
-        public bool transformStart = false;
-
-        public bool Visible = true;
-
+        public static bool rebuildTiles = false;
         public static uint Color_Default = 0xFFFFFFFF;
         public static uint Color_SelectionEdit = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
         public static uint Color_SlopeError = 0xFF0000FF;
-
-   
-        private (Vector3 pos, int index)? addPointPos;
-
-        public CourseUnit CourseUnit = unit;
-
-        public void Update(ISceneUpdateContext ctx, bool isSelected)
-        {
-           
-        }
-
-        private bool IsSelected(CourseAreaEditContext ctx) => ctx.IsSelected(rail);
-
-        private void DeselectAll(CourseAreaEditContext ctx)
-        {
-            ctx.WithSuspendUpdateDo(() =>
-            {
-                foreach (var point in rail.Points)
-                    ctx.Deselect(point);
-            });
-
-        }
-
-        public void SelectAll(CourseAreaEditContext ctx)
-        {
-            ctx.WithSuspendUpdateDo(() =>
-            {
-                foreach (var point in rail.Points)
-                    ctx.Select(point);
-            });
-        }
-
+        private static (Vector3 pos, int index)? addPointPos;
+        public static List<BGUnitRail.RailPoint> pointsToDelete = new();
+ 
         public static void InsertPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point, int index, BGUnitRail rail)
         {
-            var batch = ctx.BeginBatchAction();
+            var batchAction = ctx.BeginBatchAction();
             var revertible = rail.Points.RevertableInsert(point, index,
                 $"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
 
-            ctx.CommitAction(new TileRebuildRevertable(rail.mCourseUnit));
+            ctx.CommitAction(new TileRebuildRevertable(point.mRail.mCourseUnit));
             ctx.CommitAction(revertible);
-            batch.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
             ctx.Select(point);
-
+            rebuildUnit(rail.mCourseUnit);
+            batchAction.Commit("add point");
         }
 
         public void AddPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point)
@@ -76,47 +43,20 @@ namespace Fushigi.ui.SceneObjects.bgunit
             ctx.Select(point);
         }
 
-        public void RemoveSelected(CourseAreaEditContext ctx, LevelViewport viewport)
+
+        private static bool HitTest(LevelViewport viewport, BGUnitRail rail)
         {
-            var selected = GetSelected(ctx);
-            if (selected.Count == 0)
-                return;
-
-            var batchAction = ctx.BeginBatchAction();
-
-            foreach (var point in selected)
-            {
-                var revertible = rail.Points.RevertableRemove(point);
-                ctx.CommitAction(revertible);
-            }
-
-            batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
-        }
-
-        public void OnKeyDown(CourseAreaEditContext ctx, LevelViewport viewport)
-        {
-            //TODO move the delete logic over to CourseAreaEditContext and remove this
-
-            if ((ImGui.IsKeyPressed(ImGuiKey.Delete) && !ImGui.GetIO().KeyShift) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace)))
-            {
-                RemoveSelected(ctx, viewport);
-            }
-            if (IsSelected(ctx) && ImGui.GetIO().KeyCtrl && ImGui.IsKeyPressed(ImGuiKey.A))
-                SelectAll(ctx);
-        }
-
-        private bool HitTest(LevelViewport viewport)
-        {
-            return MathUtil.HitTestLineLoopPoint(GetPoints(viewport), 10f,
+            return MathUtil.HitTestLineLoopPoint(GetPoints(viewport, rail), 10f,
                     ImGui.GetMousePos());
         }
 
-        public static (Vector3 pos, int index)? EvaluateAddPointPos(CourseAreaEditContext ctx, LevelViewport viewport, BGUnitRail rail)
+        private static (Vector3 pos, int index)? EvaluateAddPointPos(CourseAreaEditContext ctx, LevelViewport viewport, BGUnitRail rail)
         {
+            if (!ImGui.GetIO().KeyAlt || !ctx.IsSelected(rail))
+                return null;
 
             Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
             Vector3 pos;
-
             if (UserSettings.GetEnableHalfTile())
             {
                 pos = new(
@@ -165,22 +105,17 @@ namespace Fushigi.ui.SceneObjects.bgunit
             for (int i = 0; i < segmentCount; i++)
             {
                 pointA = rail.Points[i].mTranslation;
-                pointB = rail.Points.GetWrapped(i + 1).mTranslation ;
-
+                pointB = rail.Points.GetWrapped(i + 1).mTranslation;
                 var seg = pointB - pointA;
                 float segLenSq = seg.LengthSquared();
                 if (segLenSq < 0.0001f)
                     continue;
-
                 float t = Vector3.Dot(pos - pointA, seg) / segLenSq;
                 float tClamped = Math.Clamp(t, 0f, 1f);
-
                 var closest = pointA + seg * tClamped;
                 float distance = Vector3.Distance(pos, closest);
-
-                var delta = distance;
-                if (delta <= min.distance)
-                    min = (delta, i + 1);
+                if (distance <= min.distance)
+                    min = (distance, i + 1);
             }
 
             if (rail.IsClosed)
@@ -207,8 +142,28 @@ namespace Fushigi.ui.SceneObjects.bgunit
                 return (pos, rail.Points.Count);
         }
 
-       
-        private Vector2[] GetPoints(LevelViewport viewport)
+        public static void OnMouseDown(CourseAreaEditContext ctx, LevelViewport viewport, BGUnitRail rail)
+        {
+
+            if (!ctx.IsSelected(rail))
+                return;
+
+            var mouseDownPos = viewport.ScreenToWorld(ImGui.GetMousePos());
+
+            if (addPointPos.TryGetValue(out var addPos))
+            {
+                //DeselectAll(ctx, rail);
+                InsertPoint(ctx, new BGUnitRail.RailPoint(rail, addPos.pos), addPos.index, rail);
+            }
+            else
+            {
+                /*if (!ImGui.GetIO().KeyCtrl && !ImGui.GetIO().KeyShift)
+                    DeselectAll(ctx);*/
+            }
+            var mouseDown = true;
+        }
+
+        private static Vector2[] GetPoints(LevelViewport viewport, BGUnitRail rail)
         {
             Vector2[] points = new Vector2[rail.Points.Count];
             for (int i = 0; i < rail.Points.Count; i++)
@@ -220,44 +175,37 @@ namespace Fushigi.ui.SceneObjects.bgunit
         }
 
 
-       
-      
-
-        public static void rebuildUnit(CourseUnit unit1)
+        public static void Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail rail, bool isBelt)
         {
-            unit1.GenerateTileSubUnits();
-            unit1.GenerateCorrectTiles();
-        }
+            //if (!Visible)
+            //    return;
 
-        void Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, ref bool isNewHoveredObj)
-        {
-            if (!Visible)
-                return;
+            BGUnitRail.RailPoint point = null;
+            if (ctx.IsAnySelected<BGUnitRail.RailPoint>())
+            {
+                point = ctx.GetFirstObjectOfType<BGUnitRail.RailPoint>();
+                ctx.Select(point.mRail);
+            }
+     
+            bool isNewHoveredObj = false;
+            addPointPos = EvaluateAddPointPos(ctx, viewport, rail);
 
-            //addPointPos = EvaluateAddPointPos(ctx, viewport);
-
-            if ((addPointPos.HasValue && ctx.IsSelected(rail)) || (!isBelt && HitTest(viewport)))
+            if ((addPointPos.HasValue && ctx.IsSelected(rail)) || (!isBelt && HitTest(viewport, rail)))
                 isNewHoveredObj = true;
 
-            bool isSelected = IsSelected(ctx);
+            bool isSelected = ctx.IsSelected(rail);
 
-           
-           
+            if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                OnMouseDown(ctx, viewport, rail);
 
-            //TODO does it still need a condition like this?
-            //if (viewport.mEditorState == LevelViewport.EditorState.Selecting)
-            //if (CourseScene.leftClickStartedInsideViewport)
-            //    OnSelecting(ctx, viewport);
-
-            OnKeyDown(ctx, viewport);
-
-            var lineThickness = viewport.IsHovered(this) ? 3.5f : 2.5f;
+            var lineThickness = 3.5f;
 
             for (int i = 0; i < rail.Points.Count; i++)
             {
                 Vector3 pos = rail.Points[i].mTranslation;
 
                 Vector3 nextPos;
+
                 if (i < rail.Points.Count - 1) //is not last point
                 {
                     nextPos = rail.Points[i + 1].mTranslation;
@@ -357,7 +305,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
             }
         }
 
-        public static bool IsValidAngle(Vector2 point1, Vector2 point2)
+        private static bool IsValidAngle(Vector2 point1, Vector2 point2)
         {
             var dist = point2 - point1;
             var angleInRadian = MathF.Atan2(dist.Y, dist.X); //angle in radian
@@ -383,43 +331,53 @@ namespace Fushigi.ui.SceneObjects.bgunit
             return validAngles.Contains(MathF.Round(angle)) && isCorrectDist;
         }
 
-        /// <summary>
-        /// Check if the proposed position is valid within the rail
-        /// </summary>
-        /// <param name="pos">new proposed position</param>
-        /// <param name="index">index of the point to set to the new position</param>
-        /// <returns>true if the point is valid there, false otherwise</returns>
-      
-      
+        public static void rebuildUnit(CourseUnit unit)
+        {
+            unit.GenerateTileSubUnits();
+            unit.GenerateCorrectTiles();
+            rebuildTiles = true;
+            unit.UpdateTiles = false;
+        }
 
-            private readonly BGUnitRail.RailPoint point;
 
-            public Transform Transform = new Transform();
+        public static void Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail.RailPoint point)
+        {
+            var pos2D = viewport.WorldToScreen(point.mTranslation);
 
-            //For transforming
-            public Vector3 PreviousPosition { get; private set; }
+            //Display point color
+            uint color = 0xFFFFFFFF;
+            if (ctx.IsSelected(point))
+                color = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
 
-          
+            dl.AddCircleFilled(pos2D, 10.0f, color);
 
-        
+            bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
 
-            //void IViewportDrawable.Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, ref bool isNewHoveredObj)
-            //{
-            //    var pos2D = viewport.WorldToScreen(point.mTranslation);
+            if (isHovered)
+            {
+                dl.AddCircle(pos2D, 15.0f, color, 10, 1.5f);
+                viewport.mHoveredObject = point;
+            }
 
-            //    //Display point color
-            //    uint color = 0xFFFFFFFF;
-            //    if (ctx.IsSelected(point))
-            //        color = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
+            if (viewport.mMultiSelecting)
+            {
+                float pntX = point.mTranslation.X;
+                float pntY = point.mTranslation.Y;
 
-            //    dl.AddCircleFilled(pos2D, 10.0f, color);
+                viewport.isInMultiSelectBox(new Vector2(pntX, pntY), point);
+            }
 
-            //    if (viewport.IsHovered(this))
-            //        dl.AddCircle(pos2D, 15.0f, color, 10, 1.5f);
+            if (ImGui.IsKeyPressed(ImGuiKey.A) && ImGui.GetIO().KeyCtrl && ctx.IsSelected(point))
+            {
+                foreach (var newPoint in point.mRail.Points)
+                {
+                    ctx.Select(newPoint);
+                }
+            }
 
-            //    if (HitTest(viewport))
-            //        isNewHoveredObj = true;
-            //}
-        
+            //if (HitTest(viewport, point))
+            //    viewport.mHoveredObject = point;
+        }
+
     }
 }
