@@ -24,6 +24,8 @@ namespace Fushigi.course
             mOpened = false;
         }
 
+
+
         public BymlHashTable BuildNode()
         {
             BymlHashTable tbl = new();
@@ -58,19 +60,6 @@ namespace Fushigi.course
             foreach (BymlHashTable comment in commentArray.Array)
                 mComments.Add(new CourseComment(comment));
         }
-
-
-            //public BymlArrayNode SerializeToArray(CourseLinkHolder linkHolder)
-            //{
-            //    BymlArrayNode node = new((uint)mComments.Count);
-
-            //    foreach (CourseActor actor in mActors)
-            //    {
-            //        node.AddNodeToArray(actor.BuildNode(linkHolder));
-            //    }
-
-            //    return node;
-            //}
    
             public BymlArrayNode SerializeToArray()
             {

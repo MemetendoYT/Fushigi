@@ -12,13 +12,8 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
-using Silk.NET.Maths;
 using Silk.NET.OpenGL;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Data.SqlTypes;
 using System.Drawing;
 using System.Numerics;
 using static Fushigi.course.CourseUnit;
@@ -1997,8 +1992,6 @@ namespace Fushigi.ui.widgets
 
                 mEditContext.InsertRailPoint(rail, newPoint, min.index);
             }
-            
-
             this.mEditContext.DeselectAll();
             this.mEditContext.Select(newPoint);
             mHoveredObject = newPoint;
@@ -2011,7 +2004,8 @@ namespace Fushigi.ui.widgets
             deleteList2 = new List<(BGUnitRail rail, BGUnitRail.RailPoint point)>();
             DrawUnits();
             DrawRails();
-            DrawCursor();
+            if(cursor != null)
+                cursor.DrawCursor(this, mEditContext);
             DragComment();
             if (!Course.IsWorldMap)
             {
@@ -2349,7 +2343,9 @@ namespace Fushigi.ui.widgets
                 ImGui.Separator();
 
                 if (ImGui.MenuItem("Add Comment"))
+                {
                     AddComment();
+                }
 
 
                 BGUnitRail[] mUnitRails = null;
@@ -2546,7 +2542,7 @@ namespace Fushigi.ui.widgets
                     ImGui.Separator();
                     if (ImGui.MenuItem("Save as Prefab"))
                     {
-                        PrefabPopup();
+                        Prefab.PrefabPopup(mEditContext, mArea);
                     }
                 }
 
@@ -2556,13 +2552,13 @@ namespace Fushigi.ui.widgets
                     if (ImGui.MenuItem("Place Cursor"))
                     {
                         cursor = new FushigiCursor();
-                        CursorPlacement();
+                        cursor.CursorPlacement(this, storedMousePos);
                     }
                 }
                 else
                 {
                     if (ImGui.MenuItem("Move Cursor"))
-                        CursorPlacement();
+                        cursor.CursorPlacement(this, storedMousePos);
 
                     if (ImGui.MenuItem("Remove Cursor"))
                         cursor = null;
@@ -2862,39 +2858,7 @@ namespace Fushigi.ui.widgets
             }
         }
 
-        public void DrawCursor()
-        {
-            if (cursor != null)
-            {
-                var cursorPos2D = this.WorldToScreen(new(cursor.mTranslation.X, cursor.mTranslation.Y, cursor.mTranslation.Z));
-                Vector2 pnt = new(cursorPos2D.X, cursorPos2D.Y);
-                bool isHovered = (ImGui.GetMousePos() - pnt).Length() < 10.0f;
-
-                if (isHovered)
-                    mHoveredObject = cursor;
-
-                uint color = Color.BlueViolet.ToAbgr();
-                bool point_selected = mEditContext.IsSelected(cursor);
-                var rail_point_color = point_selected ? ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) : color;
-                var size = 10.0f;
-
-                var pos2D = WorldToScreen(cursor.mTranslation);
-                mDrawList.AddCircleFilled(pos2D, size, rail_point_color);
-
-                if (mHoveredObject == cursor)
-                    mDrawList.AddCircle(pos2D, 15.0f, rail_point_color, 10, 1.5f);
-
-            }
-        }
-
-        public void CursorPlacement()
-        {
-            var pos = ScreenToWorld(storedMousePos);
-            cursor.mTranslation.X = MathF.Round(pos.X * 2, MidpointRounding.AwayFromZero) / 2;
-            cursor.mTranslation.Y = MathF.Round(pos.Y * 2, MidpointRounding.AwayFromZero) / 2;
-            cursor.mTranslation.Z = 0.0f;
-        }
-
+       
         #endregion
 
         #region Comments
@@ -3048,8 +3012,6 @@ namespace Fushigi.ui.widgets
                         }
                 }
                     ImGui.EndChild();
-
-    
             }
 
             if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
@@ -3063,75 +3025,6 @@ namespace Fushigi.ui.widgets
               mEditContext.RemoveComment(commentToDelete, commentVal);
               commentToDelete = null;
             }
-        }
-        #endregion
-
-        #region Prefabs 
-        public void SavePrefab(string prefabName)
-        {
-            var median = System.Numerics.Vector3.Zero;
-
-            if (mEditContext.GetSelectedObjects<CourseActor>().Count() > 0 || mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().Count() > 0)
-            {
-                List<CourseActor> actors = mEditContext.GetSelectedObjects<CourseActor>().ToList();
-                List<CourseActor> copiedActors = new List<CourseActor>();
-
-                List<CourseRail.CourseRailPoint> courseRailPoints = mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().ToList();
-                List<CourseRail> courseRails = new List<CourseRail>();
-                List<CourseRail> courseRailsClone = new List<CourseRail>();
-                foreach (var point in courseRailPoints)
-                {
-                    if (!courseRails.Contains(point.mParent))
-                        courseRails.Add(point.mParent);
-                }
-
-                foreach (var actor in actors)
-                    copiedActors.Add(actor.ClonePrefab(mArea));
-
-                foreach (var rail in courseRails)
-                {
-                    courseRailsClone.Add(rail.CloneRail(mArea));
-                }
-
-                foreach (CourseActor actor in copiedActors)
-                    median += actor.mTranslation;
-
-                median /= actors.Count;
-
-                foreach (var actor in copiedActors)
-                {
-                    actor.mTranslation.X -= median.X;
-                    actor.mTranslation.Y -= median.Y;
-                }
-
-                foreach (var rail in courseRailsClone)
-                {
-                    foreach (var point in rail.mPoints)
-                    {
-                        point.mTranslation.X -= median.X;
-                        point.mTranslation.Y -= median.Y;
-
-                        if (point.mIsCurve)
-                        {
-                            point.mControl.mTranslation.X -= median.X;
-                            point.mControl.mTranslation.Y -= median.Y;
-                        }
-                    }
-                }
-
-                mArea.SaveActorsToPrefab(copiedActors, actors, prefabName, courseRailsClone, courseRails);
-            }
-        }
-
-        public async Task PrefabPopup()
-        {
-            var result = await SavePrefabDialog.ShowDialog(MainWindow.mModalHost, "Save Prefab", "Enter name for this prefab");
-
-            if (result.Result == SavePrefabDialog.DialogResult.Yes)
-            {
-                SavePrefab(result.PrefabName);
-            }
-
         }
         #endregion
     }

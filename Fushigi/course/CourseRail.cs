@@ -558,6 +558,7 @@ namespace Fushigi.course
             return node;
         }
 
+
         public List<CourseActorToRailLink> mLinks = new();
     }
 }
