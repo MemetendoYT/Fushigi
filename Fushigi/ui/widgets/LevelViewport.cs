@@ -112,10 +112,8 @@ namespace Fushigi.ui.widgets
         bool copyContext = false;
         bool deleteContext = false;
         public static CourseScene _courseScene;
-        public static bool draggingCommentIcon;
         public void PreventFurtherRendering() => mIsNoMoreRendering = true;
 
-        public ulong prevSelectVersion { get; private set; } = 0;
         public bool dragRelease;
         List<object> newSelection = new();
         public List<CourseActor> BgUnits = new();
@@ -141,7 +139,7 @@ namespace Fushigi.ui.widgets
         DistantViewManager DistantViewScrollManager = new DistantViewManager(area);
 
         List<CourseActor> backupSelection;
-        private Vector2 storedMousePos;
+        public Vector2 storedMousePos;
         Vector2? mMultiSelectStartPos;
         Vector2? mMultiSelectCurrentPos;
         public bool mMultiSelecting = false;
@@ -156,12 +154,6 @@ namespace Fushigi.ui.widgets
         public static bool setGlobalSrc;
         public static bool setGlobalDst;
         public static ulong globalHash;
-
-        public CourseActor[] pivotedActors;
-        private CourseComment commentToDelete;
-        private bool draggingComment;
-        private int commentVal;
-        private bool canEditStart;
         public bool panOverride = false;
 
         public FushigiCursor cursor;
@@ -170,7 +162,6 @@ namespace Fushigi.ui.widgets
         private List<(BGUnitRail Rail, BGUnitRail.RailPoint Point)> deleteList2;
         private List<CourseUnit> rebuildList;
         private bool multiRailDelete;
-        public bool applyRotation;
         private bool DoTranslateObjects;
         private Vector3 startPosWorld;
         private Vector3 currentPosWorld;
@@ -314,7 +305,7 @@ namespace Fushigi.ui.widgets
 
                 if (!ImGui.GetIO().KeyCtrl)
                 {
-                    if(!draggingComment && !panOverride)
+                    if(!CourseComment.draggingComment && !panOverride)
                     Camera.Distance *= MathF.Pow(2, -ImGui.GetIO().MouseWheel / 10);
                 }
                 else if (ImGui.IsMouseDragging(ImGuiMouseButton.Middle))
@@ -361,12 +352,6 @@ namespace Fushigi.ui.widgets
                    mEditContext.IsAnySelected<DefaultShape>();
         }
 
-
-        public bool IsNonTransformableSelected()
-        {
-            return mEditContext.IsAnySelected<BGUnitRail.RailPoint>();
-        }
-
         public void HandleTranslation(object obj, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             switch (obj)
@@ -389,7 +374,6 @@ namespace Fushigi.ui.widgets
                 case DefaultShape:
                     HandleShapeTranslation(StartingTrans, CurrentTrans);
                     break;
-                
             }
         }
         
@@ -1250,16 +1234,6 @@ namespace Fushigi.ui.widgets
         public void DrawUnits()
         {
             DrawBGUnits();
-            //if (!ScreenshotMode)
-            //{
-            //    areaScene.ForEach<IViewportDrawable>(obj =>
-            //    {
-            //        bool isNewHoveredObj = false;
-            //        obj.Draw2D(mEditContext, this, mDrawList, ref isNewHoveredObj);
-            //        if (isNewHoveredObj)
-            //            mHoveredObject = obj;
-            //    });
-            //}
         }
 
         public void DrawBGUnits()
@@ -1577,7 +1551,7 @@ namespace Fushigi.ui.widgets
             DrawGridLines(true, 20f, 10);
         }
 
-        void DrawGrid2()
+        void DrawGrid()
         {
             var camForward = Vector3.Transform(-Vector3.UnitZ, Camera.Rotation);
             var camUp = Vector3.Transform(Vector3.UnitY, Camera.Rotation);
@@ -2004,9 +1978,14 @@ namespace Fushigi.ui.widgets
             deleteList2 = new List<(BGUnitRail rail, BGUnitRail.RailPoint point)>();
             DrawUnits();
             DrawRails();
+
             if(cursor != null)
                 cursor.DrawCursor(this, mEditContext);
-            DragComment();
+
+            if (!mMultiSelecting && mEditContext.IsSingleObjectSelected(out CourseComment? comment))
+                comment.DragComment(this, mEditContext);
+            
+
             if (!Course.IsWorldMap)
             {
                 DrawActorCollision();
@@ -2136,6 +2115,7 @@ namespace Fushigi.ui.widgets
 
                 ImGui.SetTooltip(objectPickingRequest.message + "\nPress Escape to cancel" +
                     currentlyHoveredObjText);
+
                 if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                 {
                     CourseScene.pickingComplete = true;
@@ -2212,7 +2192,8 @@ namespace Fushigi.ui.widgets
 
             Multiselection();
 
-            PivotActors();
+            if(cursor != null)
+                cursor.PivotActors(mEditContext, this);
 
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
             {
@@ -2221,14 +2202,8 @@ namespace Fushigi.ui.widgets
                     if (!ImGui.IsKeyDown(ImGuiKey.LeftShift))
                         mEditContext.DeselectAll();
                 }
-                //else if (mHoveredObject is IViewportSelectable selectable)
-                //{
-                //    prevSelectVersion = mEditContext.SelectionVersion;
-                //    selectable.OnSelect(mEditContext);
-                //}
                 else
                 {
-                    prevSelectVersion = mEditContext.SelectionVersion;
                     IViewportSelectable.DefaultSelect(mEditContext, mHoveredObject);
 
                 }
@@ -2243,7 +2218,6 @@ namespace Fushigi.ui.widgets
                     dragRelease = ImGui.IsMouseDragging(ImGuiMouseButton.Left);
             }
 
-        
 
             if (ImGui.IsMouseReleased(ImGuiMouseButton.Left))
             {
@@ -2251,8 +2225,7 @@ namespace Fushigi.ui.widgets
                 mMultiSelectEnded = true;
                 if (mHoveredObject is CourseActor && !dragRelease)
                 {
-                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) &&
-                        prevSelectVersion == mEditContext.SelectionVersion || CourseScene.bypassSelection)
+                    if (ImGui.IsKeyDown(ImGuiKey.LeftShift) || CourseScene.bypassSelection)
                     {
                         CourseScene.bypassSelection = false;
                         mEditContext.Deselect(mHoveredObject!);
@@ -2344,7 +2317,7 @@ namespace Fushigi.ui.widgets
 
                 if (ImGui.MenuItem("Add Comment"))
                 {
-                    AddComment();
+                    CourseComment.AddComment(this, mEditContext);
                 }
 
 
@@ -2387,7 +2360,6 @@ namespace Fushigi.ui.widgets
                                     setGlobalSrc = true;
                                     globalHash = mSelectedActor.mHash;
                                 }
-
 
                                 if (ImGui.MenuItem("Make Global Dst"))
                                 {
@@ -2661,17 +2633,17 @@ namespace Fushigi.ui.widgets
                         switch (lastHoveredObject)
                         {
                             case Transformable transformable:
-                                StartingTrans = transformable.mStartingTrans;
-                                CurrentTrans = transformable.mTranslation;
-                                break;
+                                    StartingTrans = transformable.mStartingTrans;
+                                    CurrentTrans = transformable.mTranslation;
+                                    break;
                             case DefaultShape shape:
-                                StartingTrans = shape.Center;
-                                CurrentTrans = shape.mStartingTrans;
+                                    StartingTrans = shape.Center;
+                                    CurrentTrans = shape.mStartingTrans;
 
                                 if(shape is PolytopeVertex vertex)
                                 {
-                                StartingTrans = vertex.Center;
-                                CurrentTrans = shape.mStartingTrans;
+                                    StartingTrans = vertex.Center;
+                                    CurrentTrans = shape.mStartingTrans;
                                 }
 
                                 if (shape is CapsulePoint point)
@@ -2707,7 +2679,6 @@ namespace Fushigi.ui.widgets
                             }
                         }
  
-
                         if (StartingTrans != CurrentTrans)
                             DoTranslateObjects = true;
 
@@ -2752,7 +2723,6 @@ namespace Fushigi.ui.widgets
                 }
                 else
                 {
-
                     var transformable = mEditContext.GetFirstObjectOfType<Transformable>();
                     if (transformable is CourseRail.CourseRailPoint point)
                     {
@@ -2809,223 +2779,11 @@ namespace Fushigi.ui.widgets
         }
         #endregion
 
-        #region 2D Cursor
-
-        public void PivotActors()
-        {
-            if (ImGui.IsKeyPressed(ImGuiKey.R))
-            {
-                if (mEditContext.GetSelectedObjects<CourseActor>().ToArray().Length >= 1 && mEditContext.GetSelectedObjects<FushigiCursor>().ToArray().Length == 1)
-                {
-                    pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
-                    foreach (CourseActor actor in pivotedActors)
-                    {
-                        Vector2 delta = ImGui.GetIO().MouseDelta;
-                        float rotationSpeed = 0.05f;
-                        float deltaAngle = ImGui.GetIO().MouseDelta.X * rotationSpeed;
-                        Vector3 cursorTrans = cursor.mTranslation;
-                        actor.mRotation.Z += deltaAngle;
-                        actor.mTranslation = cursorTrans + Vector3.Transform(actor.mTranslation - cursorTrans, Matrix4x4.CreateRotationZ(deltaAngle));
-
-                    }
-
-                    if (pivotedActors[0].mRotation != pivotedActors[0].mStartingRot)
-                        applyRotation = true;
-                }
-            }
-
-            if (applyRotation && !ImGui.IsKeyDown(ImGuiKey.R))
-            {
-                applyRotation = false;
-
-                if (pivotedActors.Length == 1)
-                {
-                    CommitRotation(pivotedActors[0]);
-                    CommitTranslation(pivotedActors[0]);
-                }
-                else
-                {
-                    var batch = mEditContext.BeginBatchAction();
-
-                    foreach (var actor in pivotedActors)
-                    {
-                        CommitRotation(actor);
-                        CommitTranslation(actor);
-                    }
-                    batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Pivoted {pivotedActors.Count()} Actors");
-                }
-
-            }
-        }
-
-       
-        #endregion
 
         #region Comments
-        public void DragComment()
-        {
-            if (draggingComment || draggingCommentIcon)
-            {
-                if (!mMultiSelecting && mEditContext.IsSingleObjectSelected(out CourseComment? comment))
-                {
-                    if (canEditStart)
-                    {
-                        comment.mStartingTrans = comment.mTranslation;
-                        canEditStart = false;
-                    }
 
-                    var posVec = CalcPosVec(comment.mStartingTrans);
-                    comment.mTranslation.X = posVec.X;
-                    comment.mTranslation.Y = posVec.Y;
-                }
-            }
-            else
-            {
-                canEditStart = true;
-            }
-        }
-
-        private void AddComment()
-        {
-            var comment = new CourseComment();
-            var pos = ScreenToWorld(storedMousePos);
-            comment.mTranslation.X = MathF.Round(pos.X * 2, MidpointRounding.AwayFromZero) / 2;
-            comment.mTranslation.Y = MathF.Round(pos.Y * 2, MidpointRounding.AwayFromZero) / 2;
-            comment.mTranslation.Z = 0.0f;
-            mEditContext.AddComment(comment);
-        }
-
-        public void DrawComments()
-        {
-            int i = 0;
-            foreach (CourseComment comment in mArea.GetComments())
-            {
-                i++;
-                Vector2 pos = WorldToScreen(comment.mTranslation);
-                Vector2 iconPos = new Vector2(pos.X - (30 * MainWindow.dpiScale), pos.Y - (20 * MainWindow.dpiScale));
-                ImGui.SetCursorScreenPos(iconPos);
-
-
-                ImGui.BeginChild(
-                    $"CommentIcon{i}",
-                    new Vector2(40 * MainWindow.dpiScale, 40 * MainWindow.dpiScale),
-                    ImGuiChildFlags.None,
-                    ImGuiWindowFlags.NoDecoration |
-                    ImGuiWindowFlags.NoScrollbar |
-                    ImGuiWindowFlags.NoScrollWithMouse |
-                    ImGuiWindowFlags.NoBackground 
-                );
-
-
-                ImGui.SetCursorPos(Vector2.Zero);
-             
-
-                if (ImGui.Button(IconUtil.ICON_MAIL_BULK, new Vector2(40 * MainWindow.dpiScale, 40 * MainWindow.dpiScale)))
-                    {
-                        if (!draggingCommentIcon)
-                            comment.mOpened = !comment.mOpened;
-            
-                    }
-
-                if (!comment.mOpened &&
-                  ImGui.IsItemActive() &&
-                  ImGui.IsMouseDragging(ImGuiMouseButton.Left))
-                {
-                    draggingCommentIcon = true;
-                    if (mEditContext.GetSelectedObjects<object>().Count() > 1)
-                    {
-                        mEditContext.DeselectAll();
-                    }
-                    mEditContext.Select(comment);
-
-    
-
-                    if (!comment.mOpened && ImGui.IsItemActive() && ImGui.IsKeyPressed(ImGuiKey.Delete))     
-                    {            
-                            commentToDelete = comment;
-                            commentVal = i;
-                    }
-                }
-
-
-                bool iconHovered = ImGui.IsItemHovered();
-
-                if (iconHovered)
-                    panOverride = true;
-
-                if (iconHovered && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
-                {
-                    if (mEditContext.GetSelectedObjects<object>().Count() > 1)
-                        mEditContext.DeselectAll();
-
-                    mEditContext.Select(comment);
-                }
-
-
-                ImGui.EndChild();
-
-                if (!comment.mOpened)
-                    continue;
-
-                    ImGui.SetCursorScreenPos(pos);
-
-                ref string text = ref comment.mText;
-                ImGui.BeginChild(
-                  $"CommentWindow{i}",
-                  new Vector2(200 * MainWindow.dpiScale, 100 * MainWindow.dpiScale),
-                  ImGuiChildFlags.None,
-                  ImGuiWindowFlags.NoDecoration |
-                  ImGuiWindowFlags.NoScrollbar |
-                  ImGuiWindowFlags.NoScrollWithMouse
-                 );
-
-                ImGui.InputTextMultiline(
-                    $"##Comment{i}",
-                    ref text,
-                    1024,
-                    new Vector2(200 * MainWindow.dpiScale, 100 * MainWindow.dpiScale)
-                );
-
-
-                    bool textActive = ImGui.IsItemActive();
-                    bool textFocused = ImGui.IsItemFocused();
-                    bool textHovered = ImGui.IsItemHovered();
-
-                if (textHovered)
-                {
-                    panOverride = true;
-                }
-
-
-                    if (textActive || textFocused)
-                    {
-                        draggingComment = ImGui.IsMouseDragging(ImGuiMouseButton.Left);
-                            if (mEditContext.GetSelectedObjects<object>().Count() > 1)
-                        {
-                            mEditContext.DeselectAll();
-                        }
-                        mEditContext.Select(comment);
-                        if (ImGui.IsKeyPressed(ImGuiKey.Delete))
-                        {
-                            commentToDelete = comment;
-                            commentVal = i;
-                        }
-                }
-                    ImGui.EndChild();
-            }
-
-            if (!ImGui.IsMouseDown(ImGuiMouseButton.Left))
-                draggingCommentIcon = false;
-
-            if(!CourseScene.insideViewport)
-                panOverride = false;
-
-            if(commentToDelete != null)
-            {
-              mEditContext.RemoveComment(commentToDelete, commentVal);
-              commentToDelete = null;
-            }
-        }
+     
+ 
         #endregion
     }
 

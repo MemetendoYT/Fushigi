@@ -1071,7 +1071,10 @@ namespace Fushigi.ui.widgets
                         viewport.vpMax = ImGui.GetItemRectMax();
                         insideViewport = ImGui.IsMouseHoveringRect(viewport.vpMin, viewport.vpMax);
                         viewport.DrawOverlay();
-                        viewport.DrawComments();
+
+
+                        DrawComments(viewport, mEditContext, area);
+                        
 
                         if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                         {
@@ -4455,9 +4458,9 @@ namespace Fushigi.ui.widgets
                 if (previousDelta != cursor.delta && run)
                 {
                     float deltaAngle = cursor.delta - previousDelta;
-                    activeViewport.applyRotation = true;
-                    activeViewport.pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
-                    foreach (CourseActor actor in activeViewport.pivotedActors)
+                    cursor.applyRotation = true;
+                    cursor.pivotedActors = mEditContext.GetSelectedObjects<CourseActor>().ToArray();
+                    foreach (CourseActor actor in cursor.pivotedActors)
                     {
                         actor.mRotation = actor.mStartingRot;
                         actor.mTranslation = actor.mStartingTrans;
