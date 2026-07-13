@@ -68,6 +68,29 @@ public class ActorParams
         { "Sproing/Stretch", "7"},
     };
 
+    public static readonly Dictionary<string, string> SwitchHitType = new Dictionary<string, string>()
+    {
+        { "Only Players", "0" },
+        { "All referenced actors needed", "1" },
+        { "Any referenced actor", "2" },
+        { "Anything", "3"},
+        { "Only crown player", "4"}
+    };
+
+    public static readonly Dictionary<string, string> SwitchOnOffType = new Dictionary<string, string>()
+    {
+        { "Only Trigger Once", "0" },
+        { "Only Trigger While Conditions Are Satisfied", "1" },
+        { "Unknown", "2" }
+    };
+
+    public static readonly Dictionary<string, string> ActorSituation = new Dictionary<string, string>()
+    {
+        { "Always", "0" },
+        { "Only when actor/player is on ground", "1" },
+        { "Unknown", "2" }
+    };
+
     public static readonly Dictionary<string, string> ActorParamNames = new Dictionary<string, string>()
     {
         // Rail Move Param
@@ -79,11 +102,19 @@ public class ActorParams
         { "AccelLengthType", "Rail Acceleration" },
         { "DecelLengthType", "Rail Deceleration"},
         { "IsAccDecOnlyEdge", "Decelerate at Edge" },
+
         // RequestWonderItem
-        {"IsPlayerWonderAll", "Wonder All" },
-        {"IsUsePostWonder", "Post Wonder" },
-        {"PlayerWonderType", "Wonder Effect" },
-        {"MorphPlayerType", "Wonder Morph" }
+        { "IsPlayerWonderAll", "Wonder All" },
+        { "IsUsePostWonder", "Post Wonder" },
+        { "PlayerWonderType", "Wonder Effect" },
+        { "MorphPlayerType", "Wonder Morph" },
+
+        // AreaTargetTypeSelect 
+        { "IsAllLocalPlayer",  "Is Local Player" },
+        { "IsReferenceLinkName", "Reference Link Name" },
+        { "SwitchHitType", "Switch Hit Type" },
+        { "SwitchOnOffType", "Switch On Off Type" },
+        { "ActorSituation", "Actor Situation" }
     };
 
     public static readonly Dictionary<string, string> Tooltips = new Dictionary<string, string>()
@@ -102,7 +133,15 @@ public class ActorParams
         {"IsPlayerWonderAll", "Wonder All" },
         {"IsUsePostWonder", "Post Wonder" },
         {"PlayerWonderType", "WOOOOOOOOOONDAAAAAAAAAAAAAAAAAAAAAAAH" },
-        {"MorphPlayerType", "Wonder Morph" }
+        {"MorphPlayerType", "Wonder Morph" },
+
+        // AreaTargetTypeSelect 
+        { "IsAllLocalPlayer",  "All players needed to activate?" },
+        { "IsReferenceLinkName", "Allows all actors that are the same type as the " +
+                                 "\nreferenced actors to trigger the area." },
+        { "SwitchHitType", "Sets what triggers the area." },
+        { "SwitchOnOffType", "Sets the behaviour of the area." },
+        { "ActorSituation", "What the actor has to do to trigger the area." }
     };
 
     public static void DrawParamText(string ActorParam)
@@ -116,7 +155,14 @@ public class ActorParams
             ImGui.SetTooltip(Tooltips[ActorParam]);
     }
 
-
+    public static void DrawInt(CourseActor actor, string ActorParam)
+    {
+        ImGui.TableNextRow();
+        ImGui.TableSetColumnIndex(0);
+        int selected = (int)actor.mActorParameters[ActorParam];
+        //if (ImGui.InputInt($"##{ActorParam}", ref selected))
+        //    actor.mActorParameters[ActorParam] = selected;
+    }
     public static void DrawParamBool(CourseActor actor, string ActorParam)
     {
         ImGui.TableNextColumn();
