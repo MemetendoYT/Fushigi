@@ -37,6 +37,8 @@ namespace Fushigi.Bfres
         /// </summary>
         public Skeleton Skeleton { get; set; } = new Skeleton();
 
+        public MaterialAnimation materialAnimation { get; set; }
+
         public void Read(BinaryReader reader)
         {
             var header = new ModelHeader();

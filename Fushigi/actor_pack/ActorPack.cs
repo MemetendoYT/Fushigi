@@ -14,6 +14,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
+using static Fushigi.actor_pack.components.ModelInfo;
 
 namespace Fushigi
 {
@@ -36,6 +37,7 @@ namespace Fushigi
 
     public class ActorPack
     {
+        public string actor;
         Dictionary<string, ActorParam> paramTree = [];
         public ModelInfo DrawArrayModelInfoRef;
         public ModelInfo ModelInfoRef;
@@ -55,6 +57,7 @@ namespace Fushigi
 
         public ActorPack(string path)
         {
+            actor = path;
             try
             {
                 sarcPath = path;
@@ -130,6 +133,21 @@ namespace Fushigi
         {
             if (param.Components == null)
                 return;
+
+            if (this.actor.Contains("ObjectWaterSphere"))
+            {
+                this.ModelInfoRef = new ModelInfo
+                {
+                    parent = "",
+                    mModelName = "SystemWaterDefault",
+                    mFilePath = "SystemWaterDefault",
+                    mModelScale = Vector3.One,
+                    SearchModelKey = "",
+                    IsUseTilingMode = false,
+                    SubModels = new List<ModelInfo.SubModel>()
+                };
+
+        }
 
             foreach (var component in param.Components)
             {

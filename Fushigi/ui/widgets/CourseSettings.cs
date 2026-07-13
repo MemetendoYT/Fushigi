@@ -23,17 +23,20 @@ namespace Fushigi.ui.widgets
             { "None", "None" },
         };
 
-        private static readonly Dictionary<string, string> PlayerMorphType = new Dictionary<string, string>()
+        public static readonly Dictionary<string, string> PlayerMorphType = new Dictionary<string, string>()
         {
             { "", "None" },
             { "Slime", "Wubba" },
-            { "Ball", "Spike Ball" },
+            { "Ball", "Spike-Ball" },
             { "BalloonKiller", "Balloon" },
             { "Kuribo", "Goomba" },
             { "SinkBlock", "Puffy Lift" },
             { "Hoppin", "Hoppycat" },
             { "Biyon", "Sproing/Stretch" },
         };
+
+        public static readonly Dictionary<string, string> PlayerMorphTypeReverse =
+            PlayerMorphType.ToDictionary(kv => kv.Value, kv => kv.Key);
 
         private static readonly Dictionary<string, string> CourseKind = new Dictionary<string, string>()
         {

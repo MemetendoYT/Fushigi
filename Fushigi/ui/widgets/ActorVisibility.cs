@@ -73,7 +73,7 @@ namespace Fushigi.ui.widgets
             {
                 AddToList(ObjectName + "_tag", HiddenAll);
                 foreach (var objects in DropDownObjects)
-                    AddToList(objects.Key, LevelViewport.HiddenActors);
+                    AddToList(objects.Key, CourseActor.HiddenActors);
             }
 
             icon = IconUtil.ICON_EYE;
@@ -93,7 +93,7 @@ namespace Fushigi.ui.widgets
 
         public static void DrawVisibilityToggle(string objectName, string parentObjectName, string listToUse)
         {
-            var visibilityList = LevelViewport.HiddenActors;
+            var visibilityList = CourseActor.HiddenActors;
 
             if (listToUse == "Model")
                 visibilityList = LevelViewport.HiddenModels;
@@ -110,7 +110,7 @@ namespace Fushigi.ui.widgets
                 {
                     case "Rails":
                         AddToList("Rails", HiddenAll);
-                        LevelViewport.ShowRails = !LevelViewport.ShowRails;
+                        CourseRail.ShowRails = !CourseRail.ShowRails;
                         break;
                     case "Actor":
                         AddToList(objectName, visibilityList);

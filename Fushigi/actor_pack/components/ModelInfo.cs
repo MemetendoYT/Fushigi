@@ -19,14 +19,14 @@ namespace Fushigi.actor_pack.components
 
         [BymlProperty("ModelProjectName", DefaultValue = "")]
         public string mFilePath { get; set; }
-
         [BymlProperty("DebugModelScale")]
         public Vector3 mModelScale { get; set; }
         public string SearchModelKey { get; set; }
-
         public bool IsUseTilingMode { get; set; }
-
         public List<SubModel> SubModels { get; set; }
+
+        [BymlProperty("ModelVariationAnims")]
+        public List<MaterialAnimations> ModelVariationAnims { get; set; }
 
         [Serializable]
         public class SubModel
@@ -45,7 +45,6 @@ namespace Fushigi.actor_pack.components
             [BymlProperty("$type")]
             public string Type { get; set; }
             public string BBKey { get; set; } = "ColorIdx";
-            [BymlProperty("FilePath")]
             public string Fmab { get; set; }
         }
     }

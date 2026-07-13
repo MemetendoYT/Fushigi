@@ -1,6 +1,8 @@
 ﻿using Fushigi.Byml;
 using Fushigi.Byml.Writer;
 using Fushigi.param;
+using Fushigi.ui;
+using Fushigi.ui.widgets;
 using Fushigi.util;
 using ImGuiNET;
 using System.Diagnostics.CodeAnalysis;
@@ -37,11 +39,10 @@ namespace Fushigi.course
         Cloud
     }
 
-
-
-
     public class CourseActor : Transformable
     {
+        private static Vector2[] s_actorRectPolygon = new Vector2[4];
+        public static List<string> HiddenActors = new();
         public CourseActor(BymlHashTable actorNode)
         {
             mPackName = BymlUtil.GetNodeData<string>(actorNode["Gyaml"]);
@@ -177,7 +178,234 @@ namespace Fushigi.course
 
             mActorParameters = new PropertyDict(actorParameters);
         }
+        internal static void DrawActorCollision(LevelViewport viewport, CourseAreaEditContext mEditContext, CourseArea mArea)
+        {
+            const float pointSize = 8.0f;
+            foreach (CourseActor actor in mArea.GetActors())
+            {
+                if (HiddenActors.Contains(actor.mType.ToString()))
+                    continue;
 
+                System.Numerics.Vector3 min = new(-.5f);
+                System.Numerics.Vector3 max = new(.5f);
+                System.Numerics.Vector3 off = new(0f);
+                System.Numerics.Vector3 center = new(0f);
+                var drawing = "box";
+
+                if (actor.mActorPack?.ShapeParams != null)
+                {
+                    var shapes = actor.mActorPack.ShapeParams;
+                    var calc = shapes.mCalc;
+
+                    if (((shapes.mSphere?.Count ?? 0) > 0) ||
+                        ((shapes.mCapsule?.Count ?? 0) > 0))
+                    {
+                        drawing = "sphere";
+                    }
+                    else if ((shapes.mPoly?.Count ?? 0) > 0)
+                    {
+                        calc = shapes.mCalc;
+                    }
+
+                    if (calc != null)
+                    {
+                        center = calc.mCenter;
+                        min = calc.mMin;
+                        max = calc.mMax;
+                    }
+
+                    // Fix this so that always min < max to avoid negative length sides
+                    if (min.X == max.X)
+                    {
+                        if (min.X == 0)
+                        {
+                            min.X = -0.5f;
+                            max.X = 0.5f;
+                        }
+                        else
+                        {
+                            min.X = -Math.Abs(min.X);
+                            max.X = Math.Abs(max.X);
+                        }
+                    }
+                    if (min.Y == max.Y)
+                    {
+                        if (min.Y == 0)
+                        {
+                            min.Y = -0.5f;
+                            max.Y = 0.5f;
+                        }
+                        else
+                        {
+                            min.Y = -Math.Abs(min.Y);
+                            max.Y = Math.Abs(max.Y);
+                        }
+                    }
+                    if (min.Z == max.Z)
+                    {
+                        if (min.Z == 0)
+                        {
+                            min.Z = -0.5f;
+                            max.Z = 0.5f;
+                        }
+                        else
+                        {
+                            min.Z = -Math.Abs(min.Z);
+                            max.Z = Math.Abs(max.Z);
+                        }
+                    }
+                }
+
+                string layer = actor.mLayer;
+
+                if (viewport.mLayersVisibility!.TryGetValue(layer, out bool isVisible) && isVisible && actor.wonderVisible && !viewport.ScreenshotMode)
+                {
+                    Matrix4x4 transform =
+                        Matrix4x4.CreateScale(actor.mScale.X, actor.mScale.Y, actor.mScale.Z
+                        ) *
+                        Matrix4x4.CreateRotationZ(
+                            actor.mRotation.Z
+                        ) *
+                        Matrix4x4.CreateTranslation(
+                            actor.mTranslation.X,
+                            actor.mTranslation.Y,
+                            actor.mTranslation.Z
+                        ); ;
+
+                    // Because fuck consistency I guess.
+                    // (It's mostly cause usually AreaObjs use a distance calculation "NoModel_1x1x1", meaning a centered block.
+                    //  While some use "SameActor" and "NoModel_1x1x1_Bottom" which place the origin at the bottom. I can't be bothered to
+                    //  get this info and since it's only a handful of actors afaik, I'll just hardcode them here. If you got an issue with this,
+                    //  feel free to change it.)
+                    string[] halfOffsetCDP = {
+                        "NoModel_1x1x1_Bottom",
+                        "SameArea"
+                    };
+
+                    // Changed this cause it still wasn't correct
+                    if (actor.mActorPack?.ShapeParams == null && halfOffsetCDP.Contains(actor.mCalcDistanceParam))
+                        off = new(0, .5f, 0);
+
+                    //topLeft
+                    s_actorRectPolygon[0] = viewport.WorldToScreen(System.Numerics.Vector3.Transform(new System.Numerics.Vector3(min.X, max.Y, 0) + off, transform));
+                    //topRight
+                    s_actorRectPolygon[1] = viewport.WorldToScreen(System.Numerics.Vector3.Transform(new System.Numerics.Vector3(max.X, max.Y, 0) + off, transform));
+                    //bottomRight
+                    s_actorRectPolygon[2] = viewport.WorldToScreen(System.Numerics.Vector3.Transform(new System.Numerics.Vector3(max.X, min.Y, 0) + off, transform));
+                    //bottomLeft
+                    s_actorRectPolygon[3] = viewport.WorldToScreen(System.Numerics.Vector3.Transform(new System.Numerics.Vector3(min.X, min.Y, 0) + off, transform));
+
+                    Vector2 topLeft = s_actorRectPolygon[0];
+                    Vector2 bottomRight = s_actorRectPolygon[2];
+
+                    Vector2 tl = s_actorRectPolygon[0];
+                    Vector2 tr = s_actorRectPolygon[1];
+                    Vector2 br = s_actorRectPolygon[2];
+                    Vector2 bl = s_actorRectPolygon[3];
+
+                    if (Sprites.OverrideSize.TryGetValue(actor.mPackName, out var size))
+                    {
+                        // Scale relative to center
+                        Vector2 newCenter = (tl + br) * 0.5f;
+
+                        tl = newCenter + (tl - newCenter) * size;
+                        tr = newCenter + (tr - newCenter) * size;
+                        br = newCenter + (br - newCenter) * size;
+                        bl = newCenter + (bl - newCenter) * size;
+                    }
+
+                    if (UserSettings.GetUseSprites())
+                    {
+                        var key = actor.mPackName;
+                        if (Sprites.SpriteAliases.TryGetValue(actor.mPackName, out var alias))
+                            key = alias;
+
+                        if (Sprites.ActorSprites.TryGetValue(key, out var tex))
+                        {
+                            viewport.mDrawList.AddImageQuad(
+                                (IntPtr)tex.ID,
+                                tl,
+                                tr,
+                                br,
+                                bl,
+                                new Vector2(0, 0),
+                                new Vector2(1, 0),
+                                new Vector2(1, 1),
+                                new Vector2(0, 1),
+                                0xFFFFFFFF
+                            );
+                        }
+                    }
+
+                    uint color = CourseActor.CourseActorColors[CourseActorType.None];
+                    CourseActor.CourseActorColors.TryGetValue(actor.mType, out color);
+
+                    bool isHovered = viewport.mHoveredObject == actor;
+
+                    if (!viewport.ScreenshotMode)
+                    {
+                        switch (drawing)
+                        {
+                            default:
+                                for (int i = 0; i < 4; i++)
+                                {
+                                    viewport.mDrawList.AddLine(
+                                    s_actorRectPolygon[i],
+                                    s_actorRectPolygon[(i + 1) % 4],
+                                    color, isHovered ? 2.5f : 1.5f);
+                                }
+                                break;
+                            case "sphere":
+                                var pos = viewport.WorldToScreen(System.Numerics.Vector3.Transform(center, transform));
+                                var scale = Matrix4x4.CreateScale(actor.mScale);
+                                Vector2 rad = (viewport.WorldToScreen(System.Numerics.Vector3.Transform(max, scale)) - viewport.WorldToScreen(System.Numerics.Vector3.Transform(min, scale))) / 2;
+                                viewport.mDrawList.AddEllipse(pos, Math.Abs(rad.X), Math.Abs(rad.Y), color, -actor.mRotation.Z, 0, isHovered ? 2.5f : 1.5f);
+
+                                break;
+                        }
+                        if (mEditContext.IsSelected(actor))
+                        {
+                            for (int i = 0; i < 4; i++)
+                            {
+                                viewport.mDrawList.AddCircleFilled(s_actorRectPolygon[i],
+                                    pointSize, color);
+                                if (drawing == "sphere")
+                                {
+                                    viewport.mDrawList.AddLine(
+                                    s_actorRectPolygon[i],
+                                    s_actorRectPolygon[(i + 1) % 4],
+                                    color, isHovered ? 2.5f : 1.5f);
+                                }
+                            }
+                            viewport.mDrawList.AddEllipse(viewport.WorldToScreen(transform.Translation), pointSize * 3, pointSize * 3, color, -actor.mRotation.Z, 4, 2);
+                        }
+                    }
+
+                    string name = actor.mPackName;
+                    isHovered = MathUtil.HitTestConvexPolygonPoint(s_actorRectPolygon, ImGui.GetMousePos());
+
+                    if (name.Contains("Area"))
+                    {
+                        isHovered = MathUtil.HitTestLineLoopPoint(s_actorRectPolygon, 4f,
+                            ImGui.GetMousePos());
+                    }
+
+                    if (isHovered)
+                    {
+                        viewport.mHoveredObject = actor;
+                    }
+
+                    if (viewport.mMultiSelecting)
+                    {
+                        float actorX = actor.mTranslation.X;
+                        float actorY = actor.mTranslation.Y;
+
+                        viewport.isInMultiSelectBox(new Vector2(actorX, actorY), actor);
+                    }
+
+                }
+            }
+        }
         public BymlHashTable BuildNode(CourseLinkHolder linkHolder)
         {
             BymlHashTable table = new();
@@ -461,8 +689,7 @@ namespace Fushigi.course
         public List<CourseActor> mSortedActors = [];
     }
 
-    
-
+   
     public class CourseActorRender //This can be overridden per actor for individual behavior
     {
 

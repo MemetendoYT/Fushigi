@@ -1,27 +1,25 @@
 ﻿using Fasterflect;
 using Fushigi.Byml;
 using Fushigi.param;
+using Fushigi.ui;
+using Fushigi.ui.widgets;
 using Fushigi.util;
-using Microsoft.Msagl.Drawing;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
-using Silk.NET.Maths;
-using System;
-using System.Collections.Generic;
+using ImGuiNET;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Reflection.Metadata.Ecma335;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
+
+using System.Numerics;
 
 namespace Fushigi.course
 {
     public class CourseRail
     {
+        public static CourseRailPoint closestSelected;
+        private static bool multiRailDelete;
+        public static List<(CourseRail rail, CourseRail.CourseRailPoint point)> deleteList;
+        public static bool ShowRails = true;
         public CourseRail(uint areaHash, string type = "Default")
         {
             mType = type;
@@ -84,6 +82,303 @@ namespace Fushigi.course
             {
                 mPoints.Add(new CourseRailPoint(rail, mType, this));
             }
+        }
+
+        internal static void DrawRails(LevelViewport viewport, CourseAreaEditContext mEditContext, CourseArea mArea)
+        {
+            if (mArea.mRailHolder.mRails.Count > 0 && !viewport.ScreenshotMode && ShowRails)
+            {
+                const float pointSize = 8.0f;
+                uint color = Color.HotPink.ToAbgr();
+
+                foreach (CourseRail rail in mArea.mRailHolder.mRails)
+                {
+                    bool rail_selected = mEditContext.IsSelected(rail);
+
+                    Vector2[] GetPoints()
+                    {
+                        Vector2[] points = new Vector2[rail.mPoints.Count];
+                        for (int i = 0; i < rail.mPoints.Count; i++)
+                        {
+                            System.Numerics.Vector3 p = rail.mPoints[i].mTranslation;
+                            points[i] = viewport.WorldToScreen(new(p.X, p.Y, p.Z));
+                        }
+                        return points;
+                    }
+
+
+                    CourseRail.CourseRailPoint selectedPoint = null;
+
+                    foreach (var point in rail.mPoints)
+                    {
+                        var pos2D = viewport.WorldToScreen(new(point.mTranslation.X, point.mTranslation.Y, point.mTranslation.Z));
+                        var contPos2D = viewport.WorldToScreen(point.mControl.mTranslation);
+
+                        bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
+
+                        if (isHovered)
+                            viewport.mHoveredObject = point;
+
+                        bool selected = false;
+
+                        if (closestSelected != null)
+                        {
+                            if (point == closestSelected)
+                                selected = true;
+                        }
+                        else
+                            selected = mEditContext.IsSelected(point) || mEditContext.IsSelected(point.mControl);
+
+                        if (selected)
+                        {
+                            selectedPoint = point;
+                            if ((ImGui.GetMousePos() - contPos2D).Length() < 10.0f)
+                                viewport.mHoveredObject = point.mControl;
+                        }
+                    }
+
+                    if (selectedPoint != null && (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace))))
+                    {
+                        if (mEditContext.GetObjectCountOfType<CourseRail.CourseRailPoint>() > 1)
+                        {
+                            var railPoints = mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().ToArray();
+                            multiRailDelete = true;
+                            foreach (var point in railPoints)
+                            {
+                                if (rail.mPoints.Contains(point))
+                                    deleteList.Add((rail, point));
+                            }
+                        }
+                        else
+                            mEditContext.DeleteRailPoint(rail, selectedPoint);
+                    }
+
+                    bool add_point = ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(0) && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>();
+
+                    //Insert point to existing rail
+                    if (selectedPoint != null && add_point)
+                    {
+                        var index = rail.mPoints.IndexOf(selectedPoint);
+                        var newPoint = new CourseRail.CourseRailPoint(selectedPoint, rail);
+                        rail.addRailPoint(index, newPoint, mEditContext, viewport);
+
+                    }
+                    //Add first point to rail
+                    else if (rail_selected && add_point)
+                    {
+                        var newPoint = new CourseRail.CourseRailPoint(rail.mType, rail);
+                        rail.addRailPoint(-1, newPoint, mEditContext, viewport);
+                    }
+                }
+
+                if (multiRailDelete)
+                {
+                    Console.WriteLine("Batch deleting " + deleteList.Count + " rail points");
+                    var batch = mEditContext.BeginBatchAction();
+
+                    foreach (var (rail, point) in deleteList)
+                    {
+                        //var revertible = rail.mPoints.RevertableRemove(point);
+                        //mEditContext.CommitAction(revertible);
+                    }
+
+                    batch.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
+                    multiRailDelete = false;
+                    deleteList.Clear();
+                }
+
+                // Draw Rails to the Viewport
+                viewport.mDrawList.Flags &= ~ImDrawListFlags.AntiAliasedLines;
+                foreach (CourseRail rail in mArea.mRailHolder.mRails)
+                {
+
+                    bool selected = mEditContext.IsSelected(rail);
+
+                    if (selected && rail.mPoints.Count == 0 && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift)
+                    {
+                        System.Numerics.Vector3 pos = viewport.ScreenToWorld(ImGui.GetMousePos());
+
+                        pos.X = MathF.Round(pos.X * 2) / 2;
+                        pos.Y = MathF.Round(pos.Y * 2) / 2;
+
+                        Vector2 pos2D = viewport.WorldToScreen(pos);
+
+                        viewport.mDrawList.AddCircleFilled(pos2D, pointSize, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)));
+
+                        continue;
+                    }
+
+                    if (rail.mPoints.Count == 0)
+                        continue;
+
+                    var rail_color = selected ? ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) : color;
+
+                    List<Vector2> pointsList = [];
+
+                    var segmentCount = rail.mPoints.Count;
+                    if (!rail.mIsClosed)
+                        segmentCount--;
+
+                    viewport.mDrawList.PathLineTo(viewport.WorldToScreen(rail.mPoints[0].mTranslation));
+                    for (int i = 0; i < segmentCount; i++)
+                    {
+                        var pointA = rail.mPoints[i];
+                        var pointB = rail.mPoints[(i + 1) % rail.mPoints.Count];
+
+                        var posA2D = viewport.WorldToScreen(pointA.mTranslation);
+                        var posB2D = viewport.WorldToScreen(pointB.mTranslation);
+
+                        Vector2 cpOutA2D = posA2D;
+                        Vector2 cpInB2D = posB2D;
+
+                        if (pointA.mIsCurve)
+                            cpOutA2D = viewport.WorldToScreen(pointA.mControl.mTranslation);
+
+                        if (pointB.mIsCurve)
+                            cpInB2D = viewport.WorldToScreen(pointB.mTranslation - (pointB.mControl.mTranslation - pointB.mTranslation));
+
+                        if (cpOutA2D == posA2D && cpInB2D == posB2D)
+                        {
+                            viewport.mDrawList.PathLineTo(posB2D);
+                            continue;
+                        }
+
+                        viewport.mDrawList.PathBezierCubicCurveTo(cpOutA2D, cpInB2D, posB2D);
+                    }
+
+                    float thickness = viewport.mHoveredObject == rail ? 4f : 3.5f;
+
+                    viewport.mDrawList.PathStroke(rail_color, ImDrawFlags.None, thickness);
+                    float closestDist = float.MaxValue;
+
+                    Vector2 mouse = ImGui.GetMousePos();
+
+                    closestSelected = null;
+
+                    foreach (var pnt in rail.mPoints)
+                    {
+                        bool point_selected = mEditContext.IsSelected(pnt) || mEditContext.IsSelected(pnt.mControl);
+                        if (!point_selected)
+                            continue;
+
+                        Vector2 pos2D = viewport.WorldToScreen(pnt.mTranslation);
+                        float dist = Vector2.Distance(pos2D, mouse);
+
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closestSelected = pnt;
+                        }
+                    }
+
+                    foreach (var pnt in rail.mPoints)
+                    {
+                        bool point_selected = mEditContext.IsSelected(pnt) || mEditContext.IsSelected(pnt.mControl);
+                        var rail_point_color = point_selected ? ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) : color;
+                        var size = 10.0f;
+
+                        Vector2 pos2D = viewport.WorldToScreen(pnt.mTranslation);
+                        viewport.mDrawList.AddCircleFilled(pos2D, size, rail_point_color);
+
+                        if (viewport.mHoveredObject == pnt)
+                            viewport.mDrawList.AddCircle(pos2D, 15.0f, rail_point_color, 10, 1.5f);
+
+                        pointsList.Add(pos2D);
+
+                        if (pnt == closestSelected && ImGui.GetIO().KeyAlt && !ImGui.IsMouseDragging(ImGuiMouseButton.Left) && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>())
+                        {
+                            System.Numerics.Vector3 previewPos = viewport.ScreenToWorld(mouse);
+
+                            previewPos.X = MathF.Round(previewPos.X * 2) / 2;
+                            previewPos.Y = MathF.Round(previewPos.Y * 2) / 2;
+                            previewPos.Z = pnt.mTranslation.Z;
+
+                            Vector2 preview2D = viewport.WorldToScreen(previewPos);
+
+                            viewport.mDrawList.AddLine(pos2D, preview2D, rail_point_color, 2.5f);
+                            viewport.mDrawList.AddCircleFilled(preview2D, size, rail_point_color);
+                        }
+
+                        if (point_selected && pnt.mIsCurve)
+                        {
+                            var contPos2D = viewport.WorldToScreen(pnt.mControl.mTranslation);
+                            viewport.mDrawList.AddLine(pos2D, contPos2D, rail_point_color, thickness);
+                            viewport.mDrawList.AddCircleFilled(contPos2D, size, rail_point_color);
+
+                            if (viewport.mHoveredObject == pnt.mControl)
+                                viewport.mDrawList.AddCircle(contPos2D, 15.0f, rail_point_color, 10, 1.5f);
+                        }
+
+                        if (viewport.mMultiSelecting)
+                        {
+                            float pntX = pnt.mTranslation.X;
+                            float pntY = pnt.mTranslation.Y;
+
+                            viewport.isInMultiSelectBox(new Vector2(pntX, pntY), pnt);
+                        }
+                    }
+
+                }
+                viewport.mDrawList.Flags |= ImDrawListFlags.AntiAliasedLines;
+            }
+        }
+
+        internal void addRailPoint(int index, CourseRailPoint newPoint, CourseAreaEditContext mEditContext, LevelViewport viewport)
+        {
+            System.Numerics.Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
+            float zCord = 0;
+            if (index != -1)
+            {
+                zCord = newPoint.mTranslation.Z;
+            }
+            newPoint.mTranslation = new(
+                MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,
+                MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2,
+                zCord);
+
+            newPoint.mControl.mTranslation = newPoint.mTranslation + new System.Numerics.Vector3(0, 1, 0);
+
+
+            if (mPoints.Count - 1 == index || index == -1)
+                mEditContext.AddRailPoint(this, newPoint);
+            else
+            {
+                (float distance, int index) min = (float.PositiveInfinity, -1);
+
+                if (index != 0)
+                {
+                    for (int i = 0; i < mPoints.Count - 1; i++)
+                    {
+                        var pointA = mPoints[i].mTranslation;
+                        var pointB = mPoints[i + 1].mTranslation;
+
+                        var ab = pointB - pointA;
+                        var length = ab.Length();
+                        if (length < 0.0001f)
+                            continue;
+
+                        var dir = ab / length;
+
+                        var t = System.Numerics.Vector3.Dot(posVec - pointA, dir) / length;
+                        if (t < 0 || t > 1)
+                            continue;
+
+                        var normal = System.Numerics.Vector3.Normalize(System.Numerics.Vector3.Cross(dir, System.Numerics.Vector3.UnitZ));
+                        float distance = MathF.Abs(System.Numerics.Vector3.Dot(posVec - pointA, normal));
+
+                        if (distance <= min.distance)
+                            min = (distance, i + 1);
+
+                    }
+                }
+                else
+                    min.index = 0;
+
+                mEditContext.InsertRailPoint(this, newPoint, min.index);
+            }
+            mEditContext.DeselectAll();
+            mEditContext.Select(newPoint);
+            viewport.mHoveredObject = newPoint;
         }
 
         public void RegenerateParameters()

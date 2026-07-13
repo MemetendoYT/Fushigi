@@ -1915,7 +1915,8 @@ namespace Fushigi.ui.widgets
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-
+                      
+                           
                             if (param == "ChildActorSelectName" && actor.mActorChildRef != null)
                             {
                                 try
@@ -1950,6 +1951,58 @@ namespace Fushigi.ui.widgets
                                         actor.mActorParameters[param] = val_string;
                                     }
                                 }
+                            }
+                            else if (param == "RailMoveParam") {
+
+                                var ActorParam = "HasRailMovePreMoveAction";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "HasRailMoveArriveAction";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "IsEmitXLink";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "IsAccDecOnlyEdge";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "RailSpeedType";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.RailSpeedTypes, actor, ActorParam);
+
+                                ActorParam = "CameraVibrationStrength";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.CameraVibrationStrength, actor, ActorParam);
+
+                                ActorParam = "AccelLengthType";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.AccelType, actor, ActorParam);
+
+                                ActorParam = "DecelLengthType";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.AccelType, actor, ActorParam);
+                            }
+                            else if (param == "RequestWonderItem")
+                            {
+                                var ActorParam = "IsPlayerWonderAll";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "IsUsePostWonder";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParamBool(actor, ActorParam);
+
+                                ActorParam = "PlayerWonderType";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.WonderEffects, actor, ActorParam);
+
+                                ActorParam = "MorphPlayerType";
+                                ActorParams.DrawParamText(ActorParam);
+                                ActorParams.DrawParam(ActorParams.WonderMorphs, actor, ActorParam, this);
                             }
                             else
                             {

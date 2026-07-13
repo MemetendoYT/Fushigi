@@ -27,7 +27,7 @@ namespace Fushigi.ui.widgets
         CourseAreaEditContext mEditContext = null;
 
         private List<string> filteredActors = new List<string>();
-        private static CourseActor CollisionActor = new CourseActor("EnemyKuribo", 0, "PlayArea");
+        public static CourseActor CollisionActor = new CourseActor("EnemyKuribo", 0, "PlayArea");
         private float prevFront;
         private uint capsuleColor = ImGui.ColorConvertFloat4ToU32(new(0.125f, 0.988f, 0.561f, 0.4f));
 
@@ -47,17 +47,182 @@ namespace Fushigi.ui.widgets
 
             if (viewport != null)
             {
-                //if (!hasSetCamera)
-                //{
-                //    viewport.Camera.Distance = 10;
-                //    hasSetCamera = true;
-                //}
-                viewport.DrawCollisionVP(size, delta, CollisionActor, this);
+                DrawCollisionVP(size, delta, CollisionActor, viewport);
 
             }
             ImGui.End();
         }
+        internal void DrawCollisionVP(Vector2 size, double deltaSeconds, CourseActor actor, LevelViewport viewport)
+        {
+            RightClickMenu(actor);
+            SelectionPanel(mEditContext);
+            var io = ImGui.GetIO();
+            float fps = 1.0f / io.DeltaTime;
 
+
+            Vector2 mouse = ImGui.GetMousePos();
+            Vector3 world = viewport.ScreenToWorld(mouse);
+
+            viewport.mTopLeft = ImGui.GetCursorScreenPos();
+
+            ImGui.InvisibleButton("canvas2", size,
+                ImGuiButtonFlags.MouseButtonLeft | ImGuiButtonFlags.MouseButtonRight | ImGuiButtonFlags.MouseButtonMiddle);
+
+            bool isViewportLeftClicked = ImGui.IsItemDeactivated() && ImGui.IsMouseReleased(ImGuiMouseButton.Left) &&
+              ImGui.GetMouseDragDelta().Length() < 5;
+            viewport.IsViewportHovered = viewport.IsViewportHovered = ImGui.IsWindowHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem);
+            viewport.IsViewportActive = ImGui.IsItemActive();
+
+            viewport.ProcessModifiers();
+
+            viewport.mSize = size;
+            viewport.mDrawList = ImGui.GetWindowDrawList();
+            ImGui.PushClipRect(viewport.mTopLeft, viewport.mTopLeft + size, true);
+
+            vp3D.HandleCameraControls(deltaSeconds, viewport);
+
+            if (viewport.Camera.Width != viewport.mSize.X || viewport.Camera.Height != viewport.mSize.Y)
+            {
+                viewport.Camera.Width = viewport.mSize.X;
+                viewport.Camera.Height = viewport.mSize.Y;
+            }
+
+            if (!viewport.Camera.UpdateMatrices())
+                return;
+
+            viewport.DrawScene3D(size, null);
+
+            if (viewport.ShowGrid)
+                DrawGrid(viewport);
+
+
+            vp3D.Gizmos(viewport.IsViewportHovered, isViewportLeftClicked, out bool isAnyGizmoHovered, viewport);
+
+            viewport.Selection();
+
+            DrawActorCollisionPoop(actor, mEditContext, viewport);
+
+            if (ImGui.IsKeyPressed(ImGuiKey.Delete))
+            {
+                var actorPack = actor.mActorPack.ShapeParams;
+                foreach (var shape in mEditContext.GetSelectedObjects<DefaultShape>().ToArray())
+                {
+                    switch (shape)
+                    {
+                        case Box Box:
+                            actorPack.mBox.Remove(Box);
+                            break;
+                        case Sphere Sphere:
+                            actorPack.mSphere.Remove(Sphere);
+                            break;
+                        case PolytopeVertex vertex:
+                            vertex.Parent.mergeList.Remove(vertex);
+                            break;
+                    }
+                }
+
+            }
+        }
+        internal static void HandleShapeTranslation(Vector3 StartingTrans, Vector3 CurrentTrans, CourseAreaEditContext mEditContext)
+        {
+            foreach (var shape in mEditContext.GetSelectedObjects<DefaultShape>())
+            {
+                Vector3 relativePos = shape.mStartingTrans - StartingTrans;
+
+                if (shape is PolytopeVertex vertex)
+                {
+                    vertex.X = CurrentTrans.X + relativePos.X;
+                    vertex.Y = CurrentTrans.Y + relativePos.Y;
+                }
+                else if (shape is CapsulePoint point)
+                {
+                    var capsule = point.Parent;
+
+                    Vector3 worldTarget = CurrentTrans + relativePos;
+                    Vector3 localTarget = CollisionEditor.InverseTranslatePoint(worldTarget, capsule);
+
+                    point.X = localTarget.X;
+                    point.Y = localTarget.Y;
+                    point.Z = localTarget.Z;
+                }
+
+                else
+                {
+                    var shapeCenter = shape.Center;
+                    shapeCenter.X = CurrentTrans.X + relativePos.X;
+                    shapeCenter.Y = CurrentTrans.Y + relativePos.Y;
+                    shapeCenter.Z = CurrentTrans.Z + relativePos.Z;
+                    shape.Center = shapeCenter;
+                }
+            }
+        }
+
+        internal void RightClickMenu(CourseActor actor)
+        {
+            var shapeParams = actor.mActorPack.ShapeParams;
+            if ((ImGui.IsKeyPressed(ImGuiKey.A) || ImGui.IsKeyPressed(ImGuiKey.Menu)) && viewport.IsViewportHovered)
+            {
+                ImGui.OpenPopup("ViewportContextMenu");
+            }
+
+            if (ImGui.BeginPopup("ViewportContextMenu"))
+            {
+                if (mEditContext.IsSingleObjectSelected(out PolytopeVertex vertex))
+                {
+                    if (ImGui.MenuItem("Add Point"))
+                    {
+                        vertex.Parent.mergeList.Add(new PolytopeVertex
+                        {
+                            Z = vertex.Parent.zFront
+                        });
+                    }
+                }
+                if (ImGui.BeginMenu("Add"))
+                {
+                    if (ImGui.MenuItem("Sphere"))
+                    {
+
+                        if (shapeParams.mSphere == null)
+                            shapeParams.mSphere = new List<Sphere>();
+
+                        shapeParams.mSphere.Add(new Sphere
+                        {
+                            Radius = 1.0f,
+                            mPresets = new List<string> { "Dummy" },
+                        });
+                    }
+
+                    if (ImGui.MenuItem("Polytope"))
+                    {
+                        if (shapeParams.mPoly == null)
+                            shapeParams.mPoly = new List<Polytope>();
+
+                        shapeParams.mPoly.Add(new Polytope
+                        {
+                            mPresets = new List<string> { "Dummy" },
+                            Vertices = new List<PolytopeVertex> { new PolytopeVertex() }
+                        });
+                    }
+
+
+                    if (ImGui.MenuItem("Box"))
+                    {
+                        if (shapeParams.mBox == null)
+                            shapeParams.mBox = new List<Box>();
+
+                        shapeParams.mBox.Add(new Box
+                        {
+                            mPresets = new List<string> { "Dummy" },
+                            mExtents = new Vector3(1, 1, 1)
+                        });
+                    }
+
+                    ImGui.EndMenu();
+
+                }
+                ImGui.EndPopup();
+            }
+        }
         internal void SelectionPanel(CourseAreaEditContext editContext)
         {
             if (!ImGui.Begin("Collision Selection"))
@@ -182,71 +347,19 @@ namespace Fushigi.ui.widgets
             ImGui.End();
         }
 
-
-        internal void RightClickMenu(CourseActor actor)
+        internal void DrawGrid(LevelViewport viewport)
         {
-            var shapeParams = actor.mActorPack.ShapeParams;
-            if ((ImGui.IsKeyPressed(ImGuiKey.A)|| ImGui.IsKeyPressed(ImGuiKey.Menu)) && viewport.IsViewportHovered)
+            var camForward = Vector3.Transform(-Vector3.UnitZ, viewport.Camera.Rotation);
+            var camUp = Vector3.Transform(Vector3.UnitY, viewport.Camera.Rotation);
+
+            if ((camForward.X < -0.7 && camForward.X > -0.8) || (camForward.X > 0.7 && camForward.X < 0.8) ||
+                (camForward.Y < -0.7 && camForward.Y > -0.8) || (camForward.Y > 0.7 && camForward.Y < 0.8))
+                Viewport3D.CameraSnapped = false;
+
+            if (Viewport3D.CameraSnapped)
             {
-                ImGui.OpenPopup("ViewportContextMenu");
-            }
-
-            if (ImGui.BeginPopup("ViewportContextMenu"))
-            {
-                if(mEditContext.IsSingleObjectSelected(out PolytopeVertex vertex))
-                {
-                    if (ImGui.MenuItem("Add Point"))
-                    {
-                        vertex.Parent.mergeList.Add(new PolytopeVertex
-                        {
-                            Z = vertex.Parent.zFront
-                        });
-                    }
-                }
-                if (ImGui.BeginMenu("Add"))
-                {
-                    if (ImGui.MenuItem("Sphere"))
-                    {
-
-                        if (shapeParams.mSphere == null)
-                            shapeParams.mSphere = new List<Sphere>();
-
-                        shapeParams.mSphere.Add(new Sphere
-                        {
-                            Radius = 1.0f,
-                            mPresets = new List<string> { "Dummy" },
-                        });
-                    }
-
-                    if (ImGui.MenuItem("Polytope"))
-                    {
-                        if (shapeParams.mPoly == null)
-                            shapeParams.mPoly = new List<Polytope>();
-
-                        shapeParams.mPoly.Add(new Polytope
-                        {
-                            mPresets = new List<string> { "Dummy" },
-                            Vertices = new List<PolytopeVertex> { new PolytopeVertex()}
-                        });
-                    }
-
-
-                    if (ImGui.MenuItem("Box"))
-                    {
-                        if (shapeParams.mBox == null)
-                            shapeParams.mBox = new List<Box>();
-
-                        shapeParams.mBox.Add(new Box
-                        {
-                            mPresets = new List<string> { "Dummy" },
-                            mExtents = new Vector3(1, 1, 1)
-                        });
-                    }
-
-                    ImGui.EndMenu();
-
-                }
-                ImGui.EndPopup();
+                viewport.DrawGridLines(false, 20f, 10);
+                viewport.DrawGridLines(true, 20f, 10);
             }
         }
         internal async Task InitLevel(GLTaskScheduler scheduler)
