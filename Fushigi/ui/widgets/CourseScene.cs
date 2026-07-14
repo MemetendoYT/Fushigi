@@ -1916,7 +1916,7 @@ namespace Fushigi.ui.widgets
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
 
-                           
+
                             if (param == "ChildActorSelectName" && actor.mActorChildRef != null)
                             {
                                 try
@@ -1952,98 +1952,26 @@ namespace Fushigi.ui.widgets
                                     }
                                 }
                             }
-                            else if (param == "RailMoveParam") { 
-                                var ActorParam = "HasRailMovePreMoveAction";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "HasRailMoveArriveAction";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "IsEmitXLink";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "IsAccDecOnlyEdge";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "RailSpeedType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.RailSpeedTypes, actor, ActorParam);
-
-                                ActorParam = "CameraQuakeDirType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawInt(actor, ActorParam);
-
-                                ActorParam = "RailModelVibrateType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawInt(actor, ActorParam);
-
-                                ActorParam = "AccelLengthType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.AccelType, actor, ActorParam);
-
-                                ActorParam = "DecelLengthType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.AccelType, actor, ActorParam);
-                            }
+                            else if (param == "TurnCompnentCommon")
+                                ActorParams.Params(actor, param);
+                            else if (param == "RailMoveParam")
+                                ActorParams.Params(actor, param);
                             else if (param == "RequestWonderItem")
-                            {
-                                var ActorParam = "IsPlayerWonderAll";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "IsUsePostWonder";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "WonderTime";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawInt(actor, ActorParam);
-
-                                ActorParam = "PlayerWonderType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.WonderEffects, actor, ActorParam);
-
-                                ActorParam = "MorphPlayerType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.WonderMorphs, actor, ActorParam, this);
-                            }
+                                ActorParams.Params(actor, param, this);
                             else if (param == "AreaTargetTypeSelect")
-                            {
-                                var ActorParam = "IsAllLocalPlayer";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
+                                ActorParams.Params(actor, param);
 
-                                ActorParam = "IsReferenceLinkName";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParamBool(actor, ActorParam);
-
-                                ActorParam = "SwitchHitType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.SwitchHitType, actor, ActorParam);
-
-                                ActorParam = "SwitchOnOffType";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.SwitchOnOffType, actor, ActorParam);
-
-                                ActorParam = "ActorSituation";
-                                ActorParams.DrawParamText(ActorParam);
-                                ActorParams.DrawParam(ActorParams.ActorSituation, actor, ActorParam);
-                            }
                             else
                             {
                                 foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
                                 {
-                                    Console.WriteLine(actor.mActorParameters[pair.Key] + " " + pair.Value);
+                                    //Console.WriteLine(actor.mActorParameters[pair.Key] + " " + pair.Key);
                                     string id = $"##{pair.Key}";
 
                                     ImGui.AlignTextToFramePadding();
                                     ImGui.Text(pair.Key);
                                     //keyPair = pair.Value;
-                                    
+
                                     ImGui.TableNextColumn();
                                     ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
 
@@ -5106,6 +5034,7 @@ namespace Fushigi.ui.widgets
         private bool showActorVisibility;
         private string keyPair;
         private int gateID;
+        private bool printOnce = false;
 
         public bool attemptSave()
         {

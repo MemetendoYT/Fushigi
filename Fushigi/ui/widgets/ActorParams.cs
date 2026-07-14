@@ -1,4 +1,5 @@
 ﻿using Fushigi.course;
+using Fushigi.param;
 using Fushigi.ui.widgets;
 using ImGuiNET;
 
@@ -79,8 +80,8 @@ public class ActorParams
 
     public static readonly Dictionary<string, string> SwitchOnOffType = new Dictionary<string, string>()
     {
-        { "Only Trigger Once", "0" },
-        { "Only Trigger While Conditions Are Satisfied", "1" },
+        { "Once", "0" },
+        { "While Conditions Are Satisfied", "1" },
         { "Unknown", "2" }
     };
 
@@ -89,6 +90,35 @@ public class ActorParams
         { "Always", "0" },
         { "Only when actor/player is on ground", "1" },
         { "Unknown", "2" }
+    };
+
+    public static readonly Dictionary<string, string> InitDir = new Dictionary<string, string>()
+    {
+        { "Right", "0" },
+        { "Left", "1" },
+        { "Up", "2" },
+        { "Down", "3" },
+        { "Towards Player", "4" },
+    };
+
+    public static readonly Dictionary<string, object> MapParams = new()
+    {
+        // Rail move Param
+        { "RailSpeedType", RailSpeedTypes },
+        { "AccelLengthType", AccelType },
+        { "DecelLengthType", AccelType },
+
+        // Request Wonder Item 
+        { "PlayerWonderType", WonderEffects },
+        { "MorphPlayerType", WonderMorphs },
+
+        // AreaTargetTypeSelect 
+        { "SwitchHitType", SwitchHitType },
+        { "SwitchOnOffType", SwitchOnOffType },
+        { "ActorSituation", ActorSituation },
+
+        // TurnCompnentCommon
+        { "InitDir", InitDir }
     };
 
     public static readonly Dictionary<string, string> ActorParamNames = new Dictionary<string, string>()
@@ -114,7 +144,10 @@ public class ActorParams
         { "IsReferenceLinkName", "Reference Link Name" },
         { "SwitchHitType", "Switch Hit Type" },
         { "SwitchOnOffType", "Switch On Off Type" },
-        { "ActorSituation", "Actor Situation" }
+        { "ActorSituation", "Actor Situation" },
+
+        // TurnCompnentCommon
+        { "InitDir", "Initial Direction" }
     };
 
     public static readonly Dictionary<string, string> Tooltips = new Dictionary<string, string>()
@@ -148,20 +181,38 @@ public class ActorParams
     {
         ImGui.TableNextRow();
         ImGui.TableSetColumnIndex(0);
-        string text = ActorParamNames[ActorParam];
-        ImGui.Text(text);
+
+        if (ActorParamNames.TryGetValue(ActorParam, out var name))
+            ImGui.Text(name);
+        else
+            ImGui.Text(ActorParam);
 
         if (ImGui.IsItemHovered())
-            ImGui.SetTooltip(Tooltips[ActorParam]);
-    }
+        {
+            if (Tooltips.TryGetValue(ActorParam, out var tooltip))
+                ImGui.SetTooltip(tooltip);
+            else
+                ImGui.SetTooltip("No tooltip available.");
 
+        }
+    }
+    public static void DrawFloat(CourseActor actor, string ActorParam)
+    {
+        ImGui.TableNextColumn();
+        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+        float selected = (float)actor.mActorParameters[ActorParam];
+        if (ImGui.InputFloat($"##{ActorParam}", ref selected))
+            actor.mActorParameters[ActorParam] = selected;
+        ImGui.PopItemWidth();
+    }
     public static void DrawInt(CourseActor actor, string ActorParam)
     {
-        ImGui.TableNextRow();
-        ImGui.TableSetColumnIndex(0);
+        ImGui.TableNextColumn();
+        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         int selected = (int)actor.mActorParameters[ActorParam];
-        //if (ImGui.InputInt($"##{ActorParam}", ref selected))
-        //    actor.mActorParameters[ActorParam] = selected;
+        if (ImGui.InputInt($"##{ActorParam}", ref selected))
+            actor.mActorParameters[ActorParam] = selected;
+        ImGui.PopItemWidth();
     }
     public static void DrawParamBool(CourseActor actor, string ActorParam)
     {
@@ -171,7 +222,7 @@ public class ActorParams
 
         if (ImGui.Checkbox($"##{ActorParam}", ref selected))
             actor.mActorParameters[ActorParam] = selected;
-        
+
         ImGui.PopItemWidth();
     }
     internal static void DrawParam(List<string> list, CourseActor actor, string ActorParam)
@@ -187,19 +238,54 @@ public class ActorParams
         ImGui.PopItemWidth();
     }
 
-    internal static void DrawParam(Dictionary<string, string> list, CourseActor actor, string ActorParam, CourseScene CourseScene = null)
+    internal static void DrawParam(Dictionary<string, string> list, CourseActor actor, string ActorParam, CourseScene CourseScene)
     {
         ImGui.TableNextColumn();
         ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         int selected = list.Values.ToList().IndexOf(actor.mActorParameters[ActorParam].ToString());
-
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.Keys.ToArray(), list.Count))
         {
             actor.mActorParameters[ActorParam] = list.Values.ToArray()[selected];
-
             if (ActorParam == "MorphPlayerType")
                 CourseScene.course.mCourseInfo.CoursePlayerMorphType = CourseSettings.PlayerMorphTypeReverse[list.Keys.ToArray()[selected]];
         }
         ImGui.PopItemWidth();
+    }
+
+    internal static void Params(CourseActor actor, string param, CourseScene CourseScene = null)
+    {
+        foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
+        {
+            string paramName = pair.Key;
+
+            var value = actor.mActorParameters[paramName];
+
+            DrawParamText(paramName);
+    
+            if (MapParams.TryGetValue(paramName, out var options))
+            {
+                switch (options)
+                {
+                    case Dictionary<string, string> dictOptions:
+                        DrawParam(dictOptions, actor, paramName, CourseScene);
+                        break;
+                    case List<string> listOptions:
+                        DrawParam(listOptions, actor, paramName);
+                        break;
+                }
+            }
+            else if (value is bool)
+            {
+                DrawParamBool(actor, paramName);
+            }
+            else if (value is int)
+            {
+                DrawInt(actor, paramName);
+            }
+            else if (value is float)
+            {
+                DrawFloat(actor, paramName);
+            }
+        }
     }
 }
