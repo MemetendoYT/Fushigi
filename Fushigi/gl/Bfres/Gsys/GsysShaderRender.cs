@@ -79,8 +79,13 @@ namespace Fushigi.gl.Bfres
             //  Console.WriteLine($"{this.Material.Name} programIndex {programIndex}");
 
             if (programIndex == -1)
+            {
                 //Fallback if shader is not found
-                programIndex = 6390;
+                //throw new Exception("Shader Not Found");
+                //programIndex = 0;
+                //programIndex = 6390;
+                return null;
+            }
 
             return ShaderModel.Programs[programIndex];
         }

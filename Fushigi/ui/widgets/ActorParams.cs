@@ -101,6 +101,27 @@ public class ActorParams
         { "Towards Player", "4" },
     };
 
+    public static readonly Dictionary<string, string> EdgeTypes = new Dictionary<string, string>()
+    {
+        { "Reverse", "0" },
+        { "Open End", "1" },
+        { "Warp to first point", "2" },
+        { "Stop at end", "3" }
+    };
+
+    public static readonly Dictionary<string, string> WonderVisibility = new Dictionary<string, string>()
+    {
+        { "Exists at All times", "0" },
+        { "Only exists in Wonder Effects", "1" },
+    };
+
+    public static readonly Dictionary<string, string> MovableDir = new Dictionary<string, string>()
+    {
+        { "Towards Point 0", "-1" },
+        { "Any", "0" },
+        { "Away from Point 0", "1" }
+    };
+
     public static readonly Dictionary<string, object> MapParams = new()
     {
         // Rail move Param
@@ -118,8 +139,16 @@ public class ActorParams
         { "ActorSituation", ActorSituation },
 
         // TurnCompnentCommon
-        { "InitDir", InitDir }
+        { "InitDir", InitDir },
+
+        // Default Rail
+        { "StartEdgeType", EdgeTypes },
+        { "EndEdgeType", EdgeTypes },
+        { "WonderVisibilityType", WonderVisibility },
+        { "MovableDir", MovableDir }
     };
+
+
 
     public static readonly Dictionary<string, string> ActorParamNames = new Dictionary<string, string>()
     {
@@ -147,7 +176,15 @@ public class ActorParams
         { "ActorSituation", "Actor Situation" },
 
         // TurnCompnentCommon
-        { "InitDir", "Initial Direction" }
+        { "InitDir", "Initial Direction" },
+
+        // Default Rail
+        { "StartEdgeType", "Start Behavior" },
+        { "IsEnableRailChain", "Rail Chain" },
+        { "EndEdgeType", "End Behavior" },
+        { "IsEntity", "Is Visible" },
+        { "WonderVisibilityType", "Wonder Visibility" },
+        { "MovableDir", "Direction" }
     };
 
     public static readonly Dictionary<string, string> Tooltips = new Dictionary<string, string>()
@@ -174,7 +211,16 @@ public class ActorParams
                                  "\nreferenced actors to trigger the area." },
         { "SwitchHitType", "Sets what triggers the area." },
         { "SwitchOnOffType", "Sets the behaviour of the area." },
-        { "ActorSituation", "What the actor has to do to trigger the area." }
+        { "ActorSituation", "What the actor has to do to trigger the area." },
+
+        // Default Rail 
+        { "IsEnableRailChain", "Allows actors to fall onto rail from a different rail" },
+        { "StartEdgeType", "Actor behaviour when they reach the start of the rail." },
+        { "EndEdgeType", "Actor behaviour when they reach the end of the rail." },
+        { "IsEntity", "If set to true, the rail will be visible for the player." +
+                      "\nThe look will depend on the rail type" },
+        { "WonderVisibilityType", "If the rail exists during wonder effects." },
+        { "MovableDir", "What direction actors can move along the rail" }
     };
 
     public static void DrawParamText(string ActorParam)
@@ -195,11 +241,11 @@ public class ActorParams
                 ImGui.SetTooltip("No tooltip available.");
 
         }
+        ImGui.TableNextColumn();
+        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
     }
     public static void DrawFloat(CourseActor actor, string ActorParam)
     {
-        ImGui.TableNextColumn();
-        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         float selected = (float)actor.mActorParameters[ActorParam];
         if (ImGui.InputFloat($"##{ActorParam}", ref selected))
             actor.mActorParameters[ActorParam] = selected;
@@ -207,17 +253,21 @@ public class ActorParams
     }
     public static void DrawInt(CourseActor actor, string ActorParam)
     {
-        ImGui.TableNextColumn();
-        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         int selected = (int)actor.mActorParameters[ActorParam];
         if (ImGui.InputInt($"##{ActorParam}", ref selected))
             actor.mActorParameters[ActorParam] = selected;
         ImGui.PopItemWidth();
     }
+
+    public static void DrawIntRail(CourseRail rail, string RailParam)
+    {
+        int selected = (int)rail.mParameters[RailParam];
+        if (ImGui.InputInt($"##{RailParam}", ref selected))
+            rail.mParameters[RailParam] = selected;
+        ImGui.PopItemWidth();
+    }
     public static void DrawParamBool(CourseActor actor, string ActorParam)
     {
-        ImGui.TableNextColumn();
-        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         bool selected = (bool)actor.mActorParameters[ActorParam];
 
         if (ImGui.Checkbox($"##{ActorParam}", ref selected))
@@ -227,8 +277,6 @@ public class ActorParams
     }
     internal static void DrawParam(List<string> list, CourseActor actor, string ActorParam)
     {
-        ImGui.TableNextColumn();
-        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         int selected = list.IndexOf(actor.mActorParameters[ActorParam].ToString());
 
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.ToArray(), list.Count))
@@ -238,10 +286,17 @@ public class ActorParams
         ImGui.PopItemWidth();
     }
 
+    internal static void DrawRailParam(Dictionary<string, string> list, CourseRail rail, string RailParam)
+    {
+        int selected = list.Values.ToList().IndexOf(rail.mParameters[RailParam].ToString());
+        if (ImGui.Combo($"##{RailParam}", ref selected, list.Keys.ToArray(), list.Count))
+           rail.mParameters[RailParam] = list.Values.ToArray()[selected];
+        
+        ImGui.PopItemWidth();
+    }
+
     internal static void DrawParam(Dictionary<string, string> list, CourseActor actor, string ActorParam, CourseScene CourseScene)
     {
-        ImGui.TableNextColumn();
-        ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
         int selected = list.Values.ToList().IndexOf(actor.mActorParameters[ActorParam].ToString());
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.Keys.ToArray(), list.Count))
         {
@@ -251,8 +306,51 @@ public class ActorParams
         }
         ImGui.PopItemWidth();
     }
+    internal static void DrawRailParams(CourseRail mSelectedRail)
+    {
+        foreach (KeyValuePair<string, object> param in mSelectedRail.mParameters)
+        {
 
-    internal static void Params(CourseActor actor, string param, CourseScene CourseScene = null)
+            string type = param.Value.GetType().ToString();
+            DrawParamText(param.Key);
+
+            if (MapParams.TryGetValue(param.Key, out var options))
+            {
+                switch (options)
+                {
+                    case Dictionary<string, string> dictOptions:
+                        DrawRailParam(dictOptions, mSelectedRail, param.Key);
+                        break;
+                        //case List<string> listOptions:
+                        //    DrawParam(listOptions, actor, paramName);
+                        //    break;
+                }
+            }
+            else
+            {
+                switch (type)
+                {
+                    case "System.Int32":
+                        int int_val = (int)param.Value;
+                        if (ImGui.InputInt($"##{param.Key}", ref int_val))
+                        {
+                            mSelectedRail.mParameters[param.Key] = int_val;
+                        }
+                        break;
+                    case "System.Boolean":
+                        bool bool_val = (bool)param.Value;
+                        if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
+                        {
+                            mSelectedRail.mParameters[param.Key] = bool_val;
+                        }
+                        break;
+                }
+            }
+            ImGui.TableNextColumn();
+
+        }
+    }
+    internal static void DrawActorParams(CourseActor actor, string param, CourseScene CourseScene = null)
     {
         foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
         {

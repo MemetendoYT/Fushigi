@@ -3,6 +3,7 @@ using Fushigi.Bfres.Shaders;
 using Fushigi.gl.Shaders;
 using Fushigi.util;
 using Newtonsoft.Json.Linq;
+using Silk.NET.GLFW;
 using Silk.NET.Input;
 using Silk.NET.OpenGL;
 using Silk.NET.SDL;
@@ -168,9 +169,12 @@ namespace Fushigi.gl.Bfres
         }
 
         public virtual void Render(GL gl, BfresRender renderer, BfresRender.BfresModel model, Matrix4x4 transform, Camera camera)
-        {          
-            if (ShaderProgram == null)
-                return;
+        {
+            if (ShaderProgram == null || canOverride) {
+                ShaderInfo = null;
+                canOverride = true;
+                ShaderProgram = ShaderModel.Programs[shaderValue];
+            }
 
             SkeletonBlock = model.SkeletonBuffer;
 
@@ -429,7 +433,9 @@ namespace Fushigi.gl.Bfres
             { TexWrap.Clamp, TextureWrapMode.ClampToEdge },
             { TexWrap.ClampToEdge, TextureWrapMode.ClampToEdge },
         };
-        
+        private bool canOverride = false;
+        public static int shaderValue;
+
         public virtual void BindBindlessTextures(GL gl, GLShader shader)
         {
 

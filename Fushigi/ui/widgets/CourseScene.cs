@@ -950,6 +950,15 @@ namespace Fushigi.ui.widgets
                 CourseMiniView();
             }
 
+            ImGui.Begin("Debug", ImGuiWindowFlags.NoCollapse);
+
+            var refInt = BfshaShaderRender.shaderValue;
+            if (ImGui.InputInt("##label ", ref refInt))
+            {
+                BfshaShaderRender.shaderValue = refInt;
+            }
+            ImGui.End();
+
             backupTime += deltaSeconds;
             if (backupTime >= UserSettings.GetBackupFreqMinutes() * 60)
             {
@@ -1953,14 +1962,13 @@ namespace Fushigi.ui.widgets
                                 }
                             }
                             else if (param == "TurnCompnentCommon")
-                                ActorParams.Params(actor, param);
+                                ActorParams.DrawActorParams(actor, param);
                             else if (param == "RailMoveParam")
-                                ActorParams.Params(actor, param);
+                                ActorParams.DrawActorParams(actor, param);
                             else if (param == "RequestWonderItem")
-                                ActorParams.Params(actor, param, this);
+                                ActorParams.DrawActorParams(actor, param, this);
                             else if (param == "AreaTargetTypeSelect")
-                                ActorParams.Params(actor, param);
-
+                                ActorParams.DrawActorParams(actor, param);
                             else
                             {
                                 foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
@@ -2601,19 +2609,21 @@ namespace Fushigi.ui.widgets
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
+                        var actorType = CourseActor.GetActorTypeFromGyaml(actor);
+                        uint color = CourseActor.CourseActorColors[CourseActorType.None];
+                        CourseActor.CourseActorColors.TryGetValue(actorType, out color);
+                        ImGui.PushStyleColor(ImGuiCol.Text, CourseActor.ColorShift(color));
                         if (UserSettings.GetEnableTranslation())
                         {
-                            var actorType = CourseActor.GetActorTypeFromGyaml(actor);
-                            uint color = CourseActor.CourseActorColors[CourseActorType.None];
-                            CourseActor.CourseActorColors.TryGetValue(actorType, out color);
-
                             enActor = translatedActors[i];
-                            ImGui.PushStyleColor(ImGuiCol.Text, CourseActor.ColorShift(color));
                             ImGui.Selectable(enActor);
                             ImGui.PopStyleColor();
                         }
                         else
+                        {
                             ImGui.Selectable(actor);
+                            ImGui.PopStyleColor();
+                        }
 
                         if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
                             mSelectedActor = actor;
@@ -3257,7 +3267,6 @@ namespace Fushigi.ui.widgets
 
                     ImGui.DragFloat3("##Translation", ref mSelectedRailPoint.mTranslation, 0.25f);
 
-
                     ImGui.TableNextColumn();
                     ImGui.AlignTextToFramePadding();
                     ImGui.Text("Curve Control");
@@ -3482,7 +3491,6 @@ namespace Fushigi.ui.widgets
                             {
                                 mSelectedRail.mType = type;
                                 mSelectedRail.RegenerateParameters();
-                                //mSelectedRail = new CourseRail(mSelectedRail.mAreaHash, type);
                             }
                         }
 
@@ -3511,31 +3519,7 @@ namespace Fushigi.ui.widgets
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    foreach (KeyValuePair<string, object> param in mSelectedRail.mParameters)
-                    {
-                        string type = param.Value.GetType().ToString();
-                        ImGui.Text(param.Key);
-                        ImGui.TableNextColumn();
-
-                        switch (type)
-                        {
-                            case "System.Int32":
-                                int int_val = (int)param.Value;
-                                if (ImGui.InputInt($"##{param.Key}", ref int_val))
-                                {
-                                    mSelectedRail.mParameters[param.Key] = int_val;
-                                }
-                                break;
-                            case "System.Boolean":
-                                bool bool_val = (bool)param.Value;
-                                if (ImGui.Checkbox($"##{param.Key}", ref bool_val))
-                                {
-                                    mSelectedRail.mParameters[param.Key] = bool_val;
-                                }
-                                break;
-                        }
-                        ImGui.TableNextColumn();
-                    }
+                    ActorParams.DrawRailParams(mSelectedRail);
                     ImGui.EndTable();
                 }
             }
@@ -4662,6 +4646,7 @@ namespace Fushigi.ui.widgets
                     {
 
                         string actorName = actor.mPackName;
+                        string jpName = actorName;
                         string name = actor.mName;
 
                         if (UserSettings.GetEnableTranslation())
@@ -4675,6 +4660,12 @@ namespace Fushigi.ui.widgets
                         //Check if the node is within the necessary search filter requirements if search is used
                         bool HasText = actorName.IndexOf(mActorSearchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
                                        actorHash.ToString().Equals(mActorSearchText);
+
+                        if(UserSettings.GetEnableTranslation())
+                        {
+                            HasText = actorName.IndexOf(mActorSearchText, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                     actorHash.ToString().Equals(mActorSearchText) || jpName.IndexOf(mActorSearchText, StringComparison.OrdinalIgnoreCase) >= 0;
+                        }
 
                         if (isSearch && !HasText)
                             continue;
