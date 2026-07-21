@@ -21,6 +21,24 @@ public class ActorParams
         { "Very Strong", "2"}
     };
 
+    public static readonly Dictionary<string, string> ChildParameters = new Dictionary<string, string>()
+    {
+        { "None", "None" },
+        { "ItemMushroom_All", "Super Mushroom" },
+        { "ItemDrillSuit_All", "Drill Suit" },
+        { "ItemElephantSuit_All", "Elephant Suit" },
+        { "ItemMushroomOrAwaFlower_All", "Mushroom/Bubble Flower" },
+        { "ItemMushroomOrCoinYellow_All", "Mushroom/Coin" },
+        { "ItemMushroomOrDrillSuit_All", "Mushroom/Drill Suit" },
+        { "ItemMushroomOrElephantSuit_All", "Mushroom/Elephant Suit" },
+        { "EnemyIronBall_Single", "Iron Ball" },
+        { "ItemContinueStar_All", "Star Continue" },
+        { "ItemStar_All", "Star" },
+        { "ObjectCoinYellow_Single", "1 Coin" },
+        { "ObjectPropellerFlower", "Propeller Flower" },
+        { "ObjectScatterRandomCoin_Five", "5 Purple Coins" },
+        { "ObjectScatterRandomCoin_Five", "1 Purple Coin" },
+    };
 
     public static readonly Dictionary<string, string> RailSpeedTypes = new Dictionary<string, string>()
     {
@@ -145,7 +163,10 @@ public class ActorParams
         { "StartEdgeType", EdgeTypes },
         { "EndEdgeType", EdgeTypes },
         { "WonderVisibilityType", WonderVisibility },
-        { "MovableDir", MovableDir }
+        { "MovableDir", MovableDir },
+
+        // ChildActorSelectName
+        { "ChildActorSelectName", ChildParameters }
     };
 
 
@@ -184,7 +205,10 @@ public class ActorParams
         { "EndEdgeType", "End Behavior" },
         { "IsEntity", "Is Visible" },
         { "WonderVisibilityType", "Wonder Visibility" },
-        { "MovableDir", "Direction" }
+        { "MovableDir", "Direction" },
+
+        // ChildActorSelectName
+        { "ChildActorSelectName", "Contents" }
     };
 
     public static readonly Dictionary<string, string> Tooltips = new Dictionary<string, string>()
@@ -306,6 +330,55 @@ public class ActorParams
         }
         ImGui.PopItemWidth();
     }
+
+    internal static void DrawChildParameters(CourseActor actor, string param)
+    {
+        try
+        {
+            string id = $"##{param}";
+            List<string> list = ChildActorParam.GetActorParams(actor.mActorChildRef);
+            int selected = list.IndexOf(actor.mActorParameters[param].ToString());
+
+            List<string> translated = new List<string>();
+            foreach (var child in list)
+            {
+                if (ChildParameters.TryGetValue(child, out var translatedName))
+                {
+                    translated.Add(translatedName);
+                }
+                else
+                {
+                    translated.Add(child);
+                }
+            }
+
+            ImGui.Text("ChildParameters");
+            ImGui.TableNextColumn();
+            ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+            if (ImGui.Combo("##Parameters", ref selected, translated.ToArray(), translated.Count))
+            {
+                actor.mActorParameters[param] = list[selected];
+            }
+            ImGui.PopItemWidth();
+        }
+        catch (Exception ex) 
+        {
+                Console.WriteLine(ex.Message);
+            string id = $"##{param}";
+
+            ImGui.AlignTextToFramePadding();
+            ImGui.Text(param);
+            ImGui.TableNextColumn();
+
+            ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+
+            string val_string = actor.mActorParameters[param].ToString();
+            if (ImGui.InputText(id, ref val_string, 1024))
+            {
+                actor.mActorParameters[param] = val_string;
+            }
+        }
+    }
     internal static void DrawRailParams(CourseRail mSelectedRail)
     {
         foreach (KeyValuePair<string, object> param in mSelectedRail.mParameters)
@@ -352,37 +425,43 @@ public class ActorParams
     }
     internal static void DrawActorParams(CourseActor actor, string param, CourseScene CourseScene = null)
     {
-        foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
+        if (param == "ChildActorSelectName" && actor.mActorChildRef != null)
+            DrawChildParameters(actor, param);
+        else
         {
-            string paramName = pair.Key;
-
-            var value = actor.mActorParameters[paramName];
-
-            DrawParamText(paramName);
-    
-            if (MapParams.TryGetValue(paramName, out var options))
+            foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
             {
-                switch (options)
+                string paramName = pair.Key;
+
+                if (!actor.mActorParameters.TryGetValue(paramName, out var value))
+                    continue;
+
+                DrawParamText(paramName);
+
+                if (MapParams.TryGetValue(paramName, out var options))
                 {
-                    case Dictionary<string, string> dictOptions:
-                        DrawParam(dictOptions, actor, paramName, CourseScene);
-                        break;
-                    case List<string> listOptions:
-                        DrawParam(listOptions, actor, paramName);
-                        break;
+                    switch (options)
+                    {
+                        case Dictionary<string, string> dictOptions:
+                            DrawParam(dictOptions, actor, paramName, CourseScene);
+                            break;
+                        case List<string> listOptions:
+                            DrawParam(listOptions, actor, paramName);
+                            break;
+                    }
                 }
-            }
-            else if (value is bool)
-            {
-                DrawParamBool(actor, paramName);
-            }
-            else if (value is int)
-            {
-                DrawInt(actor, paramName);
-            }
-            else if (value is float)
-            {
-                DrawFloat(actor, paramName);
+                else if (value is bool)
+                {
+                    DrawParamBool(actor, paramName);
+                }
+                else if (value is int)
+                {
+                    DrawInt(actor, paramName);
+                }
+                else if (value is float)
+                {
+                    DrawFloat(actor, paramName);
+                }
             }
         }
     }

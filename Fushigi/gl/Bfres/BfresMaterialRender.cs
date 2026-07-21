@@ -38,6 +38,26 @@ namespace Fushigi.gl.Bfres
             GsysShaderRender.Init(gl, modelRender, meshRender, shape, material);
         }
 
+        //internal BfresMaterialRender GetMaterial(string materialName)
+        //{
+        //    foreach (var mesh in Meshes)
+        //    {
+        //        if (mesh.MaterialRender.Name == materialName)
+        //            return mesh.MaterialRender;
+        //    }
+        //    return null;
+        //}
+
+        public object GetParam(string name)
+        {
+            if (this.Material.ShaderParams.ContainsKey(name))
+            {
+                return this.Material.ShaderParams[name].DataValue;
+            }
+
+            return null;
+        }
+
         public void SetParam(string name, float value)
         {
             if (this.Material.ShaderParams.ContainsKey(name))

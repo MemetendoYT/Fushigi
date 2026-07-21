@@ -790,6 +790,7 @@ namespace Fushigi.ui
 
                     }
 
+
                     ImGui.Separator();
 
                     if (ImGui.MenuItem("Update Translation JSON"))
@@ -923,6 +924,11 @@ namespace Fushigi.ui
                 {
                     saveEditor.Draw();
                 }
+
+                if(EditorMode.editMode == "ShaderEditor")
+                {
+                    shaderEditor.Draw(mGLTaskScheduler, delta, gl);
+                }
             }
 
             if (mIsShowPreferenceWindow)
@@ -959,6 +965,7 @@ namespace Fushigi.ui
         public static string mCurrentLevelName = "";
         CourseScene? mSelectedCourseScene;
         CollisionEditor? collisionEditor = new CollisionEditor();
+        ShaderEditor? shaderEditor = new ShaderEditor();
         MsbtEditor? msbtEditor = new MsbtEditor();
         SaveEditor? saveEditor = new SaveEditor();
         bool mIsShowPreferenceWindow = false;

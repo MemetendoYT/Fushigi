@@ -221,6 +221,7 @@ namespace Fushigi.ui.widgets
             var dpiVal = UserSettings.GetDPIVal();
             var ClickDuplicate = UserSettings.GetClickDuplicate();
             var UseSprites = UserSettings.GetUseSprites();
+            var UseShaderError = UserSettings.GetUseShaderErrors();
             ImGui.Indent();
 
             Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
@@ -264,36 +265,15 @@ namespace Fushigi.ui.widgets
             if (ImGui.Checkbox("Hide Activity", ref privateDRPC))
                 UserSettings.SetPrivateDRPC(privateDRPC);
 
+            if (ImGui.Checkbox("Display Shader Errors", ref UseShaderError))
+                UserSettings.SetUseShaderErrors(UseShaderError);
 
-            //    int shaderSettings = UserSettings.GetShaders();
+            Tooltip.Show("Models with invalid materials will display as red, as they would ingame");
 
-            //if (ImGui.BeginCombo("Shader Settings [Deprecated]", ShaderDescriptions[shaderSettings]))
-            //{
-            //    if (ImGui.Selectable(ShaderDescriptions[0]))
-            //    {
-            //        UserSettings.SetShaders(0);
-            //    }
-            //    if (ImGui.Selectable(ShaderDescriptions[1]))
-            //    {
-            //        UserSettings.SetShaders(1);
-            //    }
-            //    if (ImGui.Selectable(ShaderDescriptions[2]))
-            //    {
-            //        UserSettings.SetShaders(2);
-            //    }
-            //    if (ImGui.Selectable(ShaderDescriptions[3]))
-            //    {
-            //        UserSettings.SetShaders(3);
-            //    }
-            //    if (ImGui.Selectable(ShaderDescriptions[4]))
-            //    {
-            //        UserSettings.SetShaders(4);
-            //    }
+            if (ImGui.Checkbox("Use Sprites", ref UseSprites))
+                UserSettings.SetUseSprites(UseSprites);
 
-            //    ImGui.EndCombo();
-            //}
-            //Tooltip.Show("Disable custom shaders on custom actors. NOTE: This only works on new custom actors and not model swaps");
-
+            Tooltip.Show("Bazinga");
 
             if (ImGui.Checkbox("DPI Override", ref dpiToggle))
             {
@@ -317,10 +297,7 @@ namespace Fushigi.ui.widgets
                 }
             }
 
-            if (ImGui.Checkbox("Use Sprites", ref UseSprites))
-                UserSettings.SetUseSprites(UseSprites);
-
-            Tooltip.Show("Bazinga");
+ 
 
             if (dpiToggle)
             {

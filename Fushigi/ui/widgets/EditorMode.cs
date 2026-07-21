@@ -59,6 +59,11 @@ namespace Fushigi.ui.widgets
                     editMode = "SaveData";
                 }
 
+                if(ImGui.Button("Shader Editor"))
+                {
+                    editMode = "ShaderEditor";
+                }
+
             }
 
             ImGui.End();

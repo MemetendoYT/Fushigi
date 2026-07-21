@@ -628,7 +628,7 @@ namespace Fushigi.ui.widgets
             //Start drawing the scene. Bfres draw upside down so flip the viewport clip
             gl.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
 
-            if (!UserSettings.GetUseSprites() && EditorMode.editMode != "Collision")
+            if (!UserSettings.GetUseSprites() && EditorMode.editMode != "Collision" && EditorMode.editMode != "ShaderEditor")
             {
                 if (!CourseScene.HideWalls)
             {
@@ -723,7 +723,7 @@ namespace Fushigi.ui.widgets
                     }
                 }
             }
-            else if(EditorMode.editMode == "Collision")
+            else if(EditorMode.editMode == "Collision" || EditorMode.editMode == "ShaderEditor")
             {
                 RenderActor(CollisionEditor.CollisionActor, CollisionEditor.CollisionActor.mActorPack.ModelInfoRef);
                 RenderActor(CollisionEditor.CollisionActor, CollisionEditor.CollisionActor.mActorPack.DrawArrayModelInfoRef);

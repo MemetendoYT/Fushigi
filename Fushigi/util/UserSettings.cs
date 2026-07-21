@@ -38,6 +38,7 @@ namespace Fushigi.util
             public float dpiVal = 1.0f;
             public bool DeleteEmptyRails;
             public bool UseSprites;
+            public bool UseShaderErrors;
 
             public Settings()
             {
@@ -62,6 +63,7 @@ namespace Fushigi.util
                 dpiVal = 1.0f;
                 DeleteEmptyRails = false;
                 UseSprites = false;
+                UseShaderErrors = false;
             }
         }
 
@@ -223,10 +225,6 @@ namespace Fushigi.util
             AppSettings.Theme = theme;
             Save();
         }
-        //public static int GetShaders()
-        //{
-        //    return AppSettings.ShaderSettings;
-        //}
 
         public static void SetRomfsReload(bool status)
         {
@@ -236,11 +234,7 @@ namespace Fushigi.util
         {
             return AppSettings.romfsReload;
         }
-        //public static void SetShaders(int selectedShaderSetting)
-        //{
-        //    AppSettings.ShaderSettings = selectedShaderSetting;
-        //    Save();
-        //}
+
         public static bool GetAllowRomfsReload()
         {
             return AppSettings.allowRomfsReload;
@@ -301,7 +295,15 @@ namespace Fushigi.util
             AppSettings.UseSprites = value;
             Save();
         }
-
+        public static bool GetUseShaderErrors()
+        {
+            return AppSettings.UseShaderErrors;
+        }
+        public static void SetUseShaderErrors(bool value)
+        {
+            AppSettings.UseShaderErrors = value;
+            Save();
+        }
 
         public static void AppendRecentCourse(string courseName)
         {

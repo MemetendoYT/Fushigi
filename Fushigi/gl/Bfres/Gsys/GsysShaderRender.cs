@@ -1,5 +1,7 @@
-﻿using Fushigi.Bfres;
+﻿using DiscordRPC;
+using Fushigi.Bfres;
 using Fushigi.gl.Shaders;
+using Fushigi.util;
 using Silk.NET.OpenGL;
 using System.Numerics;
 
@@ -81,15 +83,15 @@ namespace Fushigi.gl.Bfres
             if (programIndex == -1)
             {
                 //Fallback if shader is not found
-                //throw new Exception("Shader Not Found");
-                //programIndex = 0;
-                //programIndex = 6390;
-                return null;
+                //if(!UserSettings.GetUseShaderErrors()) 
+                //    programIndex = 6390;
+                //else
+                    return null;
             }
 
             return ShaderModel.Programs[programIndex];
         }
-
+   
         public override GLTexture GetExternalTexture(GL gl, string sampler)
         {
             switch (sampler)

@@ -950,15 +950,6 @@ namespace Fushigi.ui.widgets
                 CourseMiniView();
             }
 
-            ImGui.Begin("Debug", ImGuiWindowFlags.NoCollapse);
-
-            var refInt = BfshaShaderRender.shaderValue;
-            if (ImGui.InputInt("##label ", ref refInt))
-            {
-                BfshaShaderRender.shaderValue = refInt;
-            }
-            ImGui.End();
-
             backupTime += deltaSeconds;
             if (backupTime >= UserSettings.GetBackupFreqMinutes() * 60)
             {
@@ -1924,171 +1915,47 @@ namespace Fushigi.ui.widgets
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-
-
-                            if (param == "ChildActorSelectName" && actor.mActorChildRef != null)
-                            {
-                                try
-                                {
-                                    string id = $"##{param}";
-                                    List<string> list = ChildActorParam.GetActorParams(actor.mActorChildRef);
-                                    int selected = list.IndexOf(actor.mActorParameters[param].ToString());
-                                    ImGui.Text("ChildParameters");
-                                    ImGui.TableNextColumn();
-                                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-
-                                    if (ImGui.Combo("##Parameters", ref selected, list.ToArray(), list.Count))
-                                    {
-                                        actor.mActorParameters[param] = list[selected];
-                                    }
-                                    ImGui.PopItemWidth();
-                                }
-                                catch
-                                {
-
-                                    string id = $"##{param}";
-
-                                    ImGui.AlignTextToFramePadding();
-                                    ImGui.Text(param);
-                                    ImGui.TableNextColumn();
-
-                                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-
-                                    string val_string = actor.mActorParameters[param].ToString();
-                                    if (ImGui.InputText(id, ref val_string, 1024))
-                                    {
-                                        actor.mActorParameters[param] = val_string;
-                                    }
-                                }
-                            }
-                            else if (param == "TurnCompnentCommon")
-                                ActorParams.DrawActorParams(actor, param);
-                            else if (param == "RailMoveParam")
-                                ActorParams.DrawActorParams(actor, param);
-                            else if (param == "RequestWonderItem")
-                                ActorParams.DrawActorParams(actor, param, this);
-                            else if (param == "AreaTargetTypeSelect")
-                                ActorParams.DrawActorParams(actor, param);
-                            else
-                            {
-                                foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
-                                {
-                                    //Console.WriteLine(actor.mActorParameters[pair.Key] + " " + pair.Key);
-                                    string id = $"##{pair.Key}";
-
-                                    ImGui.AlignTextToFramePadding();
-                                    ImGui.Text(pair.Key);
-                                    //keyPair = pair.Value;
-
-                                    ImGui.TableNextColumn();
-                                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-
-                                    if (actor.mActorParameters.ContainsKey(pair.Key))
-                                    {
-                                        var actorParam = actor.mActorParameters[pair.Key];
-
-                                        if (pair.Value.IsSignedInt(out int minValue, out int maxValue))
-                                        {
-                                            int val_int = (int)actorParam;
-                                            if (ImGui.InputInt(id, ref val_int))
-                                            {
-                                                actor.mActorParameters[pair.Key] = Math.Clamp(val_int, minValue, maxValue);
-                                            }
-                                            if (pair.Key == "GateId")
-                                            {
-                                                gateID = val_int;
-                                            }
-                                        }
-                                        else if (pair.Value.IsUnsignedInt(out minValue, out maxValue))
-                                        {
-                                            uint val_uint = (uint)actorParam;
-                                            int val_int = unchecked((int)val_uint);
-                                            if (ImGui.InputInt(id, ref val_int))
-                                            {
-                                                actor.mActorParameters[pair.Key] = unchecked((uint)Math.Clamp(val_int, minValue, maxValue));
-                                            }
-                                        }
-                                        else if (pair.Value.IsBool())
-                                        {
-                                            bool val_bool = (bool)actorParam;
-                                            if (ImGui.Checkbox(id, ref val_bool))
-                                            {
-                                                actor.mActorParameters[pair.Key] = val_bool;
-                                            }
-
-                                        }
-                                        else if (pair.Value.IsFloat())
-                                        {
-                                            float val_float = (float)actorParam;
-                                            if (ImGui.InputFloat(id, ref val_float))
-                                            {
-                                                actor.mActorParameters[pair.Key] = val_float;
-                                            }
-                                        }
-                                        else if (pair.Value.IsString())
-                                        {
-                                            string val_string = (string)actorParam;
-                                            if (ImGui.InputText(id, ref val_string, 1024))
-                                            {
-                                                actor.mActorParameters[pair.Key] = val_string;
-                                            }
-                                        }
-                                        else if (pair.Value.IsDouble())
-                                        {
-                                            double val = (double)actorParam;
-                                            if (ImGui.InputDouble(id, ref val))
-                                            {
-                                                actor.mActorParameters[pair.Key] = val;
-                                            }
-                                        }
-                                    }
-
-                                    ImGui.PopItemWidth();
-                                    ImGui.TableNextColumn();
-                                }
-                            }
-
+                            ActorParams.DrawActorParams(actor, param);
                             ImGui.EndTable();
                         }
 
+                        //if (param == "WorldMapCoursePointGate")
+                        //{
+                        //    if (ImGui.BeginTable("FixedProps", 2,
+                        //        ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
+                        //    {
+                        //        ImGui.TableNextRow();
+                        //        ImGui.TableSetColumnIndex(0);
+                        //        ImGui.AlignTextToFramePadding();
 
-                        if (param == "WorldMapCoursePointGate")
-                        {
-                            if (ImGui.BeginTable("FixedProps", 2,
-                                ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
-                            {
-                                ImGui.TableNextRow();
-                                ImGui.TableSetColumnIndex(0);
-                                ImGui.AlignTextToFramePadding();
+                        //        if (gateID <= course.mWorldInfo.Gates.Count && gateID > 0)
+                        //        {
+                        //            ImGui.Text("Price");
 
-                                if (gateID <= course.mWorldInfo.Gates.Count && gateID > 0)
-                                {
-                                    ImGui.Text("Price");
+                        //            ImGui.TableSetColumnIndex(1);
+                        //            ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
+                        //            var Gate = course.mWorldInfo.Gates[gateID - 1];
+                        //            var price = Gate.Price;
+                        //            if (ImGui.InputInt("##price", ref price))
+                        //            {
+                        //                course.mWorldInfo.Gates[gateID - 1].Price = price;
+                        //            }
+                        //        }
+                        //        else
+                        //        {
+                        //            if (ImGui.Button("makey new gatey"))
+                        //            {
+                        //                course.mWorldInfo.Gates.Add(new WorldMapInfo.GateTable
+                        //                {
+                        //                    GateNo = course.mWorldInfo.Gates.Count + 1
+                        //                });
+                        //            }
+                        //        }
+                        //        ImGui.PopItemWidth();
 
-                                    ImGui.TableSetColumnIndex(1);
-                                    ImGui.PushItemWidth(ImGui.GetColumnWidth() - ImGui.GetStyle().ScrollbarSize);
-                                    var Gate = course.mWorldInfo.Gates[gateID - 1];
-                                    var price = Gate.Price;
-                                    if (ImGui.InputInt("##price", ref price))
-                                    {
-                                        course.mWorldInfo.Gates[gateID - 1].Price = price;
-                                    }
-                                }
-                                else
-                                {
-                                    if (ImGui.Button("makey new gatey"))
-                                    {
-                                        course.mWorldInfo.Gates.Add(new WorldMapInfo.GateTable
-                                        {
-                                            GateNo = course.mWorldInfo.Gates.Count + 1
-                                        });
-                                    }
-                                }
-                                ImGui.PopItemWidth();
-
-                                ImGui.EndTable();
-                            }
-                        }
+                        //        ImGui.EndTable();
+                        //    }
+                        //}
                         ImGui.Unindent();
                         ImGui.Unindent();
 

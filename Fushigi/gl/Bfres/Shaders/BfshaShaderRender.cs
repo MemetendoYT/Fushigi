@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Text;
 using System.Threading;
@@ -29,10 +30,10 @@ namespace Fushigi.gl.Bfres
         private TegraShaderDecoder.ShaderInfo ShaderInfo;
 
         private Material Material;
-
+        public bool IsBrokenMaterial;
         public BfshaFile ShaderFile;
         public ShaderModel ShaderModel;
-
+        public static bool makeyChangey = false;
         //Resources
         private ShaderProgram ShaderProgram;
         private UniformBlock ConstantVSBlock;
@@ -168,25 +169,96 @@ namespace Fushigi.gl.Bfres
             }
         }
 
+        string FragShader = 
+            @"#version 450 
+            out vec4 FragColor; 
+            void main() { 
+                FragColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+            }";
+
+        string VertexShader =
+            @"#version 450
+            layout (location = 0) in vec3 aPosition;
+            uniform mat4 mtxCam;
+            uniform mat4 mtxMdl;
+            void main()
+            {
+                gl_Position = mtxCam * (mtxMdl * vec4(aPosition, 1.0)); 
+            }";
+
+        public static uint BackupProgram = 0;
+        private uint UseBackupShader(GL gl)
+        {
+            if (BackupProgram != 0)
+                return BackupProgram;
+
+            var program = gl.CreateProgram();
+            var FragShader = gl.CreateShader(ShaderType.FragmentShader);
+            var VertexShader = gl.CreateShader (ShaderType.VertexShader);
+
+            gl.ShaderSource(FragShader, this.FragShader);
+            gl.ShaderSource(VertexShader, this.VertexShader);
+
+            gl.AttachShader(program, FragShader);
+            gl.AttachShader(program, VertexShader);
+
+            gl.CompileShader(FragShader);
+            gl.CompileShader(VertexShader);
+
+            gl.LinkProgram(program);
+
+            gl.DeleteShader(FragShader);
+            gl.DeleteShader(VertexShader);
+
+            BackupProgram = program;
+            return program;
+        }
+
+        protected virtual unsafe void RenderFallback(GL gl, Matrix4x4 transform, Camera camera)
+        {
+            uint program = UseBackupShader(gl);
+            gl.UseProgram(program);
+
+            var camMatrix = camera.ViewProjectionMatrix;
+            var mdlMatrix = transform;
+
+            int camLoc = gl.GetUniformLocation(program, "mtxCam");
+            int mdlLoc = gl.GetUniformLocation(program, "mtxMdl");
+
+            gl.UniformMatrix4(camLoc, 1, false, (float*)&camMatrix);
+            gl.UniformMatrix4(mdlLoc, 1, false, (float*)&mdlMatrix);
+        }
+
         public virtual void Render(GL gl, BfresRender renderer, BfresRender.BfresModel model, Matrix4x4 transform, Camera camera)
         {
-            if (ShaderProgram == null || canOverride) {
-                ShaderInfo = null;
-                canOverride = true;
-                ShaderProgram = ShaderModel.Programs[shaderValue];
+            if(IsBrokenMaterial && UserSettings.GetUseShaderErrors() && ShaderProgram == ShaderModel.Programs[6390])
+            {
+                ShaderProgram = null;
             }
 
-            SkeletonBlock = model.SkeletonBuffer;
+            if (ShaderProgram == null && UserSettings.GetUseShaderErrors())
+            {
+                RenderFallback(gl, transform, camera);
+                return;
+            }
+            else if (ShaderProgram == null)
+            {
+                IsBrokenMaterial = true;
+                ShaderProgram = ShaderModel.Programs[6390];
+            }
 
+                SkeletonBlock = model.SkeletonBuffer;
             SetShapeBlock(ShapeBlock, transform);
             SetSkeletonBlock(SkeletonBlock, model, transform);
 
             if (ShaderInfo == null)
                 CompileShader(gl, ShaderProgram);
 
-            //Shader failed, skip
-            if (ShaderInfo == null)
+            if (ShaderInfo == null && UserSettings.GetUseShaderErrors())
+            {
+                RenderFallback(gl, transform, camera);
                 return;
+            }
 
             ShaderInfo.Shader.Use();
             BindUniformBlocks(gl);
@@ -408,19 +480,19 @@ namespace Fushigi.gl.Bfres
 
 
             /*
-                                    if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.Linear)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
-                                    else if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.Points)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapNearest);
-                                    else if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.None)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-                                    else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.Linear)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
-                                    else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.Points)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
-                                    else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.None)
-                                        gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
-                                    */
+            if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.Linear)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapLinear);
+            else if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.Points)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.LinearMipmapNearest);
+            else if (sampler.MinFilter == ShrinkFilterModes.Linear && sampler.Mipmap == MipFilterModes.None)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+            else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.Linear)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapLinear);
+            else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.Points)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.NearestMipmapNearest);
+            else if (sampler.MinFilter == ShrinkFilterModes.Points && sampler.Mipmap == MipFilterModes.None)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
+            */
         }
 
 
@@ -433,6 +505,7 @@ namespace Fushigi.gl.Bfres
             { TexWrap.Clamp, TextureWrapMode.ClampToEdge },
             { TexWrap.ClampToEdge, TextureWrapMode.ClampToEdge },
         };
+
         private bool canOverride = false;
         public static int shaderValue;
 
