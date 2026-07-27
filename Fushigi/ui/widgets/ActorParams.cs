@@ -36,8 +36,7 @@ public class ActorParams
         { "ItemStar_All", "Star" },
         { "ObjectCoinYellow_Single", "1 Coin" },
         { "ObjectPropellerFlower", "Propeller Flower" },
-        { "ObjectScatterRandomCoin_Five", "5 Purple Coins" },
-        { "ObjectScatterRandomCoin_Five", "1 Purple Coin" },
+        { "ObjectScatterRandomCoin_Five", "5 Purple Coins" }
     };
 
     public static readonly Dictionary<string, string> RailSpeedTypes = new Dictionary<string, string>()
