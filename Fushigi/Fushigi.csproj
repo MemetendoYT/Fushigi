@@ -27,7 +27,6 @@
     <PackageReference Include="ImGui.NET" Version="1.90.0.1" />
     <PackageReference Include="NativeFileDialogSharp" Version="0.6.0-alpha" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="SarcLibrary" Version="3.3.4" />
     <PackageReference Include="Silk.NET.Core" Version="2.19.0" />
     <PackageReference Include="Silk.NET.GLFW" Version="2.19.0" />
     <PackageReference Include="Silk.NET.OpenGL" Version="2.19.0" />

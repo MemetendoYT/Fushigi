@@ -18,7 +18,6 @@ namespace Fushigi.ui.widgets
         static readonly Vector4 errCol = new Vector4(1f, 0, 0, 1);
         static bool romfsTouched = false;
         static bool modRomfsTouched = false;
-        static string curTheme = null;
         private static readonly string[] ShaderDescriptions =
             {
             "All Actors",
@@ -68,14 +67,7 @@ namespace Fushigi.ui.widgets
             var enableHalfTile = UserSettings.GetEnableHalfTile();
             var enableTranslation = UserSettings.GetEnableTranslation();
             var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
-            var deleteEmptyRails = UserSettings.GetDeleteEmptyRails();
-            curTheme = UserSettings.GetTheme();
-            switch (curTheme)
-            {
-                case "Dark (Default)": ImGui.StyleColorsDark(); break;
-                case "Classic": ImGui.StyleColorsClassic(); break;
-                case "Light": ImGui.StyleColorsLight(); break;
-            }
+         
             ImGui.Indent();
 
             DrawSettings(modalHost, glTaskScheduler);
@@ -100,41 +92,11 @@ namespace Fushigi.ui.widgets
 
             Tooltip.Show("Translates all the actor names to English.");
 
-            if (ImGui.Checkbox("Delete Empty Rails on Save", ref deleteEmptyRails))
-            {
-                UserSettings.SetDeleteEmptyRails(deleteEmptyRails);
-            }
-
-            Tooltip.Show("Automatically deletes empty rails when saving a level.");
-
             if (ImGui.InputFloat("Backup Frequency (in minutes)", ref backupFreqMinutes))
                 UserSettings.SetBackupFreqMinutes(backupFreqMinutes);
 
             Tooltip.Show("How long between each backup, in minutes.\nBackups are stored in Fushigi's appdata folder.");
-
-
-            if (ImGui.BeginCombo("Themes", curTheme))
-            {
-                if (ImGui.Selectable("Dark (Default)", curTheme == "Dark (Default)"))
-                {
-                    ImGui.StyleColorsDark();
-                    curTheme = "Dark (Default)";
-                    UserSettings.SetTheme(curTheme);
-                }
-                if (ImGui.Selectable("Classic", curTheme == "Classic"))
-                {
-                    ImGui.StyleColorsClassic();
-                    curTheme = "Classic";
-                    UserSettings.SetTheme(curTheme);
-                }
-                if (ImGui.Selectable("Light", curTheme == "Light"))
-                {
-                    ImGui.StyleColorsLight();
-                    curTheme = "Light";
-                    UserSettings.SetTheme(curTheme);
-                }
-                ImGui.EndCombo();
-            }
+      
 
             Tooltip.Show("Change the UI theme.");
         }
@@ -220,7 +182,6 @@ namespace Fushigi.ui.widgets
             var dpiToggle = UserSettings.GetDPIOverride();
             var dpiVal = UserSettings.GetDPIVal();
             var ClickDuplicate = UserSettings.GetClickDuplicate();
-            var UseSprites = UserSettings.GetUseSprites();
             var UseShaderError = UserSettings.GetUseShaderErrors();
             ImGui.Indent();
 
@@ -269,9 +230,6 @@ namespace Fushigi.ui.widgets
                 UserSettings.SetUseShaderErrors(UseShaderError);
 
             Tooltip.Show("Models with invalid materials will display as red, as they would ingame");
-
-            if (ImGui.Checkbox("Use Sprites", ref UseSprites))
-                UserSettings.SetUseSprites(UseSprites);
 
             Tooltip.Show("Bazinga");
 

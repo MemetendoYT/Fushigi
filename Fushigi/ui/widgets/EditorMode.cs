@@ -49,20 +49,12 @@ namespace Fushigi.ui.widgets
                     editMode = "Collision";
                 }
 
-                if (ImGui.Button("MSBT Editor"))
-                {
-                    editMode = "MSBT";
-                }
-
+     
                 if (ImGui.Button("Save Data Editor"))
                 {
                     editMode = "SaveData";
                 }
 
-                if(ImGui.Button("Shader Editor"))
-                {
-                    editMode = "ShaderEditor";
-                }
 
             }
 

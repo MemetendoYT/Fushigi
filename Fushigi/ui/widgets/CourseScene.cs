@@ -320,13 +320,10 @@ namespace Fushigi.ui.widgets
             for (int i = 0; i < resourceFiles.Count; i++)
             {
                 string? file = resourceFiles[i];
-                if (!UserSettings.GetUseSprites())
-                {
-                    progress.Report(($"Loading models", i / (float)resourceFiles.Count));
-                    Logger.Logger.LogMessage("CourseScene", $"Loading {file}");
-                    await BfresCache.LoadAsync(glScheduler, file);
-                    Logger.Logger.LogMessage("CourseScene", $"Loaded {file}");
-                }
+                progress.Report(($"Loading models", i / (float)resourceFiles.Count));
+                Logger.Logger.LogMessage("CourseScene", $"Loading {file}");
+                await BfresCache.LoadAsync(glScheduler, file);
+                Logger.Logger.LogMessage("CourseScene", $"Loaded {file}");
             }
             Logger.Logger.LogMessage("CourseScene", $"Finished loading models");
         }
@@ -1536,25 +1533,31 @@ namespace Fushigi.ui.widgets
                 if (showActorVisibility)
                     ActorVisibility.Draw(ref showActorVisibility, mPopupModalHost);
 
+
+                ImGui.PushStyleColor(ImGuiCol.FrameBg, new Vector4(0, 0, 0, 0));
+                ImGui.PushStyleColor(ImGuiCol.FrameBgHovered, new Vector4(1, 1, 1, 0.1f));
+                ImGui.PushStyleColor(ImGuiCol.FrameBgActive, new Vector4(1, 1, 1, 0.15f));
+                ImGui.PushStyleColor(ImGuiCol.Border, new Vector4(0, 0, 0, 0));
+                ImGui.PushStyleVar(ImGuiStyleVar.FrameBorderSize, 0f);
+
                 var flags = ImGuiComboFlags.NoArrowButton | ImGuiComboFlags.WidthFitPreview;
                 if (ImGui.BeginCombo($"##EnvPalette", $"{IconUtil.ICON_PALETTE}", flags))
                 {
                     SelectPalette($"Default Palette", area.mAreaParams.EnvPaletteSetting.InitPaletteBaseName);
-
                     if (area.mAreaParams.EnvPaletteSetting.WonderPaletteList != null)
                         foreach (var palette in area.mAreaParams.EnvPaletteSetting.WonderPaletteList)
                             SelectPalette($"Wonder Palette", palette);
-
                     if (area.mAreaParams.EnvPaletteSetting.TransPaletteList != null)
                         foreach (var palette in area.mAreaParams.EnvPaletteSetting.TransPaletteList)
                             SelectPalette($"Transition Palette", palette);
-
                     if (area.mAreaParams.EnvPaletteSetting.EventPaletteList != null)
                         foreach (var palette in area.mAreaParams.EnvPaletteSetting.EventPaletteList)
                             SelectPalette($"Event Palette", palette);
-
                     ImGui.EndCombo();
                 }
+
+                ImGui.PopStyleVar();
+                ImGui.PopStyleColor(4);
 
                 ImGui.SameLine();
 
@@ -3086,6 +3089,7 @@ namespace Fushigi.ui.widgets
                             actor.mLayer = layer;
                     }
                 }
+                ImGui.EndCombo();
             }
             string text = "Multiple Actors Selected";
             var windowWidth = ImGui.GetWindowSize().X;
@@ -4890,11 +4894,8 @@ namespace Fushigi.ui.widgets
         private int prevCallFrom = 0;
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
         private bool showActorVisibility;
-        private string keyPair;
-        private int gateID;
-        private bool printOnce = false;
 
-        public bool attemptSave()
+        public bool checkForEmptyRails()
         {
             foreach (var area in course.GetAreas())
             {

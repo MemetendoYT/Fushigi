@@ -314,29 +314,6 @@ namespace Fushigi.course
                         bl = newCenter + (bl - newCenter) * size;
                     }
 
-                    if (UserSettings.GetUseSprites())
-                    {
-                        var key = actor.mPackName;
-                        if (Sprites.SpriteAliases.TryGetValue(actor.mPackName, out var alias))
-                            key = alias;
-
-                        if (Sprites.ActorSprites.TryGetValue(key, out var tex))
-                        {
-                            viewport.mDrawList.AddImageQuad(
-                                (IntPtr)tex.ID,
-                                tl,
-                                tr,
-                                br,
-                                bl,
-                                new Vector2(0, 0),
-                                new Vector2(1, 0),
-                                new Vector2(1, 1),
-                                new Vector2(0, 1),
-                                0xFFFFFFFF
-                            );
-                        }
-                    }
-
                     uint color = CourseActor.CourseActorColors[CourseActorType.None];
                     CourseActor.CourseActorColors.TryGetValue(actor.mType, out color);
 

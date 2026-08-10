@@ -27,6 +27,7 @@ namespace Fushigi.ui
                     ImGui.Dummy(new Vector2(0, 30));
                     ImGui.SetCursorPosX(centerX);
                     ImGui.Text("Welcome to Fushigi");
+                    ImGui.SetCursorPosX(centerX);
                     ImGui.Text("The Super Mario Bros. Wonder Level Editor");
                 }
                 else if (pageNumb == 1)

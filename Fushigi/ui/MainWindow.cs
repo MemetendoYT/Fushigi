@@ -222,29 +222,6 @@ namespace Fushigi.ui
             return true;
         }
 
-        public async Task<bool> TrySaveCourse()
-        {
-            if (mSelectedCourseScene is not null)
-            {
-                var result = await RailConfirmationDialog.ShowDialog(this);
-
-                if (result == RailConfirmationDialog.DialogResult.Yes)
-                {
-                    mSelectedCourseScene.deleteEmptyRails();
-                    return true;
-                }
-                else if (result == RailConfirmationDialog.DialogResult.AutoDelete)
-                { 
-                    mSelectedCourseScene.deleteEmptyRails();
-                    return true;
-                }
-                else
-                    return false;
-            }
-
-            return true;
-        }
-
         public async Task<bool> ResetCourse()
         {
             if (mSelectedCourseScene is not null)
@@ -510,23 +487,18 @@ namespace Fushigi.ui
             style.PopupRounding = 5.4f;
             style.PopupBorderSize = 1.0f;
             style.FrameRounding = 5.9f;
-            style.FrameBorderSize = 0.0f;
-            style.FramePadding = new Vector2(10f, 6f);
+            style.FramePadding = new Vector2(4f, 6f);
+            //style.ItemInnerSpacing = new Vector2(4f, 4f);
+            //style.CellPadding = new Vector2(6f, 3f);
+            //style.ColumnsMinSpacing = 6f;
+            //style.ScrollbarSize = 15f;
+            //style.ScrollbarRounding = 15f;
+            //style.GrabMinSize = 6f;
+            //style.GrabRounding = 20.0f;
 
-            style.ItemInnerSpacing = new Vector2(4f, 4f);
-            style.CellPadding = new Vector2(6f, 3f);
-            style.IndentSpacing = 0.0f;
-            style.ColumnsMinSpacing = 6f;
-            style.ScrollbarSize = 15f;
-            style.ScrollbarRounding = 15f;
-            style.GrabMinSize = 6f;
-            style.GrabRounding = 20.0f;
-
-            style.TabRounding = 6f;
-            style.TabBorderSize = 0.0f;
-            style.TabMinWidthForCloseButton = 0.0f;
-            style.ColorButtonPosition = ImGuiDir.Right;
-            style.ButtonTextAlign = new Vector2(0.5f, 0.5f);
+            //style.TabRounding = 6f;
+            //style.ColorButtonPosition = ImGuiDir.Right;
+            //style.ButtonTextAlign = new Vector2(0.5f, 0.5f);
 
             var midblue = new Vector4(0.15f, 0.30f, 0.62f, 1.0f);
             var darkblue = new Vector4(0.09f, 0.19f, 0.40f, 1.0f);
@@ -542,9 +514,9 @@ namespace Fushigi.ui
             style.Colors[(int)ImGuiCol.PopupBg] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
             style.Colors[(int)ImGuiCol.Border] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
             style.Colors[(int)ImGuiCol.BorderShadow] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
-            style.Colors[(int)ImGuiCol.FrameBg] = new Vector4(0.11372549f, 0.1254902f, 0.15294118f, 1.0f);
-            style.Colors[(int)ImGuiCol.FrameBgHovered] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
-            style.Colors[(int)ImGuiCol.FrameBgActive] = new Vector4(0.15686275f, 0.16862746f, 0.19215687f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBg] = new Vector4(0.17f, 0.19f, 0.24f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBgHovered] = new Vector4(0.22f, 0.25f, 0.31f, 1.0f);
+            style.Colors[(int)ImGuiCol.FrameBgActive] = new Vector4(0.25f, 0.29f, 0.36f, 1.0f);
             style.Colors[(int)ImGuiCol.MenuBarBg] = new Vector4(0.09803922f, 0.105882354f, 0.12156863f, 1.0f);
             style.Colors[(int)ImGuiCol.ScrollbarBg] = new Vector4(0.047058824f, 0.05490196f, 0.07058824f, 1.0f);
             style.Colors[(int)ImGuiCol.ScrollbarGrab] = new Vector4(0.11764706f, 0.13333334f, 0.14901961f, 1.0f);
@@ -556,9 +528,9 @@ namespace Fushigi.ui
             style.Colors[(int)ImGuiCol.Button] = blue;
             style.Colors[(int)ImGuiCol.ButtonHovered] = new Vector4(0.18039216f, 0.1882353f, 0.19607843f, 1.0f);
             style.Colors[(int)ImGuiCol.ButtonActive] = new Vector4(0.15294118f, 0.15294118f, 0.15294118f, 1.0f);
-            style.Colors[(int)ImGuiCol.Header] = new Vector4(0.14117648f, 0.16470589f, 0.20784314f, 1.0f);
-            style.Colors[(int)ImGuiCol.HeaderHovered] = new Vector4(0.1274510f, 0.1901961f, 0.1856863f, 1.0f);
-            style.Colors[(int)ImGuiCol.HeaderActive] = new Vector4(0.078431375f, 0.08627451f, 0.101960786f, 1.0f);
+            style.Colors[(int)ImGuiCol.Header] = new Vector4(0.14f, 0.16f, 0.21f, 1.0f);
+            style.Colors[(int)ImGuiCol.HeaderHovered] = new Vector4(0.24f, 0.42f, 0.72f, 1.0f);
+            style.Colors[(int)ImGuiCol.HeaderActive] = new Vector4(0.19f, 0.35f, 0.65f, 1.0f);
             style.Colors[(int)ImGuiCol.Separator] = new Vector4(0.35f, 0.38f, 0.45f, 1.0f);
             style.Colors[(int)ImGuiCol.SeparatorHovered] = new Vector4(0.45f, 0.48f, 0.55f, 1.0f);
             style.Colors[(int)ImGuiCol.SeparatorActive] = new Vector4(0.45f, 0.48f, 0.55f, 1.0f);
@@ -587,7 +559,7 @@ namespace Fushigi.ui
             style.Colors[(int)ImGuiCol.TabHovered] = lightblue;
             style.Colors[(int)ImGuiCol.TabActive] = blue;
             style.Colors[(int)ImGuiCol.TabUnfocused] = lightGray;
-            style.Colors[(int)ImGuiCol.TabUnfocusedActive] = darkblue;
+            style.Colors[(int)ImGuiCol.TabUnfocusedActive] = blue;
         }
 
         void DrawMainMenu()
@@ -606,19 +578,16 @@ namespace Fushigi.ui
                     ImGui.EndMenu();
                 }
 
-                float buttonSize = ImGui.GetFrameHeight();
-                float iconSize = buttonSize * 0.75f;
-
                 var min = ImGui.GetItemRectMin();
                 var max = ImGui.GetItemRectMax();
+                float buttonSize = max.Y - min.Y; // actual menu bar item height, not GetFrameHeight()
+                float iconSize = buttonSize * 0.75f;
 
                 Vector2 iconMin = new Vector2(
-                    min.X + (buttonSize - iconSize) * 0.5f,
+                    min.X + ((max.X - min.X) - iconSize) * 0.5f,  // center within FULL item width, not buttonSize
                     min.Y + (buttonSize - iconSize) * 0.5f
                 );
-
                 Vector2 iconMax = iconMin + new Vector2(iconSize, iconSize);
-
 
                 ImGui.GetWindowDrawList().AddImage(
                     (IntPtr)FushigiIcon.ID,
@@ -656,11 +625,6 @@ namespace Fushigi.ui
                                 }).ConfigureAwait(false); //fire and forget
                             }
 
-
-                            if(ImGui.MenuItem("Make lookey better"))
-                            {
-
-                            }
                             // Reload Course
                             if (ImGui.MenuItem("Reload Course"))
                             {
@@ -698,20 +662,8 @@ namespace Fushigi.ui
                             //Ensure the romfs path is set for saving
                             if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
                             {
-                                if (mSelectedCourseScene.attemptSave() && !UserSettings.GetDeleteEmptyRails())
-                                {
-                                    Task.Run(async () =>
-                                    {
-                                        if (await TrySaveCourse())
-                                            mSelectedCourseScene.Save(false);
-                                        else
-                                            return;
-                                    }).ConfigureAwait(false);
-                                }
-                                else if (UserSettings.GetDeleteEmptyRails())
-                                {
+                                if (!mSelectedCourseScene.checkForEmptyRails())
                                     mSelectedCourseScene.deleteEmptyRails();
-                                }
                                 mSelectedCourseScene.Save(false);
                             }
                             else //Else configure the mod path
@@ -831,8 +783,13 @@ namespace Fushigi.ui
                     ImGui.EndMenu();
                 }
 
-                /* end entire menu bar */
-                ImGui.EndMenuBar();
+                if (ImGui.BeginMenu("Help"))
+                {
+
+                    ImGui.EndMenu();
+                }
+                    /* end entire menu bar */
+                    ImGui.EndMenuBar();
             }
         }
 
@@ -915,20 +872,6 @@ namespace Fushigi.ui
                     collisionEditor.Draw(mGLTaskScheduler, delta);
                 }
 
-                if (EditorMode.editMode == "MSBT")
-                {
-                    msbtEditor.Draw();
-                }
-
-                if (EditorMode.editMode == "SaveData")
-                {
-                    saveEditor.Draw();
-                }
-
-                if(EditorMode.editMode == "ShaderEditor")
-                {
-                    shaderEditor.Draw(mGLTaskScheduler, delta, gl);
-                }
             }
 
             if (mIsShowPreferenceWindow)
@@ -965,9 +908,6 @@ namespace Fushigi.ui
         public static string mCurrentLevelName = "";
         CourseScene? mSelectedCourseScene;
         CollisionEditor? collisionEditor = new CollisionEditor();
-        ShaderEditor? shaderEditor = new ShaderEditor();
-        MsbtEditor? msbtEditor = new MsbtEditor();
-        SaveEditor? saveEditor = new SaveEditor();
         bool mIsShowPreferenceWindow = false;
         public static float backupSize;
     }

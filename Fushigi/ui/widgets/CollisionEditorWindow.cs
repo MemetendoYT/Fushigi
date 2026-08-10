@@ -1,5 +1,4 @@
-﻿using CommunityToolkit.HighPerformance;
-using Fushigi.actor_pack.components;
+﻿using Fushigi.actor_pack.components;
 using Fushigi.Byml;
 using Fushigi.course;
 using Fushigi.gl;

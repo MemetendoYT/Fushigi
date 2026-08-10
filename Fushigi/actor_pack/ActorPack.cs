@@ -5,7 +5,6 @@ using Fushigi.Byml.Serializer;
 using Fushigi.gl.Bfres;
 using Fushigi.SARC;
 using Fushigi.util;
-using SarcLibrary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

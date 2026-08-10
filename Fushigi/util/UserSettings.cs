@@ -36,8 +36,6 @@ namespace Fushigi.util
             public bool ClickDuplicate;
             public bool dpiOverride = false;
             public float dpiVal = 1.0f;
-            public bool DeleteEmptyRails;
-            public bool UseSprites;
             public bool UseShaderErrors;
 
             public Settings()
@@ -61,8 +59,6 @@ namespace Fushigi.util
                 ClickDuplicate = false;
                 dpiOverride = false;
                 dpiVal = 1.0f;
-                DeleteEmptyRails = false;
-                UseSprites = false;
                 UseShaderErrors = false;
             }
         }
@@ -271,28 +267,6 @@ namespace Fushigi.util
         public static void ToggleDPIOverride(bool value)
         {
             AppSettings.dpiOverride = value;
-            Save();
-        }
-
-        public static bool GetDeleteEmptyRails()
-        {
-            return AppSettings.DeleteEmptyRails;
-        }
-
-        public static void SetDeleteEmptyRails(bool value)
-        {
-            AppSettings.DeleteEmptyRails = value;
-            Save();
-        }
-
-        public static bool GetUseSprites()
-        {
-            return AppSettings.UseSprites;
-        }
-
-        public static void SetUseSprites(bool value)
-        {
-            AppSettings.UseSprites = value;
             Save();
         }
         public static bool GetUseShaderErrors()

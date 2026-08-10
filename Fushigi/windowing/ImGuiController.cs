@@ -141,18 +141,6 @@ public class ImGuiController : IDisposable
 
         Context = ImGuiNET.ImGui.CreateContext();
         ImGuiNET.ImGui.SetCurrentContext(Context);
-        switch (UserSettings.GetTheme())
-        {
-            case "Classic":
-                ImGui.StyleColorsClassic();
-                break;
-            case "Light":
-                ImGui.StyleColorsLight();
-                break;
-            default:
-                ImGui.StyleColorsDark();
-                break;
-        }
     }
 
     private void BeginFrame()

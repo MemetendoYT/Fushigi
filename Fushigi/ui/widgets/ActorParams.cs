@@ -298,6 +298,17 @@ public class ActorParams
 
         ImGui.PopItemWidth();
     }
+
+    public static void DrawString(CourseActor actor, string ActorParam)
+    {
+        string selected = (string)actor.mActorParameters[ActorParam];
+
+        if (ImGui.InputText($"##{ActorParam}", ref selected, 0x100))
+            actor.mActorParameters[ActorParam] = selected;
+
+        ImGui.PopItemWidth();
+    }
+
     internal static void DrawParam(List<string> list, CourseActor actor, string ActorParam)
     {
         int selected = list.IndexOf(actor.mActorParameters[ActorParam].ToString());
@@ -460,6 +471,10 @@ public class ActorParams
                 else if (value is float)
                 {
                     DrawFloat(actor, paramName);
+                }
+                else if (value is string)
+                {
+                    DrawString(actor, paramName);
                 }
             }
         }
