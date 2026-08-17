@@ -1862,6 +1862,9 @@ namespace Fushigi.ui.widgets
                         foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                             HandleTranslation(transformable, StartingTrans, CurrentTrans);
 
+
+                        CollisionEditor.HandleShapeTranslation(StartingTrans, CurrentTrans, mEditContext);
+
                         foreach (var unit in rebuildList)
                             BGUnitRailSceneObj.rebuildUnit(unit);
                             
