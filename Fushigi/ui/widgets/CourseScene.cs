@@ -23,6 +23,7 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks.Dataflow;
 using static DiscordRPC.User;
 using static Fushigi.course.CourseComment;
 using NumVec = System.Numerics.Vector3;
@@ -710,6 +711,9 @@ namespace Fushigi.ui.widgets
                                 editContext.Select(rail);
                             }
 
+                            ImGui.Checkbox($"##{name}{wallname}_visibility", ref rail.Visible);
+                            ImGui.SameLine();
+
                             if (ImGui.Selectable($"##{name}{wallname}", isSelected, ImGuiSelectableFlags.SpanAllColumns))
                             {
                                 SelectRail();
@@ -721,9 +725,6 @@ namespace Fushigi.ui.widgets
                             }
 
                             ImGui.SameLine();
-
-                            //Shift text from selection
-                            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (22 * MainWindow.dpiScale));
                             ImGui.Text(wallname);
 
                             ImGui.TableNextColumn();
@@ -735,12 +736,7 @@ namespace Fushigi.ui.widgets
 
                         ImGui.Unindent();
                     }
-                    if (reloadUnit)
-                    {
-                        editContext.DeselectAll();
-                        editContext.Select(unit);
-                        reloadUnit = false;
-                    }
+ 
                     if (editContext.IsSelected(unit))
                     {
                         if (ImGui.BeginPopupContextWindow("RailMenu", ImGuiPopupFlags.MouseButtonRight))
@@ -755,7 +751,6 @@ namespace Fushigi.ui.widgets
                             if (ImGui.MenuItem($"Remove {name}"))
                             {
                                 removed_tile_units.Add(unit);
-                                reloadUnit = true;
                             }
 
                             ImGui.EndPopup();
@@ -767,18 +762,19 @@ namespace Fushigi.ui.widgets
                         if (ImGui.Button("Add Wall"))
                         {
                             editContext.AddWall(unit, new Wall(unit));
-                            reloadUnit = true;
                         }
                         ImGui.SameLine();
 
                         if (ImGui.Button("Remove Wall") || (ImGui.IsKeyPressed(ImGuiKey.Delete) && ImGui.GetIO().KeyShift))
                         {
+                            var batchAction = mEditContext.BeginBatchAction();
                             foreach (var rail in mEditContext.GetSelectedObjects<BGUnitRail>())
                             {
+                                mEditContext.CommitAction(new TileRebuildRevertable(rail.mCourseUnit));
                                 editContext.DeleteWall(unit, unit.Walls[rail.mIndex]);
+                                BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
                             }
-
-                            reloadUnit = true;
+                            batchAction.Commit("RAARGH");
                         }
 
                         for (int iWall = 0; iWall < unit.Walls.Count; iWall++)
@@ -901,6 +897,12 @@ namespace Fushigi.ui.widgets
                 }
 
                 removed_tile_units.Clear();
+
+                foreach (var unit in selectedArea.mUnitHolder.mUnits)
+                    BGUnitRailSceneObj.rebuildUnit(unit);
+
+                BGUnitRailSceneObj.rebuildTiles = true;
+
                 editContext.DeselectAll();
             }
         }
@@ -2531,6 +2533,7 @@ namespace Fushigi.ui.widgets
             if (UserSettings.GetEnableTranslation())
                 actorName = Translate.FetchTranslatedName(actorName);
 
+            Console.WriteLine("placing actor");
             do
             {
                 ImGui.SetWindowFocus(area.mAreaName);
@@ -3236,14 +3239,20 @@ namespace Fushigi.ui.widgets
                     ImGui.TableSetColumnIndex(0);
                     ImGui.Text("Model Type"); ImGui.TableNextColumn();
 
-                    ImGui.Combo("##mModelType", ref Unsafe.As<CourseUnit.ModelType, int>(ref mSelectedUnit.mModelType),
-                        CourseUnit.ModelTypeNames, CourseUnit.ModelTypeNames.Length);
+                    if(ImGui.Combo("##mModelType", ref Unsafe.As<CourseUnit.ModelType, int>(ref mSelectedUnit.mModelType),
+                        CourseUnit.ModelTypeNames, CourseUnit.ModelTypeNames.Length))
+                    {
+                        BGUnitRailSceneObj.rebuildUnit(mSelectedUnit);
+                    }
 
                     ImGui.TableNextColumn();
 
                     ImGui.Text("Skin Division"); ImGui.TableNextColumn();
-                    ImGui.Combo("##SkinDivision", ref Unsafe.As<CourseUnit.SkinDivision, int>(ref mSelectedUnit.mSkinDivision),
-                        CourseUnit.SkinDivisionNames, CourseUnit.SkinDivisionNames.Length);
+                    if (ImGui.Combo("##SkinDivision", ref Unsafe.As<CourseUnit.SkinDivision, int>(ref mSelectedUnit.mSkinDivision),
+                        CourseUnit.SkinDivisionNames, CourseUnit.SkinDivisionNames.Length))
+                    {
+                        BGUnitRailSceneObj.rebuildUnit(mSelectedUnit);
+                    }
 
                     ImGui.EndTable();
                 }

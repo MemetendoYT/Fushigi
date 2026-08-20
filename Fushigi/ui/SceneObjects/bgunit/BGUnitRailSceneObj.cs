@@ -23,26 +23,12 @@ namespace Fushigi.ui.SceneObjects.bgunit
  
         public static void InsertPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point, int index, BGUnitRail rail)
         {
-            var batchAction = ctx.BeginBatchAction();
-            var revertible = rail.Points.RevertableInsert(point, index,
-                $"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
-
-            ctx.CommitAction(new TileRebuildRevertable(point.mRail.mCourseUnit));
-            ctx.CommitAction(revertible);
-            ctx.Select(point);
+            ctx.DeselectAll();
+            ctx.CommitAction(rail.Points.RevertableInsert(point, index,
+                $"{IconUtil.ICON_PLUS_CIRCLE} Terrain Point Insert"));
             rebuildUnit(rail.mCourseUnit);
-            batchAction.Commit("add point");
-        }
-
-        public void AddPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point)
-        {
-            var revertible = rail.Points.RevertableAdd(point,
-                $"{IconUtil.ICON_PLUS_CIRCLE} Rail Point Add");
-
-            ctx.CommitAction(revertible);
             ctx.Select(point);
         }
-
 
         private static bool HitTest(LevelViewport viewport, BGUnitRail rail)
         {
@@ -175,7 +161,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
         }
 
 
-        public static void Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail rail, bool isBelt)
+        public static void DrawBGUnitLines(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail rail, bool isBelt)
         {
             //if (!Visible)
             //    return;
@@ -336,11 +322,10 @@ namespace Fushigi.ui.SceneObjects.bgunit
             unit.GenerateTileSubUnits();
             unit.GenerateCorrectTiles();
             rebuildTiles = true;
-            unit.UpdateTiles = false;
         }
 
 
-        public static void Draw2D(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail.RailPoint point)
+        public static void DrawBGUnitPoints(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail.RailPoint point)
         {
             var pos2D = viewport.WorldToScreen(point.mTranslation);
 

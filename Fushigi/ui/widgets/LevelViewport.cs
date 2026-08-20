@@ -12,11 +12,14 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Silk.NET.OpenGL;
 using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Numerics;
+using System.Reflection.Metadata.Ecma335;
+using ZstdSharp.Unsafe;
 using static Fushigi.course.CourseUnit;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
@@ -352,10 +355,9 @@ namespace Fushigi.ui.widgets
                     label = "Rail Point Control";
                     break;
                 case BGUnitRail.RailPoint point:
-                    label = "Terrain point";
+                    label = "Terrain Point";
                     break;
             }
-
             return label;
         }
         public void CommitTranslation(Transformable transformable)
@@ -524,12 +526,18 @@ namespace Fushigi.ui.widgets
             if (ImGui.IsKeyPressed(ImGuiKey.Z) && modifiers == KeyboardModifier.CtrlCmd)
             {
                 mEditContext.Undo();
+
+                foreach (var unit in mArea.mUnitHolder.mUnits)
+                    BGUnitRailSceneObj.rebuildUnit(unit);
             }
 
             if ((ImGui.IsKeyPressed(ImGuiKey.Y) && modifiers == KeyboardModifier.CtrlCmd) ||
                 (ImGui.IsKeyPressed(ImGuiKey.Z) && modifiers == (KeyboardModifier.Shift | KeyboardModifier.CtrlCmd)))
             {
                 mEditContext.Redo();
+
+                foreach (var unit in mArea.mUnitHolder.mUnits)
+                    BGUnitRailSceneObj.rebuildUnit(unit);
             }
 
             CourseActor[] selectedActors = areaScene.EditContext.GetSelectedObjects<CourseActor>().ToArray();
@@ -692,7 +700,6 @@ namespace Fushigi.ui.widgets
                         TileBfresRenderFieldB.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
 
                         BGUnitRailSceneObj.rebuildTiles = false;
-                    //CourseUnit.UpdateTiles = false;
                 }
 
 
@@ -1023,10 +1030,11 @@ namespace Fushigi.ui.widgets
                 var batchAction = mEditContext.BeginBatchAction();
                 foreach (var point in BGUnitRailSceneObj.pointsToDelete)
                 {
-                    var revertible = point.mRail.Points.RevertableRemove(point);
-                    mEditContext.CommitAction(revertible);
+                    if (!point.mRail.Points.Contains(point))
+                        continue;
+
+                    mEditContext.CommitAction(point.mRail.Points.RevertableRemove(point));
                     BGUnitRailSceneObj.rebuildUnit(point.mRail.mCourseUnit);
-                    mEditContext.CommitAction(new TileRebuildRevertable(point.mRail.mCourseUnit));
                 }
                 batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
                 BGUnitRailSceneObj.pointsToDelete.Clear();
@@ -1034,6 +1042,9 @@ namespace Fushigi.ui.widgets
         }
         private void DrawRail(BGUnitRail rail, bool isBelt)
         {
+            if (!rail.Visible)
+                return;
+           
             if(rail.mCourseUnit.UpdateTiles)
             {
                 BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
@@ -1042,10 +1053,10 @@ namespace Fushigi.ui.widgets
             float thickness = mHoveredObject == rail ? 4f : 3.5f;
             var segmentCount = rail.Points.Count;
             BGUnitRail.RailPoint selectedPoint = null;
-            BGUnitRailSceneObj.Draw2D(mEditContext, this, mDrawList, rail, isBelt);
+            BGUnitRailSceneObj.DrawBGUnitLines(mEditContext, this, mDrawList, rail, isBelt);
             foreach (var point in rail.Points)
             {
-                BGUnitRailSceneObj.Draw2D(mEditContext, this, mDrawList, point);
+                BGUnitRailSceneObj.DrawBGUnitPoints(mEditContext, this, mDrawList, point);
             }
         }
         public void DrawOverlay()
@@ -1518,6 +1529,8 @@ namespace Fushigi.ui.widgets
                 if (mEditContext.GetObjectCountOfType<BGUnitRail>() >= 1)
                     mUnitRails = mEditContext.GetSelectedObjects<BGUnitRail>().ToArray();
 
+
+
                 if (mUnitRails != null && mUnitRails.Count() > 0)
                 {
                     ImGui.Separator();
@@ -1738,6 +1751,7 @@ namespace Fushigi.ui.widgets
                 ImGui.EndPopup();
             }
         }
+
         public void DeleteUnit()
         {
             bool deleteWall = false;

@@ -662,7 +662,7 @@ namespace Fushigi.ui
                             //Ensure the romfs path is set for saving
                             if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
                             {
-                                if (!mSelectedCourseScene.checkForEmptyRails())
+                                if (mSelectedCourseScene.checkForEmptyRails())
                                     mSelectedCourseScene.deleteEmptyRails();
                                 mSelectedCourseScene.Save(false);
                             }

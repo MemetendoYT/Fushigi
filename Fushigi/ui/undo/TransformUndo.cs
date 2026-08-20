@@ -27,7 +27,7 @@ namespace Fushigi.ui
 
         public IRevertable Revert()
         {
-            unit.UpdateTiles = true;
+            Fushigi.ui.SceneObjects.bgunit.BGUnitRailSceneObj.rebuildUnit(unit);
             return this;
         }
     }

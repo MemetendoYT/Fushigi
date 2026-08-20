@@ -223,6 +223,8 @@ namespace Fushigi.course
 
         public bool IsInternal = false;
 
+        public bool Visible = false;
+
         public BGUnitRail(CourseUnit unit)
         {
             mCourseUnit = unit;
