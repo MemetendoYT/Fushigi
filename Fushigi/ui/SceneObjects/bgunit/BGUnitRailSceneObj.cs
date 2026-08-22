@@ -163,16 +163,16 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
         public static void DrawBGUnitLines(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail rail, bool isBelt)
         {
-            //if (!Visible)
-            //    return;
-
             BGUnitRail.RailPoint point = null;
+
             if (ctx.IsAnySelected<BGUnitRail.RailPoint>())
             {
                 point = ctx.GetFirstObjectOfType<BGUnitRail.RailPoint>();
-                ctx.Select(point.mRail);
+
+                if (point != null)
+                    ctx.Select(point.mRail);
             }
-     
+
             bool isNewHoveredObj = false;
             addPointPos = EvaluateAddPointPos(ctx, viewport, rail);
 
@@ -184,107 +184,115 @@ namespace Fushigi.ui.SceneObjects.bgunit
             if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 OnMouseDown(ctx, viewport, rail);
 
-            var lineThickness = 3.5f;
+            const float lineThickness = 3.5f;
+            int pointCount = rail.Points.Count;
 
-            for (int i = 0; i < rail.Points.Count; i++)
+            // Cache screen positions so each point only gets transformed once.
+            Vector2[] screenPositions = new Vector2[pointCount];
+
+            for (int i = 0; i < pointCount; i++)
+                screenPositions[i] = viewport.WorldToScreen(rail.Points[i].mTranslation);
+
+            for (int i = 0; i < pointCount; i++)
             {
                 Vector3 pos = rail.Points[i].mTranslation;
 
                 Vector3 nextPos;
 
-                if (i < rail.Points.Count - 1) //is not last point
+                int nextIndex = i + 1;
+
+                if (nextIndex < pointCount)
                 {
-                    nextPos = rail.Points[i + 1].mTranslation;
+                    nextPos = rail.Points[nextIndex].mTranslation;
                 }
-                else if (rail.IsClosed) //last point to first if closed
+                else if (rail.IsClosed)
                 {
+                    nextIndex = 0;
                     nextPos = rail.Points[0].mTranslation;
-                }
-                else //last point but not closed, draw no line
-                    continue;
-
-                var pos2D = viewport.WorldToScreen(pos);
-                var nextPos2D = viewport.WorldToScreen(nextPos);
-
-                uint line_color = IsValidAngle(new Vector2(pos.X, pos.Y), new Vector2(nextPos.X, nextPos.Y)) ? Color_Default : Color_SlopeError;
-                if (isSelected && line_color != Color_SlopeError)
-                    line_color = Color_SelectionEdit;
-
-                if (isBelt)
-                {
-                    var bottomPos2D = viewport.WorldToScreen(pos - Vector3.UnitY * 0.5f);
-                    var bottomNextPos2D = viewport.WorldToScreen(nextPos - Vector3.UnitY * 0.5f);
-
-                    dl.AddQuadFilled(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D, line_color & 0x00FFFFFF | 0x55000000);
-                    dl.AddQuad(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D, line_color, lineThickness - 1);
-
-                    if (MathUtil.HitTestConvexQuad(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D,
-                    ImGui.GetMousePos()))
-                    {
-                        isNewHoveredObj = true;
-                    }
                 }
                 else
                 {
-                    dl.AddLine(pos2D, nextPos2D, line_color, lineThickness);
+                    continue;
+                }
+
+                Vector2 pos2D = screenPositions[i];
+                Vector2 nextPos2D = screenPositions[nextIndex];
+
+                uint lineColor = IsValidAngle(new Vector2(pos.X, pos.Y), new Vector2(nextPos.X, nextPos.Y))
+                    ? Color_Default
+                    : Color_SlopeError;
+
+                if (isSelected && lineColor != Color_SlopeError)
+                    lineColor = Color_SelectionEdit;
+
+                if (isBelt)
+                {
+                    Vector2 bottomPos2D = viewport.WorldToScreen(pos - Vector3.UnitY * 0.5f);
+                    Vector2 bottomNextPos2D = viewport.WorldToScreen(nextPos - Vector3.UnitY * 0.5f);
+
+                    dl.AddQuadFilled(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D, lineColor & 0x00FFFFFF | 0x55000000);
+                    dl.AddQuad(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D, lineColor, lineThickness - 1);
+
+                    if (MathUtil.HitTestConvexQuad(pos2D, nextPos2D, bottomNextPos2D, bottomPos2D, ImGui.GetMousePos()))
+                        isNewHoveredObj = true;
+                }
+                else
+                {
+                    dl.AddLine(pos2D, nextPos2D, lineColor, lineThickness);
                 }
 
                 if (isSelected)
                 {
-                    //Arrow display
-                    Vector3 next = i < rail.Points.Count - 1 ? rail.Points[i + 1].mTranslation : rail.Points[0].mTranslation;
-                    Vector3 dist = next - rail.Points[i].mTranslation;
-                    var angleInRadian = MathF.Atan2(dist.Y, dist.X); //angle in radian
+                    Vector3 dist = nextPos - pos;
+                    float angleInRadian = MathF.Atan2(dist.Y, dist.X);
                     var rotation = Matrix4x4.CreateRotationZ(angleInRadian);
 
-                    float width = 1f;
+                    Vector3 line = Vector3.TransformNormal(new Vector3(0, 1f, 0), rotation);
 
-                    var line = Vector3.TransformNormal(new Vector3(0, width, 0), rotation);
+                    Vector2 arrowStart = viewport.WorldToScreen(pos + dist / 2f);
+                    Vector2 arrowEnd = viewport.WorldToScreen(pos + dist / 2f + line);
 
-                    Vector2[] arrow =
-                    [
-                        viewport.WorldToScreen(rail.Points[i].mTranslation + dist / 2f),
-                        viewport.WorldToScreen(rail.Points[i].mTranslation + dist / 2f + line),
-                    ];
-                    float alpha = 0.5f;
+                    uint arrowColor = ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, 0.5f));
 
-                    dl.AddLine(arrow[0], arrow[1], ImGui.ColorConvertFloat4ToU32(new Vector4(1f, 1f, 1f, alpha)), lineThickness);
+                    dl.AddLine(arrowStart, arrowEnd, arrowColor, lineThickness);
                 }
             }
 
-            //draw visual hint for added point
             if (addPointPos.TryGetValue(out var addPos))
             {
-                var pos2D = viewport.WorldToScreen(addPos.pos);
+                Vector2 pos2D = viewport.WorldToScreen(addPos.pos);
 
-                if (rail.Points.Count > 0)
+                if (pointCount > 0)
                 {
                     int index = addPos.index;
-                    var pointA = viewport.WorldToScreen(rail.Points.GetWrapped(index - 1).mTranslation);
-                    var pointB = viewport.WorldToScreen(rail.Points.GetWrapped(index).mTranslation);
-                    var pointC = pos2D;
 
-                    var pointAVec = rail.Points.GetWrapped(index - 1).mTranslation;
-                    var pointBVec = rail.Points.GetWrapped(index).mTranslation;
-                    ImGui.SetTooltip("X: " + (addPos.pos.X - pointAVec.X) + ", Y: " + (addPos.pos.Y - pointAVec.Y));
+                    Vector3 pointAVec = rail.Points.GetWrapped(index - 1).mTranslation;
+                    Vector3 pointBVec = rail.Points.GetWrapped(index).mTranslation;
+
+                    Vector2 pointA = viewport.WorldToScreen(pointAVec);
+                    Vector2 pointB = viewport.WorldToScreen(pointBVec);
+                    Vector2 pointC = pos2D;
+
+                    ImGui.SetTooltip($"X: {addPos.pos.X - pointAVec.X}, Y: {addPos.pos.Y - pointAVec.Y}");
+
                     if (!isBelt)
                         dl.AddTriangleFilled(pointA, pointB, pointC, 0x99FFFFFF);
 
                     if (rail.IsClosed || index > 0)
                         dl.AddLine(pointA, pointC, 0xFFFFFFFF, 2.5f);
-                    if (rail.IsClosed || index < rail.Points.Count)
+
+                    if (rail.IsClosed || index < pointCount)
                         dl.AddLine(pointB, pointC, 0xFFFFFFFF, 2.5f);
 
                     if (!rail.IsClosed)
                     {
                         if (index == 0)
                             ImGui.SetTooltip("Prepend point");
-                        else if (index == rail.Points.Count)
+                        else if (index == pointCount)
                             ImGui.SetTooltip("Append point");
                         else
                             ImGui.SetTooltip("Insert point");
                     }
-
                 }
 
                 dl.AddCircleFilled(pos2D, 8.5f, 0xFFFFFFFF);
@@ -320,23 +328,26 @@ namespace Fushigi.ui.SceneObjects.bgunit
         public static void rebuildUnit(CourseUnit unit)
         {
             unit.GenerateTileSubUnits();
-            unit.GenerateCorrectTiles();
+            //unit.GenerateCorrectTiles();
             rebuildTiles = true;
         }
 
 
         public static void DrawBGUnitPoints(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail.RailPoint point)
         {
-            var pos2D = viewport.WorldToScreen(point.mTranslation);
+            Vector2 pos2D = viewport.WorldToScreen(point.mTranslation);
 
-            //Display point color
             uint color = 0xFFFFFFFF;
+
             if (ctx.IsSelected(point))
                 color = ImGui.ColorConvertFloat4ToU32(new(0.84f, .437f, .437f, 1));
 
             dl.AddCircleFilled(pos2D, 10.0f, color);
 
-            bool isHovered = (ImGui.GetMousePos() - pos2D).Length() < 10.0f;
+            Vector2 mousePos = ImGui.GetMousePos();
+            Vector2 delta = mousePos - pos2D;
+
+            bool isHovered = delta.X * delta.X + delta.Y * delta.Y < 100.0f;
 
             if (isHovered)
             {
@@ -355,14 +366,8 @@ namespace Fushigi.ui.SceneObjects.bgunit
             if (ImGui.IsKeyPressed(ImGuiKey.A) && ImGui.GetIO().KeyCtrl && ctx.IsSelected(point))
             {
                 foreach (var newPoint in point.mRail.Points)
-                {
                     ctx.Select(newPoint);
-                }
             }
-
-            //if (HitTest(viewport, point))
-            //    viewport.mHoveredObject = point;
         }
-
     }
 }

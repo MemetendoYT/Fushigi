@@ -12,16 +12,11 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Silk.NET.OpenGL;
 using System.Data;
 using System.Drawing;
-using System.IO;
 using System.Numerics;
-using System.Reflection.Metadata.Ecma335;
-using ZstdSharp.Unsafe;
 using static Fushigi.course.CourseUnit;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 
 namespace Fushigi.ui.widgets
@@ -78,6 +73,7 @@ namespace Fushigi.ui.widgets
         public HDRScreenBuffer HDRScreenBuffer = new HDRScreenBuffer();
         public TileBfresRender TileBfresRenderFieldA;
         public TileBfresRender TileBfresRenderFieldB;
+
         public AreaResourceManager EnvironmentData = new AreaResourceManager(gl, area.mInitEnvPalette);
         private bool mIsNoMoreRendering = false;
         public static bool updateSkinA = false;
@@ -104,7 +100,6 @@ namespace Fushigi.ui.widgets
 
         public FushigiCursor cursor;
         private List<(BGUnitRail Rail, BGUnitRail.RailPoint Point)> deleteList2;
-        private List<CourseUnit> rebuildList;
         private bool CommitObjectTranslation;
         private Vector3 startPosWorld;
         private Vector3 currentPosWorld;
@@ -296,13 +291,6 @@ namespace Fushigi.ui.widgets
                         TransformObjects(transformable, StartingTrans, CurrentTrans);
                         if(transformable is CourseRail.CourseRailPoint point && point.mIsCurve)
                             TransformObjects(point.mControl, StartingTrans, CurrentTrans);
-                        if (transformable is BGUnitRail.RailPoint unitRail)
-                        {
-                            var unit = unitRail.mRail.mCourseUnit;
-
-                            if (!rebuildList.Contains(unit))
-                                rebuildList.Add(unit);
-                        }
                     }
                     break;
                 case DefaultShape:
@@ -313,7 +301,7 @@ namespace Fushigi.ui.widgets
         public void TransformObjects(Transformable transformable, Vector3 StartingTrans, Vector3 CurrentTrans)
         {
             Vector3 relativePos = transformable.mStartingTrans - StartingTrans;
-            if (transformable is BGUnitRail.RailPoint)
+            if (transformable is BGUnitRail.RailPoint unitRail) 
             {
                 float newX = CurrentTrans.X + relativePos.X;
                 float newY = CurrentTrans.Y + relativePos.Y;
@@ -325,9 +313,15 @@ namespace Fushigi.ui.widgets
                 //}
                 //else
                 //{
+
                 newX = MathF.Round(newX, MidpointRounding.AwayFromZero);
                 newY = MathF.Round(newY, MidpointRounding.AwayFromZero);
                 //}
+                bool changed = transformable.mTranslation.X != newX || transformable.mTranslation.Y != newY;
+
+                if (changed)
+                    BGUnitRailSceneObj.rebuildUnit(unitRail.mRail.mCourseUnit);
+                
 
                 transformable.mTranslation.X = newX;
                 transformable.mTranslation.Y = newY;
@@ -640,27 +634,21 @@ namespace Fushigi.ui.widgets
             {
                 if (!CourseScene.HideWalls)
             {
-                //TODO put this somewhere else and maybe cache this
-                TileBfresRender CreateTileRendererForSkin(SkinDivision division, string skinName)
-                {
-                    var bootupPack = RomFS.GetOrLoadBootUpPack();
+                    //TODO put this somewhere else and maybe cache this
+                    TileBfresRender CreateTileRendererForSkin(SkinDivision division, string skinName)
+                    {
+                        var render = new TileBfresRender(gl,
+                            new TileBfresRender.UnitPackNames(
+                                FullHit: CourseScene.SkinTable.GetPackName(skinName, "FullHit"),
+                                HalfHit: CourseScene.SkinTable.GetPackName(skinName, "HalfHit"),
+                                NoHit: CourseScene.SkinTable.GetPackName(skinName, "NoHit"),
+                                Bridge: CourseScene.SkinTable.GetPackName(skinName, "Bridge")
+                            ), division);
 
-                    var bytes = bootupPack.OpenFile(
-                        "System/CombinationDataTableData/DefaultBgUnitSkinConfigTable.pp__CombinationDataTableData.bgyml");
-                    var table = BymlSerialize.Deserialize<DefaultBgUnitSkinConfigTable>(bytes);
+                        render.Load(this.mArea.mUnitHolder);
+                        return render;
+                    }
 
-
-                    var render = new TileBfresRender(gl,
-                        new TileBfresRender.UnitPackNames(
-                            FullHit: table.GetPackName(skinName, "FullHit"),
-                            HalfHit: table.GetPackName(skinName, "HalfHit"),
-                            NoHit: table.GetPackName(skinName, "NoHit"),
-                            Bridge: table.GetPackName(skinName, "Bridge")
-                        ), division);
-                    render.Load(this.mArea.mUnitHolder);
-
-                    return render;
-                }
                 string? fieldASkin = mArea.mAreaParams.SkinParam?.FieldA;
                 string? fieldBSkin = mArea.mAreaParams.SkinParam?.FieldB;
 
@@ -669,6 +657,7 @@ namespace Fushigi.ui.widgets
                     TileBfresRenderFieldA = null;
                     //BfresCache.Clear();
                     updateSkinA = false;
+                        Console.WriteLine("fart");
                 }
                 
                 if(updateSkinB)
@@ -678,14 +667,19 @@ namespace Fushigi.ui.widgets
                     updateSkinB = false;
                 }
 
-                if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
-                    TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
+                    if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
+                    {
+                        TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
+                        Console.WriteLine("running");
+                    }
+                    if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
+                    {
+                        Console.WriteLine("running");
+                        TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
 
-                if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
-                    TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
+                    }
 
-
-                if (!hasInitialized)
+                    if (!hasInitialized)
                 {
                     tileRebuild = true;
                     hasInitialized = true;
@@ -1009,9 +1003,11 @@ namespace Fushigi.ui.widgets
                 foreach (var wall in unit.Walls)
                 {
                     DrawRail(wall.ExternalRail, false);
+
                     foreach (var internalRail in wall.InternalRails)
                         DrawRail(internalRail, false);
                 }
+
                 foreach (var belt in unit.mBeltRails)
                 {
                     if (belt.mCourseUnit.mModelType != ModelType.Solid)
@@ -1028,6 +1024,7 @@ namespace Fushigi.ui.widgets
             if (BGUnitRailSceneObj.pointsToDelete.Count > 0)
             {
                 var batchAction = mEditContext.BeginBatchAction();
+
                 foreach (var point in BGUnitRailSceneObj.pointsToDelete)
                 {
                     if (!point.mRail.Points.Contains(point))
@@ -1036,28 +1033,27 @@ namespace Fushigi.ui.widgets
                     mEditContext.CommitAction(point.mRail.Points.RevertableRemove(point));
                     BGUnitRailSceneObj.rebuildUnit(point.mRail.mCourseUnit);
                 }
+
                 batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
                 BGUnitRailSceneObj.pointsToDelete.Clear();
             }
         }
+
         private void DrawRail(BGUnitRail rail, bool isBelt)
         {
             if (!rail.Visible)
                 return;
-           
-            if(rail.mCourseUnit.UpdateTiles)
+
+            if (rail.mCourseUnit.UpdateTiles)
             {
                 BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
+                rail.mCourseUnit.UpdateTiles = false;
             }
 
-            float thickness = mHoveredObject == rail ? 4f : 3.5f;
-            var segmentCount = rail.Points.Count;
-            BGUnitRail.RailPoint selectedPoint = null;
             BGUnitRailSceneObj.DrawBGUnitLines(mEditContext, this, mDrawList, rail, isBelt);
+
             foreach (var point in rail.Points)
-            {
                 BGUnitRailSceneObj.DrawBGUnitPoints(mEditContext, this, mDrawList, point);
-            }
         }
         public void DrawOverlay()
         {
@@ -1871,7 +1867,6 @@ namespace Fushigi.ui.widgets
                         if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                             CurrentTrans.Z = posVec.Z;
 
-                        rebuildList = new();
 
                         foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                             HandleTranslation(transformable, StartingTrans, CurrentTrans);
@@ -1879,9 +1874,7 @@ namespace Fushigi.ui.widgets
 
                         CollisionEditor.HandleShapeTranslation(StartingTrans, CurrentTrans, mEditContext);
 
-                        foreach (var unit in rebuildList)
-                            BGUnitRailSceneObj.rebuildUnit(unit);
-                            
+
                         if (StartingTrans != CurrentTrans)
                             CommitObjectTranslation = true;
                     }
@@ -1903,7 +1896,6 @@ namespace Fushigi.ui.widgets
                     if (transformable is CourseRail.CourseRailPoint p && p.mIsCurve)
                         CommitTranslation(p.mControl);
                 }
-                rebuildList.Clear();
 
                 if(objCount > 1) 
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} Objects");

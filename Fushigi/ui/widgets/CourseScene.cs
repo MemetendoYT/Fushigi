@@ -1,6 +1,7 @@
 ﻿using Fasterflect;
 using Fushigi.Bfres;
 using Fushigi.Byml;
+using Fushigi.Byml.Serializer;
 using Fushigi.course;
 using Fushigi.env;
 using Fushigi.gl;
@@ -42,14 +43,13 @@ namespace Fushigi.ui.widgets
             envPaletteWindow = new EnvPaletteWindow();
             activeViewport = null!;
             LevelViewport._courseScene = this;
+            
+            SkinTable ??= BymlSerialize.Deserialize<DefaultBgUnitSkinConfigTable>(
+            RomFS.GetOrLoadBootUpPack().OpenFile(
+            "System/CombinationDataTableData/DefaultBgUnitSkinConfigTable.pp__CombinationDataTableData.bgyml"));
             UpdateDRPC();
         }
 
-        public CourseScene(GLTaskScheduler glScheduler)
-        {
-            activeViewport = null!;
-            LevelViewport._courseScene = this;
-        }
 
         #region Variables
         readonly Dictionary<CourseArea, LevelViewport> viewports = [];
@@ -107,6 +107,7 @@ namespace Fushigi.ui.widgets
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
         public static CourseArea currentArea;
+        public static DefaultBgUnitSkinConfigTable SkinTable;
         // this is a very bad fix bc im waiting
         // to work on jupahe's editor instead of
         // fushigi.

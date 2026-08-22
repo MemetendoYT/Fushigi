@@ -223,7 +223,7 @@ namespace Fushigi.course
 
         public bool IsInternal = false;
 
-        public bool Visible = false;
+        public bool Visible = true;
 
         public BGUnitRail(CourseUnit unit)
         {
