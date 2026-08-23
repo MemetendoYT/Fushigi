@@ -306,22 +306,19 @@ namespace Fushigi.ui.widgets
                 float newX = CurrentTrans.X + relativePos.X;
                 float newY = CurrentTrans.Y + relativePos.Y;
 
-                //if (UserSettings.GetEnableHalfTile())
-                //{
-                //    newX = MathF.Round(newX * 2, MidpointRounding.AwayFromZero) / 2;
-                //    newY = MathF.Round(newY * 2, MidpointRounding.AwayFromZero) / 2;
-                //}
-                //else
-                //{
-
+                if (ImGui.GetIO().KeyShift)
+                {
+                    newX = MathF.Round(newX * 2, MidpointRounding.AwayFromZero) / 2;
+                    newY = MathF.Round(newY * 2, MidpointRounding.AwayFromZero) / 2;
+                }
+                else
+                {
                 newX = MathF.Round(newX, MidpointRounding.AwayFromZero);
                 newY = MathF.Round(newY, MidpointRounding.AwayFromZero);
-                //}
-                bool changed = transformable.mTranslation.X != newX || transformable.mTranslation.Y != newY;
+                }
 
-                if (changed)
-                    BGUnitRailSceneObj.rebuildUnit(unitRail.mRail.mCourseUnit);
-                
+                if (transformable.mTranslation.X != newX || transformable.mTranslation.Y != newY)
+                   BGUnitRailSceneObj.rebuildUnit(unitRail.mRail.mCourseUnit);       
 
                 transformable.mTranslation.X = newX;
                 transformable.mTranslation.Y = newY;
@@ -989,10 +986,7 @@ namespace Fushigi.ui.widgets
                 }
             }
         }
-        public void DrawUnits()
-        {
-            DrawBGUnits();
-        }
+
         public void DrawBGUnits()
         {
             foreach (var unit in mArea.mUnitHolder.mUnits)
@@ -1181,7 +1175,7 @@ namespace Fushigi.ui.widgets
             mHoveredObject = null;
             CourseRail.deleteList = new List<(CourseRail rail, CourseRail.CourseRailPoint point)>();
             deleteList2 = new List<(BGUnitRail rail, BGUnitRail.RailPoint point)>();
-            DrawUnits();
+            DrawBGUnits();
             CourseRail.DrawRails(this, mEditContext, mArea);
 
             cursor?.DrawCursor(this, mEditContext);

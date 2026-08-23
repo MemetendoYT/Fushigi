@@ -311,30 +311,36 @@ public class ActorParams
 
     internal static void DrawParam(List<string> list, CourseActor actor, string ActorParam)
     {
-        int selected = list.IndexOf(actor.mActorParameters[ActorParam].ToString());
+        object original = actor.mActorParameters[ActorParam];
+        Type originalType = original.GetType();
 
+        int selected = list.IndexOf(original.ToString());
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.ToArray(), list.Count))
-            actor.mActorParameters[ActorParam] = list[selected];
-
+            actor.mActorParameters[ActorParam] = Convert.ChangeType(list[selected], originalType);
 
         ImGui.PopItemWidth();
     }
 
     internal static void DrawRailParam(Dictionary<string, string> list, CourseRail rail, string RailParam)
     {
-        int selected = list.Values.ToList().IndexOf(rail.mParameters[RailParam].ToString());
+        object original = rail.mParameters[RailParam];
+        Type originalType = original.GetType();
+
+        int selected = list.Values.ToList().IndexOf(original.ToString());
         if (ImGui.Combo($"##{RailParam}", ref selected, list.Keys.ToArray(), list.Count))
-           rail.mParameters[RailParam] = list.Values.ToArray()[selected];
-        
+            rail.mParameters[RailParam] = Convert.ChangeType(list.Values.ToArray()[selected], originalType);
+
         ImGui.PopItemWidth();
     }
-
     internal static void DrawParam(Dictionary<string, string> list, CourseActor actor, string ActorParam, CourseScene CourseScene)
     {
-        int selected = list.Values.ToList().IndexOf(actor.mActorParameters[ActorParam].ToString());
+        object original = actor.mActorParameters[ActorParam];
+        Type originalType = original.GetType();
+
+        int selected = list.Values.ToList().IndexOf(original.ToString());
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.Keys.ToArray(), list.Count))
         {
-            actor.mActorParameters[ActorParam] = list.Values.ToArray()[selected];
+            actor.mActorParameters[ActorParam] = Convert.ChangeType(list.Values.ToArray()[selected], originalType);
             if (ActorParam == "MorphPlayerType")
                 CourseScene.course.mCourseInfo.CoursePlayerMorphType = CourseSettings.PlayerMorphTypeReverse[list.Keys.ToArray()[selected]];
         }

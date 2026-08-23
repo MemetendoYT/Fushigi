@@ -21,13 +21,14 @@ namespace Fushigi.ui.SceneObjects.bgunit
         private static (Vector3 pos, int index)? addPointPos;
         public static List<BGUnitRail.RailPoint> pointsToDelete = new();
  
-        public static void InsertPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point, int index, BGUnitRail rail)
+        public static void InsertPoint(CourseAreaEditContext ctx, BGUnitRail.RailPoint point, int index, BGUnitRail rail, LevelViewport viewport)
         {
             ctx.DeselectAll();
             ctx.CommitAction(rail.Points.RevertableInsert(point, index,
                 $"{IconUtil.ICON_PLUS_CIRCLE} Terrain Point Insert"));
             rebuildUnit(rail.mCourseUnit);
             ctx.Select(point);
+            viewport.mHoveredObject = point;
         }
 
         private static bool HitTest(LevelViewport viewport, BGUnitRail rail)
@@ -139,7 +140,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
             if (addPointPos.TryGetValue(out var addPos))
             {
                 //DeselectAll(ctx, rail);
-                InsertPoint(ctx, new BGUnitRail.RailPoint(rail, addPos.pos), addPos.index, rail);
+                InsertPoint(ctx, new BGUnitRail.RailPoint(rail, addPos.pos), addPos.index, rail, viewport);
             }
             else
             {
