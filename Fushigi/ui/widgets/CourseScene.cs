@@ -50,7 +50,6 @@ namespace Fushigi.ui.widgets
             UpdateDRPC();
         }
 
-
         #region Variables
         readonly Dictionary<CourseArea, LevelViewport> viewports = [];
         readonly Dictionary<CourseArea, object?> lastSavedAction = new();
