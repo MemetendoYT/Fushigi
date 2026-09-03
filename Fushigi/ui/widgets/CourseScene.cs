@@ -101,15 +101,13 @@ namespace Fushigi.ui.widgets
         public static bool refreshTranslation = false;
         private List<string> filteredActors = new();
         private List<string> filteredLayers = new();
+        private List<string> filteredPrefabs = new();
         private List<string> translatedActors = new();
         private CourseArea areaToFocus = null;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
         public static CourseArea currentArea;
         public static DefaultBgUnitSkinConfigTable SkinTable;
-        // this is a very bad fix bc im waiting
-        // to work on jupahe's editor instead of
-        // fushigi.
         public static bool HideWalls;
         public static bool reloadUnit = false;
         private int count = 0;
@@ -232,6 +230,8 @@ namespace Fushigi.ui.widgets
             "ShabonMove",
             "SwitchON",
             "SwitchOFF",
+            "WorldMapRoute",
+            "WorldMapRouteXlu"
         ];
 
         public static readonly Regex NumberRegex = new(@"\d+");
@@ -1005,20 +1005,6 @@ namespace Fushigi.ui.widgets
                             MainWindow.addNewArea = true;
                             saveStatus = false;
                         }
-
-                        //if (areaToFocus == area)
-                        //{
-                        //    ImGui.SetItemDefaultFocus();
-                        //    activeViewport = viewport;
-                        //    if (selectedArea != area)
-                        //    {
-                        //        mHasFilledLayers = false;
-                        //    }
-
-                        //    selectedArea = area;
-                        //    currentArea = selectedArea;
-                        //    areaToFocus = null;
-                        //}
 
 
                         if (selectedArea != area)
@@ -1888,7 +1874,7 @@ namespace Fushigi.ui.widgets
 
         private void DynamicParamNode(CourseActor actor)
         {
-            if (ImGui.CollapsingHeader("Dynamic", ImGuiTreeNodeFlags.DefaultOpen))
+            if (ImGui.CollapsingHeader("Actor Params", ImGuiTreeNodeFlags.DefaultOpen))
             {
                 List<string> actorParams = null;
                 try
@@ -1920,7 +1906,7 @@ namespace Fushigi.ui.widgets
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-                            ActorParams.DrawActorParams(actor, param);
+                            ActorParams.DrawActorParams(actor, param, this);
                             ImGui.EndTable();
                         }
 
@@ -2124,6 +2110,10 @@ namespace Fushigi.ui.widgets
                     mSelectedLayer = actor.mLayer;
                     ctx.AddActor(actor);
                     AddLayerFromFile();
+
+                    if(actor.mPackName == "DVBasePosLocator")
+                        activeViewport.DistantViewScrollManager.Reload(actor, true, mEditContext);
+                    
                 }
 
                 List<CourseRail>? prefabRails = CreatePrefabRail(placement, prefab, levelBytes, areaHash);
@@ -2175,15 +2165,32 @@ namespace Fushigi.ui.widgets
             ImGui.BeginChild("PrefabScroll", ImGui.GetContentRegionAvail());
             float rowHeight = ImGui.GetFrameHeight();
             float deleteButtonWidth = rowHeight * 1.6f;
+            bool isSearch = !string.IsNullOrWhiteSpace(mPrefabSearch);
 
             if (files.Length == 0)
                 ImGui.Text(noPrefabsText);
 
-            foreach (string file in files)
+            ImGui.InputText("##PrefabSearch", ref mPrefabSearch, 0x100);
+
+            if (prevLayerSearch != mPrefabSearch)
             {
+                regenerateLayersList = false;
+                filteredPrefabs.Clear();
+                prevPrefabSearch = mPrefabSearch;
 
-                string prefab = Path.GetFileName(file).Split(".bcett")[0];
+                foreach (string file in files)
+                {
+                    string prefab = Path.GetFileName(file).Split(".bcett")[0];
 
+                    var actorEnglish = Translate.FetchTranslatedName(prefab);
+                    bool HasText = file.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    filteredPrefabs.Add(prefab);
+                }
+            }
+
+            foreach (var prefab in filteredPrefabs)
+            {
                 ImGui.PushID(prefab);
 
                 float fullWidth = ImGui.GetContentRegionAvail().X;
@@ -2193,10 +2200,8 @@ namespace Fushigi.ui.widgets
                 ImGui.PushItemWidth(nameWidth);
 
                 if (ImGui.Selectable(prefab, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
-                {
                     LoadPrefab(prefab, directory);
-                }
-
+      
                 ImGui.PopItemWidth();
                 ImGui.EndGroup();
 
@@ -2223,10 +2228,8 @@ namespace Fushigi.ui.widgets
                     ImGui.SetItemTooltip("Delete Prefab");
 
                     if (clicked)
-                    {
-                        DeletePrefabPopup(file);
-                    }
-
+                        DeletePrefabPopup(prefab);
+                    
                     ImGui.PopID();
                 }
             }
@@ -2539,6 +2542,8 @@ namespace Fushigi.ui.widgets
                 ImGui.SetWindowFocus(area.mAreaName);
                 (pos, modifier) = await viewport.PickPosition(
                     $"Placing actor {actorName} -- Hold SHIFT to place multiple", mSelectedLayer, tokenSource);
+
+                Console.WriteLine("Adding the actor testy");
                 if (!pos.TryGetValue(out var posVec))
                 {
                     break;
@@ -2560,7 +2565,17 @@ namespace Fushigi.ui.widgets
 
                 actor = ActorPlacementParams(actor);
 
-                mEditContext.AddActor(actor);
+                if (actor.mPackName == "DVBasePosLocator")
+                {
+                    var batch = mEditContext.BeginBatchAction();
+                    activeViewport.DistantViewScrollManager.Reload(actor, true, mEditContext);
+                    mEditContext.AddActor(actor);
+                    batch.Commit($"{IconUtil.ICON_PLUS_CIRCLE} Add {actor.mPackName}");
+                }
+                else
+                    mEditContext.AddActor(actor);
+                
+
             } while ((modifier & KeyboardModifier.Shift) > 0);
             mSelectedActor = null;
             mSelectedLayer = null;
@@ -4739,9 +4754,8 @@ namespace Fushigi.ui.widgets
 
             var batchAction = ctx.BeginBatchAction();
             foreach (var actor in actors)
-            {
-                ctx.DeleteActor(actor);
-            }
+                ctx.DeleteActor(actor, activeViewport, selectedArea);
+            
 
             batchAction.Commit($"{IconUtil.ICON_TRASH} {actionName}");
         }
@@ -4787,9 +4801,8 @@ namespace Fushigi.ui.widgets
             var batchAction = ctx.BeginBatchAction();
 
             foreach (var actor in actors)
-            {
-                ctx.DeleteActor(actor);
-            }
+                ctx.DeleteActor(actor, activeViewport, selectedArea);
+
             ctx.CommitAction(new PropertyFieldsSetUndo(
                     this,
                     [("mLayersVisibility", new Dictionary<string, bool>(mLayersVisibility))],
@@ -4899,10 +4912,12 @@ namespace Fushigi.ui.widgets
         double backupTime = 0;
         public static bool blankLevel = false;
         private string mLayerSearch = "";
+        private string mPrefabSearch = "";
         private string prevLayerSearch;
         private int prevCallFrom = 0;
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
         private bool showActorVisibility;
+        private string prevPrefabSearch;
 
         public bool checkForEmptyRails()
         {

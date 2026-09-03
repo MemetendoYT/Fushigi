@@ -1,7 +1,9 @@
 ﻿using Fushigi.course;
+using Fushigi.course.distance_view;
 using Fushigi.param;
 using Fushigi.ui.widgets;
 using ImGuiNET;
+using System.Diagnostics.Tracing;
 
 public class ActorParams
 {
@@ -347,6 +349,51 @@ public class ActorParams
         ImGui.PopItemWidth();
     }
 
+    internal static void DrawDVBasePos(CourseActor actor, string param, LevelViewport viewport)
+    {
+        if (actor.mPackName == "DVBasePosLocator")
+        {
+            var ScrollManager = viewport.DistantViewScrollManager;
+            bool reload = false;
+
+            ImGui.Text("Scroll Rate X:");
+            ImGui.TableNextColumn();
+
+            var ActorParam = "TimeScrollRateX";
+            var value = (float)actor.mActorParameters[ActorParam];
+            if (ImGui.InputFloat($"##{ActorParam}", ref value))
+            {
+                actor.mActorParameters[ActorParam] = value;
+                reload = true;
+            }
+            ImGui.TableNextColumn();
+            ImGui.Text("Scroll Rate Y:");
+            ImGui.TableNextColumn();
+
+            ActorParam = "TimeScrollRateY";
+            value = (float)actor.mActorParameters[ActorParam];
+            if (ImGui.InputFloat($"##{ActorParam}", ref value))
+            {
+                actor.mActorParameters[ActorParam] = value;
+                reload = true;
+            }
+
+            ImGui.TableNextColumn();
+            ImGui.Text("DVLayerParam:");
+            ImGui.TableNextColumn();
+
+            ActorParam = "DVLayerParamName";
+            string DVParamName = (string)actor.mActorParameters[ActorParam];
+            if (ImGui.InputText($"##{ActorParam}", ref DVParamName, 0x100))
+            {
+                actor.mActorParameters[ActorParam] = DVParamName;
+                reload = true;
+            }
+
+            if(reload)
+                ScrollManager.Reload(actor, false);
+        }
+    }
     internal static void DrawChildParameters(CourseActor actor, string param)
     {
         try
@@ -436,13 +483,14 @@ public class ActorParams
                 }
             }
             ImGui.TableNextColumn();
-
         }
     }
-    internal static void DrawActorParams(CourseActor actor, string param, CourseScene CourseScene = null)
+    internal static void DrawActorParams(CourseActor actor, string param, CourseScene CourseScene)
     {
         if (param == "ChildActorSelectName" && actor.mActorChildRef != null)
             DrawChildParameters(actor, param);
+        else if (param == "DVBasePosLocator")
+            DrawDVBasePos(actor, param, CourseScene.activeViewport);
         else
         {
             foreach (KeyValuePair<string, ParamDB.ComponentParam> pair in ParamDB.GetComponentParams(param))
@@ -467,21 +515,13 @@ public class ActorParams
                     }
                 }
                 else if (value is bool)
-                {
                     DrawParamBool(actor, paramName);
-                }
                 else if (value is int)
-                {
                     DrawInt(actor, paramName);
-                }
                 else if (value is float)
-                {
                     DrawFloat(actor, paramName);
-                }
                 else if (value is string)
-                {
                     DrawString(actor, paramName);
-                }
             }
         }
     }

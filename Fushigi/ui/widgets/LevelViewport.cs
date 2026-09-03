@@ -79,7 +79,7 @@ namespace Fushigi.ui.widgets
         public static bool updateSkinA = false;
         public static bool updateSkinB = false;
         public IDictionary<string, bool>? mLayersVisibility;
-        DistantViewManager DistantViewScrollManager = new DistantViewManager(area);
+        public DistantViewManager DistantViewScrollManager = new DistantViewManager(area);
 
         List<CourseActor> backupSelection;
         public Vector2 storedMousePos;
@@ -1257,6 +1257,9 @@ namespace Fushigi.ui.widgets
 
                     newActor.mTranslation.Z = actor.mTranslation.Z;
 
+                    if (actor.mPackName == "DVBasePosLocator")
+                        DistantViewScrollManager.Reload(newActor, true, mEditContext);
+
                     var n = 0;
                     do { n++; }
                     while (area.GetActors().Any(x => x.mName == $"{actor.mPackName}{n}"));
@@ -1444,7 +1447,6 @@ namespace Fushigi.ui.widgets
                 if (selected.Count > 0)
                 {
                     ObjectDeletionRequested?.Invoke(selected);
-
                 }
 
                 deleteContext = false;

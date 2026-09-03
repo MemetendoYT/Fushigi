@@ -44,7 +44,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
 
             Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
             Vector3 pos;
-            if (UserSettings.GetEnableHalfTile())
+            if (ImGui.GetIO().KeyShift)
             {
                 pos = new(
                 MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2,

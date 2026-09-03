@@ -26,7 +26,6 @@ namespace Fushigi.util
             public bool UseAstcTextureCache;
             public bool HideDeletingLinkedActorsPopup;
             public bool UseNewCamera;
-            public bool EnableHalfTile;
             public bool EnableTranslation;
             public bool PrivateDRPC;
             public string Theme;
@@ -50,10 +49,8 @@ namespace Fushigi.util
                 UseAstcTextureCache = false;
                 HideDeletingLinkedActorsPopup = false;
                 UseNewCamera = true;
-                EnableHalfTile = false;
                 EnableTranslation = true;
                 Theme = "Theme";
-                //ShaderSettings = 0;
                 romfsReload = false;
                 allowRomfsReload = true;
                 ClickDuplicate = false;
@@ -154,12 +151,6 @@ namespace Fushigi.util
             return AppSettings.BackupFreqMinutes;
         }
 
-        public static void SetEnableHalfTile(bool value)
-        {
-            AppSettings.EnableHalfTile = value;
-            Save();
-        }
-
         public static void SetEnableTranslation(bool value)
         {
             AppSettings.EnableTranslation = value;
@@ -189,11 +180,6 @@ namespace Fushigi.util
         public static bool GetUseNewCamera()
         {
             return AppSettings.UseNewCamera;
-        }
-
-        public static bool GetEnableHalfTile()
-        {
-            return AppSettings.EnableHalfTile;
         }
 
         public static bool GetEnableTranslation()

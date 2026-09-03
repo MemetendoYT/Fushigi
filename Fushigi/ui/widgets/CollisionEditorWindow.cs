@@ -826,6 +826,8 @@ namespace Fushigi.ui.widgets
                 viewport.mHoveredObject = Sphere;
             }
         }
+
+   
         public void ActorsPanel()
         {
             ImGui.Begin("Actors");

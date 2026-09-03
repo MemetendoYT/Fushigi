@@ -231,7 +231,7 @@ namespace Fushigi.ui.widgets
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
 
-                ImGui.Text("Field A");
+                ImGui.Text("Tileset A");
                 ImGui.TableSetColumnIndex(1);
                 value = skinParam.FieldA;
                 int index = Tilesets.Values.ToList().IndexOf(value);
@@ -243,7 +243,7 @@ namespace Fushigi.ui.widgets
 
                     ImGui.TableNextColumn();
 
-                ImGui.Text("Field B");
+                ImGui.Text("Tileset B");
                 ImGui.TableSetColumnIndex(1);
                 value = skinParam.FieldB;
                 index = Tilesets.Values.ToList().IndexOf(value);

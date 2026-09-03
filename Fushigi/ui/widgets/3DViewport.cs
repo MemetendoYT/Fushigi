@@ -95,53 +95,53 @@ namespace Fushigi.ui.widgets
             float speed = MathF.Floor(zoomFactor) * baseSpeed;
 
 
-            //if (!VP.Camera.IsOrthographic)
-            //{
-            //    if (ImGui.IsKeyDown(ImGuiKey.W)) movement += forward;
-            //    if (ImGui.IsKeyDown(ImGuiKey.S)) movement -= forward;
-            //}
-            //else
-            //{
-            //    if (ImGui.IsKeyDown(ImGuiKey.W)) movement.Z += up.Z;
-            //    if (ImGui.IsKeyDown(ImGuiKey.S)) movement.Z -= up.Z;
-            //}
-            //if (ImGui.IsKeyDown(ImGuiKey.A)) movement -= rightDir;
-            //if (ImGui.IsKeyDown(ImGuiKey.D)) movement += rightDir;
+            if (!VP.Camera.IsOrthographic)
+            {
+                if (ImGui.IsKeyDown(ImGuiKey.W)) movement += forward;
+                if (ImGui.IsKeyDown(ImGuiKey.S)) movement -= forward;
+            }
+            else
+            {
+                if (ImGui.IsKeyDown(ImGuiKey.W)) movement.Z += up.Z;
+                if (ImGui.IsKeyDown(ImGuiKey.S)) movement.Z -= up.Z;
+            }
+            if (ImGui.IsKeyDown(ImGuiKey.A)) movement -= rightDir;
+            if (ImGui.IsKeyDown(ImGuiKey.D)) movement += rightDir;
 
             VP.Camera.Target += movement * speed * dt;
 
-            //var keyMoveUp = ImGuiKey.Q;
-            //var keyMoveDown = ImGuiKey.E;
-            //if (VP.Camera.IsOrthographic)
-            //{
-            //    keyMoveUp = ImGuiKey.W;
-            //    keyMoveDown = ImGuiKey.S;
-            //}
+            var keyMoveUp = ImGuiKey.Q;
+            var keyMoveDown = ImGuiKey.E;
+            if (VP.Camera.IsOrthographic)
+            {
+                keyMoveUp = ImGuiKey.W;
+                keyMoveDown = ImGuiKey.S;
+            }
 
-            //if (!VP.Camera.IsOrthographic)
-            //{
-            //    if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.Q) && !io.KeyCtrl)
-            //    {
-            //        VP.Camera.Target.Y += zoomedCameraSpeed * dt;
-            //    }
+            if (!VP.Camera.IsOrthographic)
+            {
+                if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.Q) && !io.KeyCtrl)
+                {
+                    VP.Camera.Target.Y += zoomedCameraSpeed * dt;
+                }
 
-            //    if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.E) && !io.KeyCtrl)
-            //    {
-            //        VP.Camera.Target.Y -= zoomedCameraSpeed * dt;
-            //    }
-            //}
-            //else
-            //{
-            //    if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.S) && !io.KeyCtrl)
-            //    {
-            //        VP.Camera.Target.Z += zoomedCameraSpeed * dt;
-            //    }
+                if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.E) && !io.KeyCtrl)
+                {
+                    VP.Camera.Target.Y -= zoomedCameraSpeed * dt;
+                }
+            }
+            else
+            {
+                if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.S) && !io.KeyCtrl)
+                {
+                    VP.Camera.Target.Z += zoomedCameraSpeed * dt;
+                }
 
-            //    if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.W) && !io.KeyCtrl)
-            //    {
-            //        VP.Camera.Target.Z -= zoomedCameraSpeed * dt;
-            //    }
-            //}
+                if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.W) && !io.KeyCtrl)
+                {
+                    VP.Camera.Target.Z -= zoomedCameraSpeed * dt;
+                }
+            }
         }
 
 

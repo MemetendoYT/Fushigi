@@ -1,12 +1,9 @@
-﻿using Fushigi.gl;
-using Fushigi.param;
+﻿using Fushigi.param;
+using Fushigi.ui;
+using Fushigi.ui.undo;
 using Fushigi.util;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+
 
 namespace Fushigi.course.distance_view
 {
@@ -15,10 +12,10 @@ namespace Fushigi.course.distance_view
         private Dictionary<string, Matrix4x4> LayerMatrices = new Dictionary<string, Matrix4x4>();
         public DVLayerParamTable ParamTable = new DVLayerParamTable();
 
-        private CourseActor DVLocator;
+        public CourseActor DVLocator;
 
-        private float ScrollSpeedX = -0.025f;
-        private float ScrollSpeedY = 0f;
+        public float ScrollSpeedX = -0.025f;
+        public float ScrollSpeedY = 0f;
 
         public DistantViewManager(CourseArea area)
         {
@@ -29,28 +26,62 @@ namespace Fushigi.course.distance_view
         {
             ParamTable.LoadDefault();
 
-            foreach (var actor in area.GetActors())
-            {
-                if (actor.mPackName == "DVBasePosLocator")
-                {
-                    DVLocator = actor;
-                    //TODO there should be a way to update these during property edit
-                    if (DVLocator.mActorParameters.ContainsKey("TimeScrollRateX"))
-                        ScrollSpeedX = (float)DVLocator.mActorParameters["TimeScrollRateX"];
-                    if (DVLocator.mActorParameters.ContainsKey("TimeScrollRateY"))
-                        ScrollSpeedY = (float)DVLocator.mActorParameters["TimeScrollRateY"];
-                    if (DVLocator.mActorParameters.ContainsKey("DVLayerParamName"))
-                    {
-                        string layer_param = (string)DVLocator.mActorParameters["DVLayerParamName"];
-                        if (!string.IsNullOrEmpty(layer_param))
-                            ParamTable.Load(layer_param);
-                    }
-                }
-            }
+            CheckForDVLocator(area, false);
 
             LayerMatrices.Clear();
             foreach (var layer in this.ParamTable.Layers)
                 LayerMatrices.Add(layer.Key, Matrix4x4.Identity);
+        }
+
+        internal void CheckForDVLocator(CourseArea area, bool commit, CourseAreaEditContext mEditContext = null)
+        {
+            foreach (var actor in area.GetActors())
+            {
+                if (actor.mPackName == "DVBasePosLocator")
+                {
+                    Reload(actor, commit, mEditContext);
+                }
+            }
+        }
+
+        internal void Reload(CourseActor actor, bool commit, CourseAreaEditContext mEditContext = null)
+        {
+            float oldScrollSpeedX = ScrollSpeedX;
+            float oldScrollSpeedY = ScrollSpeedY;
+            DVLayerParamTable oldParamTable = ParamTable;
+
+            DVLocator = actor;
+            Console.WriteLine("updating");
+            
+            if (DVLocator.mActorParameters.ContainsKey("TimeScrollRateX"))
+                ScrollSpeedX = (float)DVLocator.mActorParameters["TimeScrollRateX"];
+
+            if (DVLocator.mActorParameters.ContainsKey("TimeScrollRateY"))
+                ScrollSpeedY = (float)DVLocator.mActorParameters["TimeScrollRateY"];
+
+            if (DVLocator.mActorParameters.ContainsKey("DVLayerParamName"))
+            {
+                string layer_param = (string)DVLocator.mActorParameters["DVLayerParamName"];
+                if (!string.IsNullOrEmpty(layer_param))
+                {
+                    var newTable = new DVLayerParamTable();
+                    newTable.Load(layer_param);
+                    ParamTable = newTable;
+                }
+            }
+
+            if (commit)
+            {
+                mEditContext.CommitAction(new PropertyFieldsSetUndo(
+                this,
+                [
+                    ("ScrollSpeedX", oldScrollSpeedX),
+                    ("ScrollSpeedY", oldScrollSpeedY),
+                    ("ParamTable", oldParamTable)
+                ],
+                    $"{IconUtil.ICON_RUNNING} Updated DV Scroll Rate"
+                ));
+            }
         }
 
         public void UpdateMatrix(string layer, ref Matrix4x4 matrix)
@@ -66,8 +97,7 @@ namespace Fushigi.course.distance_view
                 var scroll_config = ParamTable.Layers[layer];
 
                 var locator_pos = DVLocator != null ? DVLocator.mTranslation : Vector3.Zero;
-
-                
+                Console.WriteLine(locator_pos + " " + DVLocator.mName);
                 //Place via base locator pos + camera
                 
                 //Distance between dv locator and camera

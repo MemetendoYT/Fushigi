@@ -64,7 +64,6 @@ namespace Fushigi.ui.widgets
         {
 
             var useGameShaders = UserSettings.UseGameShaders();
-            var enableHalfTile = UserSettings.GetEnableHalfTile();
             var enableTranslation = UserSettings.GetEnableTranslation();
             var backupFreqMinutes = UserSettings.GetBackupFreqMinutes();
          
@@ -78,11 +77,6 @@ namespace Fushigi.ui.widgets
             }
 
             Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
-
-            if (ImGui.Checkbox("Enable Half Tile Editing", ref enableHalfTile))
-                UserSettings.SetEnableHalfTile(enableHalfTile);
-
-            Tooltip.Show("Enable half tile editing for terrain.");
 
             if (ImGui.Checkbox("Enable Actor Translation", ref enableTranslation))
             {

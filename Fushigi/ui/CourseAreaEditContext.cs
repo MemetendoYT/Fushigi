@@ -4,6 +4,7 @@ using Fushigi.gl.Bfres;
 using Fushigi.Logger;
 using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
+using Fushigi.ui.widgets;
 using Fushigi.util;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -34,11 +35,12 @@ namespace Fushigi.ui
             CommitAction(area.mActorHolder.mActors
                 .RevertableAdd(actor, $"{IconUtil.ICON_PLUS_CIRCLE} Add {actor.mPackName}"));
         }
-        public void DeleteActor(CourseActor actor)
+        public void DeleteActor(CourseActor actor, LevelViewport viewport, CourseArea area)
         {
             LogDeleting<CourseActor>($"{actor.mPackName}[{actor.mHash}]");
 
             var batchAction = BeginBatchAction();
+
             Deselect(actor);
             RemoveActorFromAllGroups(actor);
             DeleteLinksWithSource(actor.mHash);
@@ -46,6 +48,9 @@ namespace Fushigi.ui
             DeleteRailLinkWithSrcActor(actor.mHash);
             CommitAction(area.mActorHolder.mActors
                 .RevertableRemove(actor));
+
+            if (actor.mPackName == "DVBasePosLocator")
+                viewport.DistantViewScrollManager.CheckForDVLocator(area, true, this);
 
             batchAction.Commit($"{IconUtil.ICON_TRASH} Delete {actor.mPackName}");
         }
@@ -226,8 +231,6 @@ namespace Fushigi.ui
             batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Unit Rail Point");
         }
 
-
-
         public void AddRailLink(CourseActorToRailLink link)
         {
             LogAdding<CourseActorToRailLink>(
@@ -318,8 +321,6 @@ namespace Fushigi.ui
         {
             rail.ReverseRailPoints();
         }
-
-
         public void DeleteInternalRail(Wall wall, BGUnitRail rail)
         {
             LogDeleting<BGUnitRail>();
