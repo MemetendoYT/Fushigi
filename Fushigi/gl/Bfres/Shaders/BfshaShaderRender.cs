@@ -463,6 +463,11 @@ namespace Fushigi.gl.Bfres
             if (sampler.WrapModeV == TexWrap.Clamp)
                 gl.TexParameter(texture.Target, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
+            if(sampler.WrapModeU == TexWrap.Mirror)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureWrapS, (int)TextureWrapMode.MirroredRepeat);
+
+            if (sampler.WrapModeV == TexWrap.Mirror)
+                gl.TexParameter(texture.Target, TextureParameterName.TextureWrapT, (int)TextureWrapMode.MirroredRepeat);
 
             //   gl.TexParameter(texture.Target, TextureParameterName.TextureWrapS, (int)WrapModes[sampler.WrapModeU]);
             //   gl.TexParameter(texture.Target, TextureParameterName.TextureWrapT, (int)WrapModes[sampler.WrapModeV]);

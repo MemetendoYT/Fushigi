@@ -1,14 +1,11 @@
 ﻿using Fasterflect;
-using Fushigi.Bfres;
 using Fushigi.Byml;
 using Fushigi.Byml.Serializer;
 using Fushigi.course;
-using Fushigi.env;
 using Fushigi.gl;
 using Fushigi.gl.Bfres;
 using Fushigi.param;
 using Fushigi.rstb;
-using Fushigi.SARC;
 using Fushigi.ui.helpers;
 using Fushigi.ui.modal;
 using Fushigi.ui.SceneObjects;
@@ -16,16 +13,12 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
-using Silk.NET.Core.Native;
 using Silk.NET.OpenGL;
 using System.Collections;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks.Dataflow;
-using static DiscordRPC.User;
 using static Fushigi.course.CourseComment;
 using NumVec = System.Numerics.Vector3;
 
@@ -2137,6 +2130,9 @@ namespace Fushigi.ui.widgets
             {
                 if (ImGui.BeginTabItem("User Prefabs"))
                 {
+                    if (ImGui.IsItemClicked())
+                        regeneratePrefabList = true;
+
                     if (Directory.Exists(appDataPath))
                     {
                         string[] files = Directory.GetFiles(appDataPath, "*.bcett*");
@@ -2167,14 +2163,17 @@ namespace Fushigi.ui.widgets
             float deleteButtonWidth = rowHeight * 1.6f;
             bool isSearch = !string.IsNullOrWhiteSpace(mPrefabSearch);
 
+            if (prevPrefabTab != canDelete)
+                regeneratePrefabList = true;
+
             if (files.Length == 0)
                 ImGui.Text(noPrefabsText);
 
             ImGui.InputText("##PrefabSearch", ref mPrefabSearch, 0x100);
 
-            if (prevLayerSearch != mPrefabSearch)
+            if (prevPrefabSearch != mPrefabSearch || regeneratePrefabList)
             {
-                regenerateLayersList = false;
+                regeneratePrefabList = false;
                 filteredPrefabs.Clear();
                 prevPrefabSearch = mPrefabSearch;
 
@@ -2183,10 +2182,14 @@ namespace Fushigi.ui.widgets
                     string prefab = Path.GetFileName(file).Split(".bcett")[0];
 
                     var actorEnglish = Translate.FetchTranslatedName(prefab);
-                    bool HasText = file.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0;
+                    bool HasText = file.IndexOf(mPrefabSearch, StringComparison.OrdinalIgnoreCase) >= 0;
+
+                    if (isSearch && !HasText)
+                        continue;
 
                     filteredPrefabs.Add(prefab);
                 }
+                prevPrefabTab = canDelete;
             }
 
             foreach (var prefab in filteredPrefabs)
@@ -2316,10 +2319,6 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginTabItem("Add Actor"))
             {
-
-                if (ImGui.IsItemClicked())
-                    regenerateLayersList = true;
-
                 ActorSearch();
                 ImGui.EndTabItem();
             }
@@ -2555,6 +2554,7 @@ namespace Fushigi.ui.widgets
                 posVec.Z = 0.0f;
 
                 actor.mTranslation = posVec;
+                actor.mStartingTrans = actor.mTranslation;
 
                 var i = 0;
                 do
@@ -2574,6 +2574,8 @@ namespace Fushigi.ui.widgets
                 }
                 else
                     mEditContext.AddActor(actor);
+
+                mEditContext.Select(actor);
                 
 
             } while ((modifier & KeyboardModifier.Shift) > 0);
@@ -4918,6 +4920,8 @@ namespace Fushigi.ui.widgets
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
         private bool showActorVisibility;
         private string prevPrefabSearch;
+        private bool regeneratePrefabList;
+        private bool prevPrefabTab;
 
         public bool checkForEmptyRails()
         {

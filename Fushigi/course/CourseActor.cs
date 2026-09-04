@@ -591,6 +591,7 @@ namespace Fushigi.course
             { CourseActorType.Sound, ImGui.ColorConvertFloat4ToU32(new(0.36f, 0.25f, 0.83f, 1)) },
             { CourseActorType.Camera, ImGui.ColorConvertFloat4ToU32(new(1, 1, 0, 1)) },
             { CourseActorType.Cloud, ImGui.ColorConvertFloat4ToU32(new(0, 0, 0.7f, 1)) },
+            { CourseActorType.Unit, ImGui.ColorConvertFloat4ToU32(new(0.82f, 0.82f, 0.82f, 1)) },
         };
 
         public static uint ColorShift(uint color)

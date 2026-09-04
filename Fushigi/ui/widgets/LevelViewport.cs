@@ -327,6 +327,7 @@ namespace Fushigi.ui.widgets
             {
                 transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
                 transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+
                 if (Course.IsWorldMap)
                     transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
             }
@@ -411,6 +412,7 @@ namespace Fushigi.ui.widgets
             foreach (Transformable transformable in ctx.GetSelectedObjects<Transformable>())
             {
                 transformable.mStartingTrans = transformable.mTranslation;
+                Console.WriteLine("SET1 " + transformable.mStartingTrans);
                 switch (transformable)
                 {
                     case CourseActor actor:
@@ -654,7 +656,6 @@ namespace Fushigi.ui.widgets
                     TileBfresRenderFieldA = null;
                     //BfresCache.Clear();
                     updateSkinA = false;
-                        Console.WriteLine("fart");
                 }
                 
                 if(updateSkinB)
@@ -667,11 +668,9 @@ namespace Fushigi.ui.widgets
                     if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
                     {
                         TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
-                        Console.WriteLine("running");
                     }
                     if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
                     {
-                        Console.WriteLine("running");
                         TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
 
                     }
@@ -1825,7 +1824,7 @@ namespace Fushigi.ui.widgets
                     Vector3 StartingTrans = new Vector3();
                     Vector3 CurrentTrans = new Vector3();
 
-                    if (mHoveredObject != null)
+                    if (mHoveredObject != null && !ImGui.IsMouseDragging(ImGuiMouseButton.Left))
                         lastHoveredObject = mHoveredObject;
 
                     switch (lastHoveredObject)
@@ -1853,7 +1852,7 @@ namespace Fushigi.ui.widgets
 
                             break;
                     }
-
+ 
                     if (Camera.IsOrthographic)
                     {
                         var posVec = CalcPosVec(StartingTrans);

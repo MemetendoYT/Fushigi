@@ -51,7 +51,6 @@ namespace Fushigi.course.distance_view
             DVLayerParamTable oldParamTable = ParamTable;
 
             DVLocator = actor;
-            Console.WriteLine("updating");
             
             if (DVLocator.mActorParameters.ContainsKey("TimeScrollRateX"))
                 ScrollSpeedX = (float)DVLocator.mActorParameters["TimeScrollRateX"];
@@ -97,7 +96,6 @@ namespace Fushigi.course.distance_view
                 var scroll_config = ParamTable.Layers[layer];
 
                 var locator_pos = DVLocator != null ? DVLocator.mTranslation : Vector3.Zero;
-                Console.WriteLine(locator_pos + " " + DVLocator.mName);
                 //Place via base locator pos + camera
                 
                 //Distance between dv locator and camera
