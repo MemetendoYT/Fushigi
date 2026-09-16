@@ -380,7 +380,6 @@ namespace Fushigi.ui.widgets
                         byte highByte = (byte)((value >> 8) & 0xFF);
                         SaveFile._Data[data.OffsetValue] = lowByte;
                         SaveFile._Data[data.OffsetValue + 1] = highByte;
-                        Console.WriteLine(" uejihst uiehtghiesgh");
                     }
                     else
                     {

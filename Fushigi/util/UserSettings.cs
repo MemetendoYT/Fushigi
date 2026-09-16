@@ -36,6 +36,7 @@ namespace Fushigi.util
             public bool dpiOverride = false;
             public float dpiVal = 1.0f;
             public bool UseShaderErrors;
+            public string BootupSkin = "";
 
             public Settings()
             {
@@ -57,6 +58,7 @@ namespace Fushigi.util
                 dpiOverride = false;
                 dpiVal = 1.0f;
                 UseShaderErrors = false;
+                BootupSkin = "";
             }
         }
 
@@ -262,6 +264,17 @@ namespace Fushigi.util
         public static void SetUseShaderErrors(bool value)
         {
             AppSettings.UseShaderErrors = value;
+            Save();
+        }
+
+        public static string GetBootupSkin()
+        {
+            return AppSettings.BootupSkin;
+        }
+
+        public static void SetBootupSkin(string value)
+        {
+            AppSettings.BootupSkin = value;
             Save();
         }
 

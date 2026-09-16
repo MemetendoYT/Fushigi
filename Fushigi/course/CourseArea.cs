@@ -207,6 +207,7 @@ namespace Fushigi.course
             }
         }
 
+
         public BymlArrayNode LoadPrefab(string prefabName, byte[] levelBytes, string objType)
         {
             var byml = new Byml.Byml(new MemoryStream(levelBytes));
@@ -325,7 +326,6 @@ namespace Fushigi.course
 
             string prefabPath = Path.Combine(prefabFolder, $"{prefabName}.bcett.byml.zs");
             File.WriteAllBytes(prefabPath, FileUtil.CompressData(mem.ToArray()));
-
         }
 
         public void Save(RSTB resource_table, string folder, bool saveTemplate)

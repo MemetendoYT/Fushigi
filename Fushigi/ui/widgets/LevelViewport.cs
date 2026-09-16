@@ -1,13 +1,11 @@
 ﻿using Fasterflect;
 using Fushigi.actor_pack.components;
 using Fushigi.Bfres;
-using Fushigi.Byml.Serializer;
 using Fushigi.course;
 using Fushigi.course.distance_view;
 using Fushigi.gl;
 using Fushigi.gl.Bfres;
 using Fushigi.gl.Bfres.AreaData;
-using Fushigi.param;
 using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
@@ -16,6 +14,7 @@ using Silk.NET.OpenGL;
 using System.Data;
 using System.Drawing;
 using System.Numerics;
+using System.Security.AccessControl;
 using static Fushigi.course.CourseUnit;
 
 
@@ -99,7 +98,6 @@ namespace Fushigi.ui.widgets
         public bool panOverride = false;
 
         public FushigiCursor cursor;
-        private List<(BGUnitRail Rail, BGUnitRail.RailPoint Point)> deleteList2;
         private bool CommitObjectTranslation;
         private Vector3 startPosWorld;
         private Vector3 currentPosWorld;
@@ -114,7 +112,10 @@ namespace Fushigi.ui.widgets
         public bool tileRebuild;
         private bool hasInitialized;
         public KeyboardModifier modifiers;
-
+        private Vector2 screenMin;
+        private Vector2 screenMax;
+        private ICommittable deleteBatchAction;
+        private int deletionCount;
 
         public Task<(object? picked, KeyboardModifier modifiers)> PickObject(string tooltipMessage,
             Predicate<object?> predicate, CancellationTokenSource tokenSource)
@@ -207,10 +208,25 @@ namespace Fushigi.ui.widgets
         }
         public void isInMultiSelectBox(Vector2 pos, Transformable obj)
         {
-            bool inBox = pos.X > startPosWorld.X &&
-                   pos.X < currentPosWorld.X &&
-                   pos.Y > startPosWorld.Y &&
-                   pos.Y < currentPosWorld.Y;
+            bool inBox = false;
+            if (!Course.IsWorldMap)
+            {
+                inBox = pos.X > startPosWorld.X &&
+                        pos.X < currentPosWorld.X &&
+                        pos.Y > startPosWorld.Y &&
+                        pos.Y < currentPosWorld.Y;
+            }
+            else
+            {
+                Vector2 screenPos = WorldToScreen(obj.mTranslation, out float ndcDepth);
+
+                if (ndcDepth is >= -1f and <= 1f)
+                {
+                    inBox = screenPos.X >= screenMin.X && screenPos.X <= screenMax.X &&
+                            screenPos.Y >= screenMin.Y && screenPos.Y <= screenMax.Y;
+
+                }
+            }
 
             if (inBox && !newSelection.Contains(obj))
                 newSelection.Add(obj);
@@ -412,7 +428,6 @@ namespace Fushigi.ui.widgets
             foreach (Transformable transformable in ctx.GetSelectedObjects<Transformable>())
             {
                 transformable.mStartingTrans = transformable.mTranslation;
-                Console.WriteLine("SET1 " + transformable.mStartingTrans);
                 switch (transformable)
                 {
                     case CourseActor actor:
@@ -715,6 +730,8 @@ namespace Fushigi.ui.widgets
                         {
                             RenderActor(actor, actor.mActorPack.ModelInfoRef);
                             RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
+
+                        
                         }
 
                     }
@@ -724,6 +741,7 @@ namespace Fushigi.ui.widgets
             {
                 RenderActor(CollisionEditor.CollisionActor, CollisionEditor.CollisionActor.mActorPack.ModelInfoRef);
                 RenderActor(CollisionEditor.CollisionActor, CollisionEditor.CollisionActor.mActorPack.DrawArrayModelInfoRef);
+
             }
             //Reset back to defaults
                 gl.ClipControl(ClipControlOrigin.LowerLeft, ClipControlDepth.ZeroToOne);
@@ -742,6 +760,40 @@ namespace Fushigi.ui.widgets
 
             ImGui.SetNextItemAllowOverlap();
         }
+
+        public void RenderBackgroundAreaLocator(CourseActor actor, ImDrawListPtr mDrawList)
+        {
+            var destArea = CourseScene.backgroundViewport;
+            if (destArea == null)
+                return;
+
+            //var fb = DrawBackgroundAreaScene3D(actor, destArea.mArea);
+
+            Vector3 pos = actor.mTranslation;
+            float halfW = actor.mScale.X * 0.5f;
+            float halfH = actor.mScale.Y * 0.5f;
+
+            Vector3 worldTl = pos + new Vector3(-halfW, halfH, 0);
+            Vector3 worldTr = pos + new Vector3(halfW, halfH, 0);
+            Vector3 worldBr = pos + new Vector3(halfW, -halfH, 0);
+            Vector3 worldBl = pos + new Vector3(-halfW, -halfH, 0);
+
+            Vector2 tl = WorldToScreen(worldTl);
+            Vector2 tr = WorldToScreen(worldTr);
+            Vector2 br = WorldToScreen(worldBr);
+            Vector2 bl = WorldToScreen(worldBl);
+            Console.WriteLine($"pos={pos} tl={tl} tr={tr} br={br} bl={bl}");
+            mDrawList.AddImageQuad(
+                (IntPtr)MainWindow.FushigiIcon.ID,
+                tl, tr, br, bl,
+                new Vector2(0, 0),
+                new Vector2(1, 0),
+                new Vector2(1, 1),
+                new Vector2(0, 1),
+                0xFFFFFFFF
+            );
+        }
+
         public void ProcessModifiers()
         {
             modifiers = KeyboardModifier.None;
@@ -754,6 +806,54 @@ namespace Fushigi.ui.widgets
                 modifiers |= KeyboardModifier.CtrlCmd;
 
         }
+
+
+        private static readonly Vector2 PortalResolution = new Vector2(512, 512);
+        private Dictionary<ulong, GLFramebuffer> mPortalFramebuffers = new();
+        public GLFramebuffer DrawBackgroundAreaScene3D(CourseActor actor, CourseArea destArea)
+        {
+            var size = PortalResolution;
+
+            if (!mPortalFramebuffers.TryGetValue(actor.mHash, out var fb) || fb == null)
+            {
+                fb = new GLFramebuffer(gl, FramebufferTarget.Framebuffer, (uint)size.X, (uint)size.Y);
+                mPortalFramebuffers[actor.mHash] = fb;
+            }
+            if (fb.Width != (uint)size.X || fb.Height != (uint)size.Y)
+                fb.Resize((uint)size.X, (uint)size.Y);
+
+            fb.Bind();
+            gl.ClearColor(0, 0, 0, 0);
+            gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            gl.Viewport(0, 0, fb.Width, fb.Height);
+            gl.Enable(EnableCap.DepthTest);
+            gl.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
+
+            // Sky is opaque and fills the whole framebuffer, killing transparency — omit it.
+            // EnvironmentData.RenderSky(gl, this.Camera);
+
+
+            foreach (var bgActor in destArea.GetSortedActors())
+            {
+                if (bgActor.mActorPack == null || !bgActor.wonderVisible)
+                    continue;
+
+                if (bgActor.mPackName == "BackgroundAreaLocator")
+                    continue;
+
+                if (!HiddenModels.Contains(bgActor.mType.ToString()))
+                {
+                    RenderActor(bgActor, bgActor.mActorPack.ModelInfoRef);
+                    RenderActor(bgActor, bgActor.mActorPack.DrawArrayModelInfoRef);
+                }
+            }
+
+            gl.ClipControl(ClipControlOrigin.LowerLeft, ClipControlDepth.ZeroToOne);
+            fb.Unbind();
+
+            return fb;
+        }
+
         private void RenderActor(CourseActor actor, ModelInfo modelInfo)
         {
             if (modelInfo == null || modelInfo.mFilePath == null)
@@ -1007,31 +1107,9 @@ namespace Fushigi.ui.widgets
                         DrawRail(belt, true);
                 }
             }
-
-            if (ImGui.IsKeyPressed(ImGuiKey.Delete) && mEditContext.IsAnySelected<BGUnitRail.RailPoint>())
-            {
-                var railPoints = mEditContext.GetSelectedObjects<BGUnitRail.RailPoint>().ToArray();
-                BGUnitRailSceneObj.pointsToDelete.AddRange(railPoints);
-            }
-
-            if (BGUnitRailSceneObj.pointsToDelete.Count > 0)
-            {
-                var batchAction = mEditContext.BeginBatchAction();
-
-                foreach (var point in BGUnitRailSceneObj.pointsToDelete)
-                {
-                    if (!point.mRail.Points.Contains(point))
-                        continue;
-
-                    mEditContext.CommitAction(point.mRail.Points.RevertableRemove(point));
-                    BGUnitRailSceneObj.rebuildUnit(point.mRail.mCourseUnit);
-                }
-
-                batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
-                BGUnitRailSceneObj.pointsToDelete.Clear();
-            }
         }
 
+   
         private void DrawRail(BGUnitRail rail, bool isBelt)
         {
             if (!rail.Visible)
@@ -1063,13 +1141,17 @@ namespace Fushigi.ui.widgets
 
             string text =
                 $"X: {Math.Round(world.X, 3)}\n" +
-                $"Y: {Math.Round(world.Y, 3)}\n" +
-                $"FPS: {Math.Round(fps)}";
+                $"Y: {Math.Round(world.Y, 3)}\n";
+
+            if (Course.IsWorldMap)
+                text += $"Z: {Math.Round(world.Z, 3)}\n";
+
+            text += $"FPS: {Math.Round(fps)}";
 
             uint textCol = ImGui.GetColorU32(ImGuiCol.Text);
-
             drawList.AddText(pos, textCol, text);
         }
+
         void DrawGrid()
         {
             DrawGridLines(false, 20f, 10);
@@ -1172,8 +1254,6 @@ namespace Fushigi.ui.widgets
         public void DrawAreaContent()
         {
             mHoveredObject = null;
-            CourseRail.deleteList = new List<(CourseRail rail, CourseRail.CourseRailPoint point)>();
-            deleteList2 = new List<(BGUnitRail rail, BGUnitRail.RailPoint point)>();
             DrawBGUnits();
             CourseRail.DrawRails(this, mEditContext, mArea);
 
@@ -1181,12 +1261,13 @@ namespace Fushigi.ui.widgets
 
             if (!mMultiSelecting && mEditContext.IsSingleObjectSelected(out CourseComment? comment))
                 comment.DragComment(this, mEditContext);
-            
+
             if (!Course.IsWorldMap)
             {
                 CourseActor.DrawActorCollision(this, mEditContext, mArea);
-                DrawMultiSelectBox();
             }
+                DrawMultiSelectBox();
+            
         }
         #endregion
 
@@ -1240,6 +1321,9 @@ namespace Fushigi.ui.widgets
                 offset.X = MathF.Round(offset.X * 2) / 2;
                 offset.Y = MathF.Round(offset.Y * 2) / 2;
 
+                if(Course.IsWorldMap)
+                    offset.Z = MathF.Round(offset.Z * 2) / 2;
+
                 for (var i = 0; i < actors.Length; i++)
                 {
                     var actor = actors[i];
@@ -1254,7 +1338,8 @@ namespace Fushigi.ui.widgets
 
                     newActor.mTranslation = actor.mTranslation + offset;
 
-                    newActor.mTranslation.Z = actor.mTranslation.Z;
+                    if(!Course.IsWorldMap)
+                        newActor.mTranslation.Z = actor.mTranslation.Z;
 
                     if (actor.mPackName == "DVBasePosLocator")
                         DistantViewScrollManager.Reload(newActor, true, mEditContext);
@@ -1344,7 +1429,14 @@ namespace Fushigi.ui.widgets
                 {
                     //TODO use positionPickingRequest.layer
                     mPositionPickingRequest = null;
-                    positionPickingRequest.promise.SetResult((ScreenToWorld(ImGui.GetMousePos()), modifiers));
+                    if (Course.IsWorldMap)
+                    {
+                        var hit = mWorldMapVP.vp3D.PlaceActorWorldMap(this);
+                        positionPickingRequest.promise.SetResult((hit, modifiers));
+                    }
+                    else
+                        positionPickingRequest.promise.SetResult((ScreenToWorld(ImGui.GetMousePos()), modifiers));
+                    
                 }
 
                 return;
@@ -1436,22 +1528,29 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace)) || deleteContext)
             {
-                List<CourseActor> selected;
-
-                if (deleteContext)
-                    selected = backupSelection;  
-                else
-                    selected = mEditContext.GetSelectedObjects<CourseActor>().ToList();
-
-                if (selected.Count > 0)
+                deletionCount = mEditContext.GetObjectCountOfType<Transformable>();
+                if (mEditContext.GetObjectCountOfType<Transformable>() > 0)
                 {
-                    ObjectDeletionRequested?.Invoke(selected);
+                    List<CourseActor> selected;
+
+                    if (deleteContext)
+                        selected = backupSelection;
+                    else
+                        selected = mEditContext.GetSelectedObjects<CourseActor>().ToList();
+
+                    deleteBatchAction = mEditContext.BeginBatchAction();
+
+                    int numObjects = 0;
+                    if (selected.Count > 0)
+                    {
+                        ObjectDeletionRequested?.Invoke(selected);
+                        numObjects = 1;
+                    }
+                    else
+                        DeleteTransformables(0);           
                 }
-
-                deleteContext = false;
-
             }
-
+            
             if (mEditContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint? point) &&
             mHoveredObject == point &&
             ImGui.IsMouseDoubleClicked(0))
@@ -1464,8 +1563,59 @@ namespace Fushigi.ui.widgets
 
                 if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                 mEditContext.DeselectAll();
-
         }
+
+        public void DeleteTransformables(int numObjects, string actorName = "")
+        {
+            var deletionObjectName = "";
+            List<CourseRail.CourseRailPoint> CourseRailsToDelete;
+            List<BGUnitRail.RailPoint> UnitRailsToDelete;
+
+            CourseRailsToDelete = mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().ToList();
+            UnitRailsToDelete = mEditContext.GetSelectedObjects<BGUnitRail.RailPoint>().ToList();
+
+            var type = "";
+            if(numObjects == 1)
+            {
+                type = "Actor";
+            }
+
+            if (CourseRailsToDelete.Count > 0)
+            {
+                CourseRail.DeleteRails(mEditContext, CourseRailsToDelete);
+                numObjects += 1;
+                type = "Course Rail";
+            }
+            if (UnitRailsToDelete.Count > 0)
+            {
+                BGUnitRailSceneObj.DeleteUnitPoints(mEditContext, UnitRailsToDelete);
+                numObjects += 1;
+                type = "Unit Rail";
+            }
+
+            var allObjects = mEditContext.GetSelectedObjects<Transformable>();
+            if (numObjects == 1)
+            {
+                deletionObjectName = type;
+
+                if (deletionCount > 1)
+                    deletionObjectName = $"{deletionCount} {type}s";
+                else
+                {
+                    if (type == "Actor")
+                        type = actorName;
+                    deletionObjectName = type;
+                }
+            }
+            else
+            {
+                deletionObjectName = $"{deletionCount} Objects";
+            }
+
+            deleteBatchAction.Commit($"{IconUtil.ICON_TRASH} Delete {deletionObjectName}");
+            deleteContext = false;
+        }
+
         public void undoPointToggleMethod(CourseRail.CourseRailPoint point, bool oldValue)
         {
             mEditContext.CommitAction(
@@ -1787,7 +1937,10 @@ namespace Fushigi.ui.widgets
         #region Multi-Selection and Drag Logic
         public void Multiselection()
         {
-            if ((ImGui.IsMouseDragging(ImGuiMouseButton.Left) && !isPanGesture))
+            screenMin = Vector2.Zero;
+            screenMax = Vector2.Zero;
+
+            if (ImGui.IsMouseDragging(ImGuiMouseButton.Left) && !isPanGesture && !Viewport3D._isDraggingFromOrientationCube)
             {
                 if (IsTransformableSelected() && mMultiSelectEnded)
                     mMultiSelecting = false;
@@ -1797,85 +1950,97 @@ namespace Fushigi.ui.widgets
                     mMultiSelecting = true;
                     mMultiSelectEnded = false;
 
-                    Vector3 startPosWorldStart = ScreenToWorld(mMultiSelectStartPos.Value);
-                    Vector3 currentPosWorldStart = ScreenToWorld(mMultiSelectCurrentPos.Value);
-
-                    startPosWorld = startPosWorldStart;
-                    currentPosWorld = currentPosWorldStart;
-
-                    if (currentPosWorldStart.X < startPosWorldStart.X)
+                    if (!Course.IsWorldMap)
                     {
-                        currentPosWorld.X = startPosWorldStart.X;
-                        startPosWorld.X = currentPosWorldStart.X;
+
+                        Vector3 startPosWorldStart = ScreenToWorld(mMultiSelectStartPos.Value);
+                        Vector3 currentPosWorldStart = ScreenToWorld(mMultiSelectCurrentPos.Value);
+
+                        startPosWorld = startPosWorldStart;
+                        currentPosWorld = currentPosWorldStart;
+
+                        if (currentPosWorldStart.X < startPosWorldStart.X)
+                        {
+                            currentPosWorld.X = startPosWorldStart.X;
+                            startPosWorld.X = currentPosWorldStart.X;
+                        }
+                        if (currentPosWorldStart.Y < startPosWorldStart.Y)
+                        {
+                            currentPosWorld.Y = startPosWorldStart.Y;
+                            startPosWorld.Y = currentPosWorldStart.Y;
+                        }
                     }
-                    if (currentPosWorldStart.Y < startPosWorldStart.Y)
+                    else
                     {
-                        currentPosWorld.Y = startPosWorldStart.Y;
-                        startPosWorld.Y = currentPosWorldStart.Y;
+                        Vector2 start = mMultiSelectStartPos.Value;
+                        Vector2 current = mMultiSelectCurrentPos.Value;
+
+                        screenMin = new Vector2(MathF.Min(start.X, current.X), MathF.Min(start.Y, current.Y));
+                        screenMax = new Vector2(MathF.Max(start.X, current.X), MathF.Max(start.Y, current.Y));
                     }
                 }
 
-                // Perform Object Translation
-                if (!mMultiSelecting && IsTransformableSelected())
-                {
-                    if (!IsViewportActive)
-                        return;
-
-                    Vector3 StartingTrans = new Vector3();
-                    Vector3 CurrentTrans = new Vector3();
-
-                    if (mHoveredObject != null && !ImGui.IsMouseDragging(ImGuiMouseButton.Left))
-                        lastHoveredObject = mHoveredObject;
-
-                    switch (lastHoveredObject)
+                    // Perform Object Translation
+                    if (!mMultiSelecting && IsTransformableSelected())
                     {
-                        case Transformable transformable:
-                            StartingTrans = transformable.mStartingTrans;
-                            CurrentTrans = transformable.mTranslation;
-                            break;
-                        case DefaultShape shape:
-                            StartingTrans = shape.Center;
-                            CurrentTrans = shape.mStartingTrans;
+                        if (!IsViewportActive)
+                            return;
 
-                            if (shape is PolytopeVertex vertex)
-                            {
-                                StartingTrans = vertex.Center;
+                        Vector3 StartingTrans = new Vector3();
+                        Vector3 CurrentTrans = new Vector3();
+
+                        if (mHoveredObject != null && !ImGui.IsMouseDragging(ImGuiMouseButton.Left))
+                            lastHoveredObject = mHoveredObject;
+
+                        switch (lastHoveredObject)
+                        {
+                            case Transformable transformable:
+                                StartingTrans = transformable.mStartingTrans;
+                                CurrentTrans = transformable.mTranslation;
+                                break;
+                            case DefaultShape shape:
+                                StartingTrans = shape.Center;
                                 CurrentTrans = shape.mStartingTrans;
-                            }
 
-                            if (shape is CapsulePoint point)
-                            {
-                                var capsule = point.Parent;
-                                StartingTrans = CollisionEditor.translatePoint(point.mStartingTrans, capsule);
-                                CurrentTrans = CollisionEditor.translatePoint(point.Center, capsule);
-                            }
+                                if (shape is PolytopeVertex vertex)
+                                {
+                                    StartingTrans = vertex.Center;
+                                    CurrentTrans = shape.mStartingTrans;
+                                }
 
-                            break;
+                                if (shape is CapsulePoint point)
+                                {
+                                    var capsule = point.Parent;
+                                    StartingTrans = CollisionEditor.translatePoint(point.mStartingTrans, capsule);
+                                    CurrentTrans = CollisionEditor.translatePoint(point.Center, capsule);
+                                }
+
+                                break;
+                        }
+
+                        if (Camera.IsOrthographic)
+                        {
+                            var posVec = CalcPosVec(StartingTrans);
+                            CurrentTrans.X = posVec.X;
+                            CurrentTrans.Y = posVec.Y;
+
+                            if (Course.IsWorldMap || EditorMode.editMode == "Collision")
+                                CurrentTrans.Z = posVec.Z;
+
+
+                            foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
+                                HandleTranslation(transformable, StartingTrans, CurrentTrans);
+
+
+                            CollisionEditor.HandleShapeTranslation(StartingTrans, CurrentTrans, mEditContext);
+
+
+                            if (StartingTrans != CurrentTrans)
+                                CommitObjectTranslation = true;
+                        }
                     }
- 
-                    if (Camera.IsOrthographic)
-                    {
-                        var posVec = CalcPosVec(StartingTrans);
-                        CurrentTrans.X = posVec.X;
-                        CurrentTrans.Y = posVec.Y;
-
-                        if (Course.IsWorldMap || EditorMode.editMode == "Collision")
-                            CurrentTrans.Z = posVec.Z;
-
-
-                        foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
-                            HandleTranslation(transformable, StartingTrans, CurrentTrans);
-
-
-                        CollisionEditor.HandleShapeTranslation(StartingTrans, CurrentTrans, mEditContext);
-
-
-                        if (StartingTrans != CurrentTrans)
-                            CommitObjectTranslation = true;
-                    }
-                }
-                else
-                    CommitObjectTranslation = false;
+                    else
+                        CommitObjectTranslation = false;
             }
 
             // Save Object Translation to history
@@ -1892,8 +2057,21 @@ namespace Fushigi.ui.widgets
                         CommitTranslation(p.mControl);
                 }
 
-                if(objCount > 1) 
-                    batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} Objects");
+                if (objCount > 1)
+                {
+                    var selected = mEditContext.GetSelectedObjects<Transformable>();
+                    string typeName;
+                    if (selected.All(x => x is CourseActor))
+                        typeName = "Actors";
+                    else if (selected.All(x => x is CourseRail.CourseRailPoint))
+                        typeName = "Rails";
+                    else if (selected.All(x => x is CourseUnit))
+                        typeName = "Units";
+                    else
+                        typeName = "Objects";
+
+                    batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {objCount} {typeName}");
+                }
                 else
                     batch.Commit($"{IconUtil.ICON_ARROWS_ALT} Move {GetTransformableType(mEditContext.GetFirstObjectOfType<Transformable>())}");
 

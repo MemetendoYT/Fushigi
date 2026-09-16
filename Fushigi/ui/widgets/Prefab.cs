@@ -1,13 +1,16 @@
 ﻿using Fushigi.course;
 using Fushigi.ui;
 using Fushigi.ui.widgets;
+using Fushigi.util;
+using System.Security.Cryptography.X509Certificates;
 
 public class Prefab
 {
+    public static string AppDataPath = Path.Combine(UserSettings.SettingsDir, "prefabs");
     internal static void SavePrefab(CourseAreaEditContext mEditContext, string prefabName, CourseArea mArea)
     {
         var median = System.Numerics.Vector3.Zero;
-
+        
         if (mEditContext.GetSelectedObjects<CourseActor>().Count() > 0 || mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().Count() > 0)
         {
             List<CourseActor> actors = mEditContext.GetSelectedObjects<CourseActor>().ToList();
@@ -55,8 +58,37 @@ public class Prefab
                     }
                 }
             }
-
+            CourseScene.regeneratePrefabList = true;
             mArea.SaveActorsToPrefab(copiedActors, actors, prefabName, courseRailsClone, courseRails);
+        }
+    }
+    public static void ImportPrefab()
+    {
+        FileDialog dlg = new FileDialog();
+        if (dlg.ShowDialog())
+        {
+            string path = dlg.SelectedPath;
+
+            if (!path.EndsWith(".bcett.byml.zs", StringComparison.OrdinalIgnoreCase))
+                return;
+
+            string prefabPath = Path.Combine(AppDataPath, Path.GetFileName(path));
+            File.Copy(path, prefabPath, overwrite: true);
+            CourseScene.regeneratePrefabList = true;
+        }
+    }
+
+    public static void ExportPrefab(string prefab, string directory)
+    {
+        FileDialog dlg = new FileDialog();
+        if (dlg.ShowSaveDialog("Export Prefab"))
+        {
+            string path = dlg.SelectedPath;
+            if (!path.EndsWith(".bcett.byml.zs"))
+                path += ".bcett.byml.zs";
+
+            string prefabPath = Path.Combine(directory, $"{prefab}.bcett.byml.zs");
+            File.Copy(prefabPath, path, overwrite: true);
         }
     }
 

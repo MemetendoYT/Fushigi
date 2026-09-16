@@ -22,7 +22,7 @@ namespace Fushigi.ui.widgets
 
         public bool ShowSaveDialog(string title = "Save File")
         {
-            DialogResult dialogResult = Dialog.FileSave("bgyml");
+            DialogResult dialogResult = Dialog.FileSave("bcett.byml.zs");
             SelectedPath = dialogResult.Path;
             return dialogResult.IsOk;
         }

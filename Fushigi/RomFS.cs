@@ -71,7 +71,10 @@ namespace Fushigi
         public static byte[] GetFileBytes(string path)
         {
             Logger.Logger.LogMessage("RomFS", $"GetFileBytes() -- {path}");
-            return File.ReadAllBytes(Path.Combine(sRomFSRoot, path));
+            if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), path)))
+                return File.ReadAllBytes(Path.Combine(UserSettings.GetModRomFSPath(), path));
+            else
+                return File.ReadAllBytes(Path.Combine(sRomFSRoot, path));
         }
 
         private static void CacheCourseFiles()

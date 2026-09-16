@@ -103,6 +103,7 @@ namespace Fushigi.ui
 
                         var native = mWindow.Native;
                         _gl = GL.GetApi(mWindow);
+
                         FushigiIcon = GLTexture2D.Load(_gl, "res/icon_menu.png");
                         FushigiLogo = GLTexture2D.Load(_gl, "res/icon1.png");
                         IntPtr hwnd = native.Win32!.Value.Hwnd;
@@ -365,7 +366,7 @@ namespace Fushigi.ui
                 $"Loading {mCurrentCourseName}",
                 async (p) =>
                 {
-                    mSelectedCourseScene.overwriteLevel(CourseScene.currentArea, mGLTaskScheduler);
+                    mSelectedCourseScene.overwriteLevel(CourseScene.resetArea, mGLTaskScheduler);
 
                     Logger.Logger.LogMessage("MainWindow", $"Reload course {mCurrentCourseName}!");
 
@@ -644,7 +645,7 @@ namespace Fushigi.ui
                             }
                         }
 
-                        if (ImGui.MenuItem("Rename Course"))
+                        if (ImGui.MenuItem("Change Course Slot"))
                             RenameLevel();
 
 
@@ -796,7 +797,7 @@ namespace Fushigi.ui
         
         public async Task RenameLevel()
         {
-            var result = await SavePrefabDialog.ShowDialog(MainWindow.mModalHost, "Rename Course", "Enter new name for course");
+            var result = await SavePrefabDialog.ShowDialog(mModalHost, "Change Course Slot", "Enter new Course ID");
 
             if (result.Result == SavePrefabDialog.DialogResult.Yes)
             {
@@ -805,8 +806,6 @@ namespace Fushigi.ui
             }
 
         }
-
-     
         public async Task AddArea()
         {
             addNewArea = false;

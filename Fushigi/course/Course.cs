@@ -210,6 +210,15 @@ namespace Fushigi.course
             return null;
         }
 
+        public CourseArea? GetAreaByHash(uint hash)
+        {
+            foreach (CourseArea area in mAreas)
+                if (area.mRootHash == hash)
+                    return area;
+
+            return null;
+        }
+
         public int GetAreaCount()
         {
             return mAreas.Count;

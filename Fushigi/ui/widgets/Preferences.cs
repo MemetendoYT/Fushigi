@@ -225,7 +225,11 @@ namespace Fushigi.ui.widgets
 
             Tooltip.Show("Models with invalid materials will display as red, as they would ingame");
 
-            Tooltip.Show("Bazinga");
+            string BootupSkin = UserSettings.GetBootupSkin();
+            if (ImGui.InputText("Bootup Skin Override", ref BootupSkin, 0x100))
+                UserSettings.SetBootupSkin(BootupSkin);
+
+            Tooltip.Show("Allows for custom tilesets. Requires editor restart. Set to default if empty.");
 
             if (ImGui.Checkbox("DPI Override", ref dpiToggle))
             {

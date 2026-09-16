@@ -1,5 +1,6 @@
 ﻿using Fushigi.Byml;
 using Fushigi.Byml.Writer;
+using Fushigi.gl;
 using Fushigi.param;
 using Fushigi.ui;
 using Fushigi.ui.widgets;
@@ -302,6 +303,25 @@ namespace Fushigi.course
                     Vector2 tr = s_actorRectPolygon[1];
                     Vector2 br = s_actorRectPolygon[2];
                     Vector2 bl = s_actorRectPolygon[3];
+
+                    if (actor.mPackName == "BackgroundAreaLocator")
+                    {
+                        if (CourseScene.backgroundViewport != null)
+                        {
+                            var ba = CourseScene.backgroundViewport;
+                            var fb = ba.DrawBackgroundAreaScene3D(actor, ba.mArea);
+
+                            viewport.mDrawList.AddImageQuad(
+                                (IntPtr)((GLTexture2D)fb.Attachments[0]).ID,
+                                tl, tr, br, bl,
+                                new Vector2(0, 0),
+                                new Vector2(1, 0),
+                                new Vector2(1, 1),
+                                new Vector2(0, 1),
+                                0xFFFFFFFF
+                            );
+                        }
+                    }
 
                     if (Sprites.OverrideSize.TryGetValue(actor.mPackName, out var size))
                     {

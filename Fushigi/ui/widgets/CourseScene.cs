@@ -13,9 +13,11 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
+using Silk.NET.Core.Native;
 using Silk.NET.OpenGL;
 using System.Collections;
 using System.Collections.Immutable;
+using System.IO;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -36,10 +38,14 @@ namespace Fushigi.ui.widgets
             envPaletteWindow = new EnvPaletteWindow();
             activeViewport = null!;
             LevelViewport._courseScene = this;
-            
+
+            if (UserSettings.GetBootupSkin() == null)
+                UserSettings.SetBootupSkin("");
+
+            string bootupskin = UserSettings.GetBootupSkin() == "" ? "DefaultBgUnitSkinConfigTable" : UserSettings.GetBootupSkin();
             SkinTable ??= BymlSerialize.Deserialize<DefaultBgUnitSkinConfigTable>(
             RomFS.GetOrLoadBootUpPack().OpenFile(
-            "System/CombinationDataTableData/DefaultBgUnitSkinConfigTable.pp__CombinationDataTableData.bgyml"));
+            $"System/CombinationDataTableData/{bootupskin}.pp__CombinationDataTableData.bgyml"));
             UpdateDRPC();
         }
 
@@ -53,14 +59,9 @@ namespace Fushigi.ui.widgets
         readonly EnvPaletteWindow envPaletteWindow;
         NumVec camSave;
         public static bool saveStatus = true;
-        private bool areaSwitched;
-        private LevelViewport pendingViewport;
         private string globalLinkType;
         private CourseActor globalSource;
         private CourseActor pendingSource = null;
-        private bool runGlobalPicker;
-        private bool runGlobal;
-        private CourseAreaEditContext pendingEditContext;
         public static bool bypassSelection;
         private string startingArea;
         (object? courseObj, FullPropertyCapture capture)
@@ -99,7 +100,7 @@ namespace Fushigi.ui.widgets
         private CourseArea areaToFocus = null;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
-        public static CourseArea currentArea;
+        public static CourseArea resetArea;
         public static DefaultBgUnitSkinConfigTable SkinTable;
         public static bool HideWalls;
         public static bool reloadUnit = false;
@@ -449,6 +450,7 @@ namespace Fushigi.ui.widgets
             }
         }
 
+      
         public void removeArea()
         {
             MainWindow.removeCurrentArea = true;
@@ -767,7 +769,7 @@ namespace Fushigi.ui.widgets
                                 editContext.DeleteWall(unit, unit.Walls[rail.mIndex]);
                                 BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
                             }
-                            batchAction.Commit("RAARGH");
+                            batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Wall");
                         }
 
                         for (int iWall = 0; iWall < unit.Walls.Count; iWall++)
@@ -909,7 +911,7 @@ namespace Fushigi.ui.widgets
             if (blankLevel)
             {
                 blankLevel = false;
-                currentArea = selectedArea;
+                resetArea = selectedArea;
                 MainWindow.reloadLevel = true;
             }
 
@@ -1003,7 +1005,6 @@ namespace Fushigi.ui.widgets
                         if (selectedArea != area)
                         {
                             mHasFilledLayers = false;
-                            areaSwitched = true;
                             regenerateLayersList = true;
                         }
 
@@ -2122,7 +2123,6 @@ namespace Fushigi.ui.widgets
 
         private void PrefabsView()
         {
-            string appDataPath = Path.Combine(UserSettings.SettingsDir, "prefabs");
             string resPath = "res/prefabs";
             string[] resPrefab = Directory.GetFiles(resPath, "*.bcett*");
 
@@ -2133,10 +2133,10 @@ namespace Fushigi.ui.widgets
                     if (ImGui.IsItemClicked())
                         regeneratePrefabList = true;
 
-                    if (Directory.Exists(appDataPath))
+                    if (Directory.Exists(Prefab.AppDataPath))
                     {
-                        string[] files = Directory.GetFiles(appDataPath, "*.bcett*");
-                        prefabList(files, true, appDataPath);
+                        string[] files = Directory.GetFiles(Prefab.AppDataPath, "*.bcett*");
+                        prefabList(files, true, Prefab.AppDataPath);
                     }
                     else
                         ImGui.Text(noPrefabsText);
@@ -2158,6 +2158,15 @@ namespace Fushigi.ui.widgets
             if (ImGui.IsKeyPressed(ImGuiKey.Escape))
                 ImGui.SetWindowFocus(null);
 
+            ImGui.InputText("##PrefabSearch", ref mPrefabSearch, 0x100);
+            ImGui.SameLine();
+
+            bool delay = false;
+            if (ImGui.Button("Import Prefab")) { 
+                Prefab.ImportPrefab();
+                delay = true;
+            }
+
             ImGui.BeginChild("PrefabScroll", ImGui.GetContentRegionAvail());
             float rowHeight = ImGui.GetFrameHeight();
             float deleteButtonWidth = rowHeight * 1.6f;
@@ -2169,9 +2178,7 @@ namespace Fushigi.ui.widgets
             if (files.Length == 0)
                 ImGui.Text(noPrefabsText);
 
-            ImGui.InputText("##PrefabSearch", ref mPrefabSearch, 0x100);
-
-            if (prevPrefabSearch != mPrefabSearch || regeneratePrefabList)
+            if (prevPrefabSearch != mPrefabSearch || (regeneratePrefabList && !delay))
             {
                 regeneratePrefabList = false;
                 filteredPrefabs.Clear();
@@ -2194,19 +2201,30 @@ namespace Fushigi.ui.widgets
 
             foreach (var prefab in filteredPrefabs)
             {
-                ImGui.PushID(prefab);
+                //ImGui.PushID(prefab);
 
                 float fullWidth = ImGui.GetContentRegionAvail().X;
                 float nameWidth = fullWidth - deleteButtonWidth - 8;
 
-                ImGui.BeginGroup();
-                ImGui.PushItemWidth(nameWidth);
+                //ImGui.BeginGroup();
+                //ImGui.PushItemWidth(nameWidth);
 
                 if (ImGui.Selectable(prefab, false, ImGuiSelectableFlags.None, new Vector2(nameWidth, rowHeight)))
                     LoadPrefab(prefab, directory);
-      
-                ImGui.PopItemWidth();
-                ImGui.EndGroup();
+
+                //ImGui.PopItemWidth();
+                //ImGui.EndGroup();
+
+                if (ImGui.IsItemClicked(ImGuiMouseButton.Right))
+                    ImGui.OpenPopup($"PrefabExport");
+
+                if (ImGui.BeginPopup($"PrefabExport"))
+                {
+                    if (ImGui.MenuItem("Export Prefab"))
+                        Prefab.ExportPrefab(prefab, directory);
+
+                    ImGui.EndPopup();
+                }
 
                 ImGui.SameLine();
 
@@ -2222,7 +2240,6 @@ namespace Fushigi.ui.widgets
                         (rowHeight - iconSize.Y) * 0.5f
                     );
 
-
                     uint color = ImGui.GetColorU32(ImGuiCol.Text);
                     if (!ImGui.IsItemHovered())
                         color = (color & 0xFFFFFF) | ((uint)((color >> 24) * 0.5f) << 24);
@@ -2231,20 +2248,23 @@ namespace Fushigi.ui.widgets
                     ImGui.SetItemTooltip("Delete Prefab");
 
                     if (clicked)
-                        DeletePrefabPopup(prefab);
-                    
-                    ImGui.PopID();
+                        DeletePrefabPopup(Path.Combine(directory, prefab + ".bcett.byml.zs"));
+         
+                    //ImGui.PopID();
                 }
             }
             ImGui.EndChild();
         }
+
         public async Task DeletePrefabPopup(string file)
         {
+            Console.WriteLine(file);
             var result = await RemoveAreaConfirmationDialog.ShowDialog(MainWindow.mModalHost, "Remove Prefab", "Do you want to remove this prefab?\nThis action cannot be undone!");
 
             if (result == RemoveAreaConfirmationDialog.DialogResult.Yes)
             {
                 File.Delete(file);
+                regeneratePrefabList = true;
             }
 
         }
@@ -2552,6 +2572,11 @@ namespace Fushigi.ui.widgets
                 posVec.X = MathF.Round(posVec.X * 2, MidpointRounding.AwayFromZero) / 2;
                 posVec.Y = MathF.Round(posVec.Y * 2, MidpointRounding.AwayFromZero) / 2;
                 posVec.Z = 0.0f;
+
+                if (Course.IsWorldMap)
+                {
+                    posVec.Z = MathF.Round(posVec.Z * 2, MidpointRounding.AwayFromZero) / 2;
+                }
 
                 actor.mTranslation = posVec;
                 actor.mStartingTrans = actor.mTranslation;
@@ -3901,7 +3926,6 @@ namespace Fushigi.ui.widgets
 
                     if (!Course.IsOneAreaCourse || course.GetAreaCount() > 1)
                     {
-
                         var glDestHashes = course.GetGlobalLinks().GetDestHashesFromSrc(mSelectedActor.mHash);
 
                         var glDestIDs = course.GetGlobalLinks().GetIndicesOfLinksWithSrc_ForDelete(mSelectedActor.mHash);
@@ -3953,6 +3977,8 @@ namespace Fushigi.ui.widgets
 
                                         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetStyle().FramePadding.X);
 
+                                        var area = course.GetAreaByHash(destActor.mAreaHash);
+                                        backgroundViewport = viewports[area];
 
                                         if (ImGui.Button($"Link {linkId}: {actorName}",
                                             new Vector2(ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight() * 1.6f, 0)))
@@ -4695,8 +4721,6 @@ namespace Fushigi.ui.widgets
             CourseAreaEditContext ctx, string actionName)
         {
             var actors = objectsToDelete.OfType<CourseActor>();
-            if (actors.Count() == 1)
-                actionName = "Delete " + actors.ElementAt(0).mPackName;
 
             if (!UserSettings.HideDeletingLinkedActorsPopup())
             {
@@ -4749,17 +4773,17 @@ namespace Fushigi.ui.widgets
                     ("As link source for", srcMsgStrs),
                     ("As link destination for", dstMsgStrs));
 
-                    if (result == OperationWarningDialog.DialogResult.Cancel)
+                    if (result == OperationWarningDialog.DialogResult.Cancel)            
                         return;
+
+
                 }
             }
 
-            var batchAction = ctx.BeginBatchAction();
             foreach (var actor in actors)
                 ctx.DeleteActor(actor, activeViewport, selectedArea);
-            
 
-            batchAction.Commit($"{IconUtil.ICON_TRASH} {actionName}");
+            activeViewport.DeleteTransformables(1, actors.ElementAt(0).mPackName);
         }
 
         //TODO making this undoable
@@ -4920,8 +4944,9 @@ namespace Fushigi.ui.widgets
         private string noPrefabsText = "You have no saved prefabs. \nYou can save a prefab by selecting multiple actors,\nright clicking and selecting 'Save as Prefab'. ";
         private bool showActorVisibility;
         private string prevPrefabSearch;
-        private bool regeneratePrefabList;
+        public static bool regeneratePrefabList;
         private bool prevPrefabTab;
+        public static LevelViewport backgroundViewport;
 
         public bool checkForEmptyRails()
         {

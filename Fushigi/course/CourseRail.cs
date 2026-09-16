@@ -9,6 +9,7 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
+using Fushigi.ui.undo;
 
 using System.Numerics;
 
@@ -17,8 +18,6 @@ namespace Fushigi.course
     public class CourseRail
     {
         public static CourseRailPoint closestSelected;
-        private static bool multiRailDelete;
-        public static List<(CourseRail rail, CourseRail.CourseRailPoint point)> deleteList;
         public static bool ShowRails = true;
         public CourseRail(uint areaHash, string type = "Default")
         {
@@ -107,7 +106,7 @@ namespace Fushigi.course
                     }
 
 
-                    CourseRail.CourseRailPoint selectedPoint = null;
+                    CourseRailPoint selectedPoint = null;
 
                     foreach (var point in rail.mPoints)
                     {
@@ -137,22 +136,6 @@ namespace Fushigi.course
                         }
                     }
 
-                    if (selectedPoint != null && (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace))))
-                    {
-                        if (mEditContext.GetObjectCountOfType<CourseRail.CourseRailPoint>() > 1)
-                        {
-                            var railPoints = mEditContext.GetSelectedObjects<CourseRail.CourseRailPoint>().ToArray();
-                            multiRailDelete = true;
-                            foreach (var point in railPoints)
-                            {
-                                if (rail.mPoints.Contains(point))
-                                    deleteList.Add((rail, point));
-                            }
-                        }
-                        else
-                            mEditContext.DeleteRailPoint(rail, selectedPoint);
-                    }
-
                     bool add_point = ImGui.IsMouseClicked(0) && ImGui.IsMouseDown(0) && ImGui.GetIO().KeyAlt && !ImGui.GetIO().KeyShift && !mEditContext.IsAnySelected<CourseActor>();
 
                     //Insert point to existing rail
@@ -171,21 +154,9 @@ namespace Fushigi.course
                     }
                 }
 
-                if (multiRailDelete)
-                {
-                    Console.WriteLine("Batch deleting " + deleteList.Count + " rail points");
-                    var batch = mEditContext.BeginBatchAction();
-
-                    foreach (var (rail, point) in deleteList)
-                    {
-                        //var revertible = rail.mPoints.RevertableRemove(point);
-                        //mEditContext.CommitAction(revertible);
-                    }
-
-                    batch.Commit($"{IconUtil.ICON_TRASH} Delete Rail Points");
-                    multiRailDelete = false;
-                    deleteList.Clear();
-                }
+                // Delete logic
+                //if (multiRailDelete)
+                //    DeleteRails(mEditContext);
 
                 // Draw Rails to the Viewport
                 viewport.mDrawList.Flags &= ~ImDrawListFlags.AntiAliasedLines;
@@ -320,6 +291,18 @@ namespace Fushigi.course
 
                 }
                 viewport.mDrawList.Flags |= ImDrawListFlags.AntiAliasedLines;
+            }
+        }
+
+        internal static void DeleteRails(CourseAreaEditContext mEditContext, List<CourseRailPoint> points)
+        {
+            Console.WriteLine("Batch deleting " + points + " rail points");
+
+            foreach (var point in points)
+            {
+                var rail = point.mParent;
+                var revertible = rail.mPoints.RevertableRemove(point);
+                mEditContext.CommitAction(revertible);
             }
         }
 

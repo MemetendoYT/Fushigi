@@ -128,6 +128,20 @@ namespace Fushigi.ui.SceneObjects.bgunit
             else
                 return (pos, rail.Points.Count);
         }
+        internal static void DeleteUnitPoints(CourseAreaEditContext mEditContext, List<BGUnitRail.RailPoint> railPoints)
+        {
+            //pointsToDelete.AddRange(railPoints);
+            foreach (var point in railPoints)
+            {
+                //if (!point.mRail.Points.Contains(point))
+                //    continue;
+
+                mEditContext.CommitAction(point.mRail.Points.RevertableRemove(point));
+                rebuildUnit(point.mRail.mCourseUnit);
+            }
+
+            //pointsToDelete.Clear();
+        }
 
         public static void OnMouseDown(CourseAreaEditContext ctx, LevelViewport viewport, BGUnitRail rail)
         {

@@ -81,7 +81,17 @@ namespace Fushigi.course
         [Serializable]
         public class CourseTable
         {
-            public string Key { get; set; }
+            public bool IsRouteLockCourse { get; set; } = false;
+            [BymlProperty("AfterCourseClearDemoType")]
+            public string CourserDemoType { get; set; } = "";
+            public string Key { get; set; } = "";
+            public string StagePath { get; set; } = "";
+            [BymlProperty("IsAppearGoldenPropellerFlower")]
+            public bool GoldenFlower { get; set; } = false;
+            [BymlProperty("IsEnableGetGrandWonderSeed")]
+            public bool GetGrandSeed { get; set; } = false;
+            public bool ClearFirstStage { get; set; } = false;
+
         }
 
         public class GateTable

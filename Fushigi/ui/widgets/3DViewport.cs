@@ -23,7 +23,7 @@ namespace Fushigi.ui.widgets
     // Full Credits to Jupahe64 for the 3D Viewport code that originated from https://github.com/jupahe64/MarioToyStudio
     public class Viewport3D {
 
-        private bool _isDraggingFromOrientationCube;
+        public static bool _isDraggingFromOrientationCube;
         public static bool CameraSnapped = true;
 
         internal Vector3? HitPointOnPlane(Vector3 planePoint, Vector3 planeNormal, LevelViewport VP)
@@ -38,6 +38,18 @@ namespace Fushigi.ui.widgets
 
             return (depth > 10_000 || depth < 0) ? null : res;
         }
+
+
+        internal Vector3 PlaceActorWorldMap(Vector2 mousePos, LevelViewport VP)
+        {
+            var planeOrigin = VP.Camera.Target;
+            var planeNormal = -GetCameraForwardDirection(VP);
+            var (rayOrigin, rayDirection) = GetMouseRay(mousePos, VP);
+            return MathUtil.IntersectPlaneRay(rayDirection, rayOrigin, planeNormal, planeOrigin);
+        }
+
+        internal Vector3 PlaceActorWorldMap(LevelViewport VP)
+            => PlaceActorWorldMap(ImGui.GetMousePos(), VP);
 
         internal void HandleCameraControls(double deltaSeconds, LevelViewport VP)
         {
@@ -86,61 +98,28 @@ namespace Fushigi.ui.widgets
                 VP.Camera.UpdateMatrices();
             }
 
-
-            Vector3 forward = Vector3.Transform(-Vector3.UnitZ, VP.Camera.Rotation);
-            Vector3 rightDir = Vector3.Transform(Vector3.UnitX, VP.Camera.Rotation);
-            Vector3 up = Vector3.Transform(Vector3.UnitY, VP.Camera.Rotation);
-
-            Vector3 movement = Vector3.Zero;
-            float speed = MathF.Floor(zoomFactor) * baseSpeed;
-
-
-            if (!VP.Camera.IsOrthographic)
+            if (!io.WantTextInput)
             {
-                if (ImGui.IsKeyDown(ImGuiKey.W)) movement += forward;
-                if (ImGui.IsKeyDown(ImGuiKey.S)) movement -= forward;
-            }
-            else
-            {
-                if (ImGui.IsKeyDown(ImGuiKey.W)) movement.Z += up.Z;
-                if (ImGui.IsKeyDown(ImGuiKey.S)) movement.Z -= up.Z;
-            }
-            if (ImGui.IsKeyDown(ImGuiKey.A)) movement -= rightDir;
-            if (ImGui.IsKeyDown(ImGuiKey.D)) movement += rightDir;
+                Vector3 forward = Vector3.Transform(-Vector3.UnitZ, VP.Camera.Rotation);
+                Vector3 rightDir = Vector3.Transform(Vector3.UnitX, VP.Camera.Rotation);
+                Vector3 up = Vector3.Transform(Vector3.UnitY, VP.Camera.Rotation);
 
-            VP.Camera.Target += movement * speed * dt;
+                Vector3 movement = Vector3.Zero;
+                float speed = MathF.Floor(zoomFactor) * baseSpeed;
 
-            var keyMoveUp = ImGuiKey.Q;
-            var keyMoveDown = ImGuiKey.E;
-            if (VP.Camera.IsOrthographic)
-            {
-                keyMoveUp = ImGuiKey.W;
-                keyMoveDown = ImGuiKey.S;
-            }
-
-            if (!VP.Camera.IsOrthographic)
-            {
-                if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.Q) && !io.KeyCtrl)
+                if (!io.KeyCtrl)
                 {
-                    VP.Camera.Target.Y += zoomedCameraSpeed * dt;
+                    if (ImGui.IsKeyDown(ImGuiKey.W) || ImGui.IsKeyDown(ImGuiKey.UpArrow))
+                        movement += up;
+                    if (ImGui.IsKeyDown(ImGuiKey.S) || ImGui.IsKeyDown(ImGuiKey.DownArrow))
+                        movement -= up;
+                    if (ImGui.IsKeyDown(ImGuiKey.A) || ImGui.IsKeyDown(ImGuiKey.LeftArrow))
+                        movement -= rightDir;
+                    if (ImGui.IsKeyDown(ImGuiKey.D) || ImGui.IsKeyDown(ImGuiKey.RightArrow))
+                        movement += rightDir;
                 }
+                    VP.Camera.Target += movement * speed * dt;
 
-                if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.E) && !io.KeyCtrl)
-                {
-                    VP.Camera.Target.Y -= zoomedCameraSpeed * dt;
-                }
-            }
-            else
-            {
-                if (ImGui.IsKeyDown(ImGuiKey.UpArrow) || ImGui.IsKeyDown(ImGuiKey.S) && !io.KeyCtrl)
-                {
-                    VP.Camera.Target.Z += zoomedCameraSpeed * dt;
-                }
-
-                if (ImGui.IsKeyDown(ImGuiKey.DownArrow) || ImGui.IsKeyDown(ImGuiKey.W) && !io.KeyCtrl)
-                {
-                    VP.Camera.Target.Z -= zoomedCameraSpeed * dt;
-                }
             }
         }
 
@@ -250,7 +229,6 @@ namespace Fushigi.ui.widgets
             //    ctx.DeselectAll();
             //    ctx.Select(VP.mHoveredObject);
             //}
-
 
             int i = 0;
             foreach (var face in allFaces)
@@ -370,6 +348,8 @@ namespace Fushigi.ui.widgets
             //    ctx.DeselectAll();
             //    ctx.Select(VP.mHoveredObject);
             //}
+
+            viewport.isInMultiSelectBox(new Vector2(actor.mTranslation.X, actor.mTranslation.Y), actor);
 
 
             int i = 0;

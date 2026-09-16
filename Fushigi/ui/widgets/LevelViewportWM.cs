@@ -1,20 +1,8 @@
-﻿
-using EditorToolkit.Core;
-using EditorToolkit.ImGui;
-using Fushigi.course;
-using Fushigi.gl;
+﻿using Fushigi.course;
 using Fushigi.ui;
 using Fushigi.ui.widgets;
-using Fushigi.util;
 using ImGuiNET;
-using Microsoft.Msagl.Core.Layout.ProximityOverlapRemoval.ConjugateGradient;
-using Silk.NET.Input;
-using Silk.NET.OpenGL;
-using System.ComponentModel.Design;
-using System.Drawing;
 using System.Numerics;
-using System.Runtime.CompilerServices;
-using ZstdSharp.Unsafe;
 
 internal class LevelViewportWM()
 {

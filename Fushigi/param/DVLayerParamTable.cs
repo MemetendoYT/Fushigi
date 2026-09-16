@@ -23,7 +23,13 @@ namespace Fushigi.param
 
         public void Load(string name)
         {
-            var file = FileUtil.FindContentPath(Path.Combine("Layer", "DVLayerParamTable", $"{name}game__actor__DVLayerParamTable.bgyml"));
+            var prefix = "Work/Layer/DVLayerParamTable/";
+            if (name.StartsWith(prefix))
+                name = name.Split(prefix)[1];
+
+            name = name.Split('.')[0];
+
+            var file = FileUtil.FindContentPath(Path.Combine("Layer", "DVLayerParamTable", $"{name}.game__actor__DVLayerParamTable.bgyml"));
             if (File.Exists(file))
                 Load(new MemoryStream(File.ReadAllBytes(file)));
         }
@@ -38,9 +44,10 @@ namespace Fushigi.param
             {
                 var v = (BymlHashTable)layer.Value;
 
-                Layers.Add(layer.Name, new Vector2(
-                    BymlUtil.GetNodeData<float>(v["X"]),
-                    BymlUtil.GetNodeData<float>(v["Y"])));
+                float x = v.ContainsKey("X") ? BymlUtil.GetNodeData<float>(v["X"]) : 0f;
+                float y = v.ContainsKey("Y") ? BymlUtil.GetNodeData<float>(v["Y"]) : 0f;
+
+                Layers.Add(layer.Name, new Vector2(x, y));
             }
             //Layers["DvScreen"] = new Vector2(1, 1);
         }
