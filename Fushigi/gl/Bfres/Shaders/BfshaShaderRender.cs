@@ -247,7 +247,7 @@ namespace Fushigi.gl.Bfres
                 ShaderProgram = ShaderModel.Programs[6390];
             }
 
-                SkeletonBlock = model.SkeletonBuffer;
+            SkeletonBlock = model.SkeletonBuffer;
             SetShapeBlock(ShapeBlock, transform);
             SetSkeletonBlock(SkeletonBlock, model, transform);
 

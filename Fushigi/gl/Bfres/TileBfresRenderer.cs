@@ -74,51 +74,82 @@ namespace Fushigi.gl.Bfres
                 ));
         }
 
-        public void LoadBGUnit(List<CourseActor> actors)
+        public void LoadBGUnitActor(List<CourseActor> actors)
         {
-            var type = ModelType.Solid;
-            var model = type switch
-            {
-                ModelType.Solid => this.SolidModel,
-                ModelType.SemiSolid => this.SemisolidModel,
-                ModelType.NoCollision => this.NoCollisionModel,
-                ModelType.Bridge => this.BridgeModel,
-                _ => null
-            };
-
-
             foreach (var actor in actors)
             {
+                Console.WriteLine(actor.mActorPack.BgUnitControl.UnitField + " " + this.mSkinDivision.ToString());
+                if (actor.mActorPack.BgUnitControl.UnitField != this.mSkinDivision.ToString())
+                    continue;
+
+                Console.WriteLine("running");
+                var typeStr = actor.mActorPack.BgUnitControl.ModelType;
+                ModelType type = typeStr switch
+                {
+                    "FullHit" => ModelType.Solid,
+                    "HalfHit" => ModelType.SemiSolid,
+                    "NoHit" => ModelType.NoCollision,
+                    _ => ModelType.Solid
+                };
+                var model = typeStr switch
+                {
+                    "FullHit" => this.SolidModel,
+                    "HalfHit" => this.SemisolidModel,
+                    "NoHit" => this.NoCollisionModel,
+                    _ => null
+                };
+
+                if (model == null)
+                    continue;
+
                 var scale = actor.mScale;
 
-                float startX = actor.mTranslation.X - (scale.X / 2f);
-                float endX = actor.mTranslation.X + (scale.X / 2f);
+                float minX = actor.mTranslation.X - (scale.X / 2f);
+                float maxX = actor.mTranslation.X + (scale.X / 2f);
+                float minY = actor.mTranslation.Y - (scale.Y / 2f);
+                float maxY = actor.mTranslation.Y + (scale.Y / 2f);
 
-                float startY = actor.mTranslation.Y - (scale.Y / 2f);
-                float endY = actor.mTranslation.Y + (scale.Y / 2f);
-
-                for (int x = (int)MathF.Floor(startX); x <= (int)MathF.Floor(endX); x++)
+                var unit = new CourseUnit
                 {
-                    for (int y = (int)MathF.Floor(startY); y <= (int)MathF.Floor(endY); y++)
+                    mModelType = type
+                };
+
+                var wall = new Wall(unit);
+                wall.ExternalRail.Points.Add(new BGUnitRail.RailPoint(wall.ExternalRail, new Vector3(minX, minY, actor.mTranslation.Z)));
+                wall.ExternalRail.Points.Add(new BGUnitRail.RailPoint(wall.ExternalRail, new Vector3(maxX, minY, actor.mTranslation.Z)));
+                wall.ExternalRail.Points.Add(new BGUnitRail.RailPoint(wall.ExternalRail, new Vector3(maxX, maxY, actor.mTranslation.Z)));
+                wall.ExternalRail.Points.Add(new BGUnitRail.RailPoint(wall.ExternalRail, new Vector3(minX, maxY, actor.mTranslation.Z)));
+
+                unit.Walls.Add(wall);
+                unit.GenerateTileSubUnits();
+
+                var clipMin = new Vector2(float.NegativeInfinity);
+                var clipMax = new Vector2(float.PositiveInfinity);
+
+                foreach (var subUnit in unit.mTileSubUnits)
+                {
+                    var origin2D = new Vector2(subUnit.mOrigin.X, subUnit.mOrigin.Y);
+
+                    foreach (var (tileIDEdge, tileIDGround, position) in subUnit.GetTiles(clipMin - origin2D, clipMax - origin2D))
                     {
-                        model.TileManager.AddWallTile(new Vector3(x, y, 0), 0);
+                        var pos = subUnit.mOrigin + new Vector3(position, subUnit.mOrigin.Z);
+
+                        if (tileIDEdge == 0)
+                        {
+                            model.TileManager.AddWallTile(pos, 0);
+                        }
+                        else
+                        {
+                            model.TileManager.AddEdgeTile(pos, tileIDEdge.GetValueOrDefault());
+
+                            if (tileIDGround.TryGetValue(out int tileIDGroundValue))
+                                model.TileManager.AddGroundTile(pos, tileIDGroundValue);
+                        }
                     }
                 }
 
-
-            //var model = type switch
-            //   ModelType.Solid => this.SolidModel,
-            //    ModelType.SemiSolid => this.SemisolidModel,
-            //    ModelType.NoCollision => this.NoCollisionModel,
-            //    ModelType.Bridge => this.BridgeModel,
-            //    _ => null
-            //};
-
-            //model.TileManager.AddWallTile(actor.mTranslation, 0);
-
-            //model.TileManager.UpdateTileParameters();
-        }
-            model.TileManager.UpdateTileParameters();
+                model.TileManager.UpdateTileParameters();
+            }
         }
         public void ClearTiles()
         {
@@ -132,17 +163,16 @@ namespace Fushigi.gl.Bfres
         {
             ClearTiles();
             Load(unitHolder);
-            //LoadBGUnit(actors);
+            LoadBGUnitActor(actors);
 
-            //if (activeViewport.BgUnits.Contains(actor))
-            //{
-            //    activeViewport.BgUnits.Remove(actor);
-            //    activeViewport.tileRebuild = true;
-            //}
+                //if (activeViewport.BgUnits.Contains(actor))
+                //{
+                //    activeViewport.BgUnits.Remove(actor);
+                //    activeViewport.tileRebuild = true;
+                //}
         }
         public void Load(CourseUnitHolder unitHolder)
         {
-
             foreach (var unit in unitHolder.mUnits)
             {
                 if (!unit.Visible)
@@ -186,6 +216,7 @@ namespace Fushigi.gl.Bfres
                             else
                             {
                                 model.TileManager.AddEdgeTile(pos, tileIDEdge.GetValueOrDefault());
+                                Console.WriteLine(tileIDEdge.GetValueOrDefault());
 
                                 if (tileIDGround.TryGetValue(out int tileIDGroundValue))
                                     model.TileManager.AddGroundTile(pos, tileIDGroundValue);

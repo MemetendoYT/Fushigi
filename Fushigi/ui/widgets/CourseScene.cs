@@ -18,6 +18,7 @@ using Silk.NET.OpenGL;
 using System.Collections;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
@@ -97,7 +98,6 @@ namespace Fushigi.ui.widgets
         private List<string> filteredLayers = new();
         private List<string> filteredPrefabs = new();
         private List<string> translatedActors = new();
-        private CourseArea areaToFocus = null;
         public static bool leftClickStartedInsideViewport = false;
         public static bool insideViewport = false;
         public static CourseArea resetArea;
@@ -127,6 +127,8 @@ namespace Fushigi.ui.widgets
         private string prevSearch;
         private CourseAreaEditContext mEditContext;
         private CourseActor pickActor;
+        private static List<string> ActorTypes = Enum.GetNames<CourseActorType>().ToList();
+        private static Dictionary<string, bool> ActorTypeEnabled = new Dictionary<string, bool>();
 
         string mActorSearchText = "";
 
@@ -595,6 +597,10 @@ namespace Fushigi.ui.widgets
                 var old_csize = AreaParam.GetDecompressedSize(old_cbyml);
                 oldCourseInfoSize = old_csize;
             }
+
+            ActorTypes.Add("Custom");
+            foreach (var actor in ActorTypes)
+                ActorTypeEnabled[actor] = true;
 
             cs.activeViewport = cs.viewports[cs.selectedArea];
 
@@ -1104,7 +1110,6 @@ namespace Fushigi.ui.widgets
 
                     if (playerLocator is not null)
                     {
-                        areaToFocus = area;
                         viewports[area].FrameSelectedActor(playerLocator);
                         break;
                     }
@@ -2450,6 +2455,23 @@ namespace Fushigi.ui.widgets
             {
                 ImGui.InputText("##ActorSearch", ref mActorSearchAll, 0x100);
                 flags |= ImGuiTableFlags.Resizable;
+
+                ImGui.SameLine();
+                var paletteFlag = ImGuiComboFlags.NoArrowButton | ImGuiComboFlags.WidthFitPreview;
+                if (ImGui.BeginCombo($"##ActorFilter", "  Filter  ", paletteFlag))
+                {
+                    foreach (var actor in ActorTypes)
+                    {
+                        bool filter = ActorTypeEnabled[actor];
+                        if (ImGui.Checkbox($"{actor}", ref filter))
+                        {
+                            ActorTypeEnabled[actor] = filter;
+                            regenerateActorsList = true;
+                        }
+                        
+                    }
+                    ImGui.EndCombo();
+                }
             }
             else
             {
@@ -2463,7 +2485,7 @@ namespace Fushigi.ui.widgets
             if (mSelectedActor != null && mSelectedLayer != null)
                 ImGui.Text($"Placing {mSelectedActor} on {mSelectedLayer}");
 
-            if (prevSearch != mActorSearchAll)
+            if (prevSearch != mActorSearchAll || regenerateActorsList)
             {
                 filteredActors.Clear();
                 translatedActors.Clear();
@@ -2471,6 +2493,15 @@ namespace Fushigi.ui.widgets
 
                 foreach (var actor in ParamDB.GetActors())
                 {
+
+                    bool isVanilla = BfresRender.VanillaActors.Contains(actor);
+                    bool isEnabled = ActorTypeEnabled[CourseActor.GetActorTypeFromGyaml(actor).ToString()];
+
+                    if (isVanilla && !isEnabled)
+                        continue;
+                    if (!isVanilla && !ActorTypeEnabled["Custom"])
+                        continue;
+
                     var actorEnglish = Translate.FetchTranslatedName(actor);
                     bool HasText = actor.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0 ||
                                    actorEnglish.IndexOf(mActorSearchAll, StringComparison.OrdinalIgnoreCase) >= 0;
@@ -2481,7 +2512,7 @@ namespace Fushigi.ui.widgets
                     filteredActors.Add(actor);
                     translatedActors.Add(actorEnglish);
                 }
-
+                regenerateActorsList = false;
             }
 
             ImGui.BeginChild("ActorScroll", ImGui.GetContentRegionAvail());
@@ -2970,6 +3001,19 @@ namespace Fushigi.ui.widgets
                 CourseLink link = linkHolder.mLinks[i];
 
                 ImGui.Selectable($"Link {i}", editContext.IsSelected(link));
+  
+                CourseActor? srcActor = course.ResolveActorByHash(link.mSource);
+                CourseActor? destActor = course.ResolveActorByHash(link.mDest);
+
+                if (srcActor != null && destActor != null && link.mLinkName == "Reference")
+                {
+                    if (srcActor.mPackName == "BackgroundAreaLocator" && destActor.mPackName == "CameraArea" && link.mLinkName == "Reference")
+                    {
+                        srcActor.backgroundActor = destActor;
+                        var area = course.GetAreaByHash(destActor.mAreaHash);
+                        srcActor.backgroundViewport = viewports[area];
+                    }
+                }
 
                 if (ImGui.IsItemHovered() &&
                     ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
@@ -3977,8 +4021,12 @@ namespace Fushigi.ui.widgets
 
                                         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetStyle().FramePadding.X);
 
-                                        var area = course.GetAreaByHash(destActor.mAreaHash);
-                                        backgroundViewport = viewports[area];
+                                        if (mSelectedActor.mPackName == "BackgroundAreaLocator" && destActor.mPackName == "CameraArea")
+                                        {
+                                            mSelectedActor.backgroundActor = destActor;
+                                            var area = course.GetAreaByHash(destActor.mAreaHash);
+                                            mSelectedActor.backgroundViewport = viewports[area];
+                                        }
 
                                         if (ImGui.Button($"Link {linkId}: {actorName}",
                                             new Vector2(ImGui.GetContentRegionAvail().X - ImGui.GetFrameHeight() * 1.6f, 0)))
@@ -4946,7 +4994,7 @@ namespace Fushigi.ui.widgets
         private string prevPrefabSearch;
         public static bool regeneratePrefabList;
         private bool prevPrefabTab;
-        public static LevelViewport backgroundViewport;
+        private bool regenerateActorsList;
 
         public bool checkForEmptyRails()
         {

@@ -6,6 +6,7 @@ using Fushigi.course.distance_view;
 using Fushigi.gl;
 using Fushigi.gl.Bfres;
 using Fushigi.gl.Bfres.AreaData;
+using Fushigi.gl.Shaders;
 using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
@@ -341,11 +342,27 @@ namespace Fushigi.ui.widgets
             }
             else
             {
-                transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
-                transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+
+                if(ImGui.GetIO().KeyAlt)
+                {
+                    transformable.mTranslation.X = MathF.Round((CurrentTrans.X + relativePos.X) * 2, MidpointRounding.AwayFromZero) / 2;
+                    transformable.mTranslation.Y = MathF.Round((CurrentTrans.Y + relativePos.Y) * 2, MidpointRounding.AwayFromZero) / 2;
+                }
+                else
+                {
+                    transformable.mTranslation.X = CurrentTrans.X + relativePos.X;
+                    transformable.mTranslation.Y = CurrentTrans.Y + relativePos.Y;
+                }
 
                 if (Course.IsWorldMap)
                     transformable.mTranslation.Z = CurrentTrans.Z + relativePos.Z;
+
+                if(transformable is CourseActor actor)
+                {
+                    if (actor.mPackName.Contains("BgUnit"))
+                        BGUnitRailSceneObj.rebuildTiles = true;
+                        
+                }
             }
         }
         public string GetTransformableType(Transformable transformable)
@@ -628,7 +645,7 @@ namespace Fushigi.ui.widgets
             GsysShaderRender.GsysResources.UpdateViewport(this.Camera);
             //Setup light map resources for the currently loaded area
             GsysShaderRender.GsysResources.Lightmaps = EnvironmentData.Lightmaps;
-            //Distance view scrol calculations
+            //Distance view scroll calculations
             DistantViewScrollManager.Calc(this.Camera.Target);
             //Set active area for getting env settings by the materials
             AreaResourceManager.ActiveArea = this.EnvironmentData;
@@ -647,7 +664,7 @@ namespace Fushigi.ui.widgets
             if (EditorMode.editMode != "Collision")
             {
                 if (!CourseScene.HideWalls)
-            {
+                {
                     //TODO put this somewhere else and maybe cache this
                     TileBfresRender CreateTileRendererForSkin(SkinDivision division, string skinName)
                     {
@@ -731,9 +748,24 @@ namespace Fushigi.ui.widgets
                             RenderActor(actor, actor.mActorPack.ModelInfoRef);
                             RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
 
-                        
-                        }
+                            if (actor.mPackName == "BackgroundAreaLocator" && actor.backgroundActor != null)
+                            {
+                                var fb = actor.backgroundViewport.DrawBackgroundAreaScene3D(actor, actor.backgroundActor);
+                                GsysShaderRender.GsysResources.UpdateViewport(this.Camera);
+                                Framebuffer.Bind();
+                                gl.Viewport(0, 0, Framebuffer.Width, Framebuffer.Height);
+                                gl.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
 
+                                RenderBackgroundAreaLocator(actor, fb);
+                                continue;
+                            }
+
+                            if (actor.mPackName.Contains("BgUnit") && !BgUnits.Contains(actor))
+                            {
+                                BgUnits.Add(actor);
+                            }
+
+                        }
                     }
                 }
             }
@@ -761,38 +793,39 @@ namespace Fushigi.ui.widgets
             ImGui.SetNextItemAllowOverlap();
         }
 
-        public void RenderBackgroundAreaLocator(CourseActor actor, ImDrawListPtr mDrawList)
+        private Plane2DRenderer _bgQuad;
+
+        private void RenderBackgroundAreaLocator(CourseActor actor, GLFramebuffer fb)
         {
-            var destArea = CourseScene.backgroundViewport;
-            if (destArea == null)
-                return;
+            var transMat = Matrix4x4.CreateTranslation(actor.mTranslation);
+            var scaleMat = Matrix4x4.CreateScale(actor.mScale * 0.5f);
+            var rotMat = Matrix4x4.CreateRotationX(actor.mRotation.X) *
+                         Matrix4x4.CreateRotationY(actor.mRotation.Y) *
+                         Matrix4x4.CreateRotationZ(actor.mRotation.Z);
 
-            //var fb = DrawBackgroundAreaScene3D(actor, destArea.mArea);
+            var mat = scaleMat * rotMat * transMat;
+            DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
 
-            Vector3 pos = actor.mTranslation;
-            float halfW = actor.mScale.X * 0.5f;
-            float halfH = actor.mScale.Y * 0.5f;
+            var shader = GLShaderCache.GetShader(gl, "BackgroundQuad",
+                Path.Combine("res", "shaders", "BackgroundQuad.vert"),
+                Path.Combine("res", "shaders", "BackgroundQuad.frag"));
 
-            Vector3 worldTl = pos + new Vector3(-halfW, halfH, 0);
-            Vector3 worldTr = pos + new Vector3(halfW, halfH, 0);
-            Vector3 worldBr = pos + new Vector3(halfW, -halfH, 0);
-            Vector3 worldBl = pos + new Vector3(-halfW, -halfH, 0);
+            shader.Use();
+            shader.SetUniform("mtxCam", this.Camera.ViewProjectionMatrix);
+            shader.SetUniform("mtxMdl", mat);
+            shader.SetTexture("albedo_texture", (GLTexture2D)fb.Attachments[0], 1);
 
-            Vector2 tl = WorldToScreen(worldTl);
-            Vector2 tr = WorldToScreen(worldTr);
-            Vector2 br = WorldToScreen(worldBr);
-            Vector2 bl = WorldToScreen(worldBl);
-            Console.WriteLine($"pos={pos} tl={tl} tr={tr} br={br} bl={bl}");
-            mDrawList.AddImageQuad(
-                (IntPtr)MainWindow.FushigiIcon.ID,
-                tl, tr, br, bl,
-                new Vector2(0, 0),
-                new Vector2(1, 0),
-                new Vector2(1, 1),
-                new Vector2(0, 1),
-                0xFFFFFFFF
-            );
+            gl.Enable(EnableCap.Blend);
+            gl.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+
+            if (_bgQuad == null)
+                _bgQuad = new Plane2DRenderer(gl, 1f);
+
+            _bgQuad.Draw(shader);
+
+            gl.Disable(EnableCap.Blend);
         }
+
 
         public void ProcessModifiers()
         {
@@ -808,11 +841,28 @@ namespace Fushigi.ui.widgets
         }
 
 
-        private static readonly Vector2 PortalResolution = new Vector2(512, 512);
+        private static readonly Vector2 PortalResolution = new Vector2(2048, 2048);
         private Dictionary<ulong, GLFramebuffer> mPortalFramebuffers = new();
-        public GLFramebuffer DrawBackgroundAreaScene3D(CourseActor actor, CourseArea destArea)
+        public GLFramebuffer DrawBackgroundAreaScene3D(CourseActor actor, CourseActor cameraActor)
         {
             var size = PortalResolution;
+            var target = cameraActor.mTranslation;
+            target.Y = cameraActor.mTranslation.Y + (cameraActor.mScale.Y / 2);
+            var fixedCamera = new Camera
+            {
+                Width = cameraActor.mScale.X,
+                Height = cameraActor.mScale.Y,
+                IsOrthographic = this.Camera.IsOrthographic,
+                Target = target,
+                Distance = 25,
+                Rotation = Quaternion.Identity,
+            };
+
+            fixedCamera.UpdateMatrices();
+
+            // Swap in the fixed camera for this actor's draw calls
+            GsysShaderRender.GsysResources.UpdateViewport(fixedCamera);
+
 
             if (!mPortalFramebuffers.TryGetValue(actor.mHash, out var fb) || fb == null)
             {
@@ -829,11 +879,7 @@ namespace Fushigi.ui.widgets
             gl.Enable(EnableCap.DepthTest);
             gl.ClipControl(ClipControlOrigin.UpperLeft, ClipControlDepth.ZeroToOne);
 
-            // Sky is opaque and fills the whole framebuffer, killing transparency — omit it.
-            // EnvironmentData.RenderSky(gl, this.Camera);
-
-
-            foreach (var bgActor in destArea.GetSortedActors())
+            foreach (var bgActor in mArea.GetSortedActors())
             {
                 if (bgActor.mActorPack == null || !bgActor.wonderVisible)
                     continue;
@@ -843,10 +889,73 @@ namespace Fushigi.ui.widgets
 
                 if (!HiddenModels.Contains(bgActor.mType.ToString()))
                 {
-                    RenderActor(bgActor, bgActor.mActorPack.ModelInfoRef);
-                    RenderActor(bgActor, bgActor.mActorPack.DrawArrayModelInfoRef);
+                    RenderActor2(bgActor, bgActor.mActorPack.ModelInfoRef, fixedCamera);
+                    RenderActor2(bgActor, bgActor.mActorPack.DrawArrayModelInfoRef, fixedCamera);
                 }
             }
+
+            TileBfresRender CreateTileRendererForSkin(SkinDivision division, string skinName)
+            {
+                var render = new TileBfresRender(gl,
+                    new TileBfresRender.UnitPackNames(
+                        FullHit: CourseScene.SkinTable.GetPackName(skinName, "FullHit"),
+                        HalfHit: CourseScene.SkinTable.GetPackName(skinName, "HalfHit"),
+                        NoHit: CourseScene.SkinTable.GetPackName(skinName, "NoHit"),
+                        Bridge: CourseScene.SkinTable.GetPackName(skinName, "Bridge")
+                    ), division);
+
+                render.Load(this.mArea.mUnitHolder);
+                return render;
+            }
+
+            string? fieldASkin = mArea.mAreaParams.SkinParam?.FieldA;
+            string? fieldBSkin = mArea.mAreaParams.SkinParam?.FieldB;
+
+            if (updateSkinA)
+            {
+                TileBfresRenderFieldA = null;
+                //BfresCache.Clear();
+                updateSkinA = false;
+            }
+
+            if (updateSkinB)
+            {
+                TileBfresRenderFieldB = null;
+                //BfresCache.Clear();
+                updateSkinB = false;
+            }
+
+            if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
+            {
+                TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
+            }
+            if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
+            {
+                TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
+
+            }
+
+            if (!hasInitialized)
+            {
+                tileRebuild = true;
+                hasInitialized = true;
+            }
+
+            if (BGUnitRailSceneObj.rebuildTiles)
+            {
+                if (TileBfresRenderFieldA is not null)
+                    TileBfresRenderFieldA.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
+
+                if (TileBfresRenderFieldB is not null)
+                    TileBfresRenderFieldB.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
+
+                BGUnitRailSceneObj.rebuildTiles = false;
+            }
+
+
+            TileBfresRenderFieldA?.Render(gl, this.Camera);
+            TileBfresRenderFieldB?.Render(gl, this.Camera);
+
 
             gl.ClipControl(ClipControlOrigin.LowerLeft, ClipControlDepth.ZeroToOne);
             fb.Unbind();
@@ -856,20 +965,31 @@ namespace Fushigi.ui.widgets
 
         private void RenderActor(CourseActor actor, ModelInfo modelInfo)
         {
+
             if (modelInfo == null || modelInfo.mFilePath == null)
-                return;
+            {
+                if (actor.mPackName.Contains("LavaBox"))
+                {
+                    modelInfo = new ModelInfo();
+                    modelInfo.mModelName = "SystemCommonLava";
+                    modelInfo.mFilePath = "SystemCommonLava";
+                    //Lava(actor);
+                }
+                else
+                    return;
+            }
 
             //if (modelInfo.ModelVariationAnims != null)
             //{
-//                if(modelInfo.ModelVariationAnims.Count > 0)
-//                {
-//                    byte[] data = File.ReadAllBytes(
-//                    Path.Combine(UserSettings.GetRomFSPath(), modelInfo.ModelVariationAnims[0].Fmab)
-//                    );
-//                    var par = BymlSerialize.Deserialize<MaterialAnimation>(data);
-//                    Console.WriteLine(par.FrameCount);
-//                }
-//            }
+            //                if(modelInfo.ModelVariationAnims.Count > 0)
+            //                {
+            //                    byte[] data = File.ReadAllBytes(
+            //                    Path.Combine(UserSettings.GetRomFSPath(), modelInfo.ModelVariationAnims[0].Fmab)
+            //                    );
+            //                    var par = BymlSerialize.Deserialize<MaterialAnimation>(data);
+            //                    Console.WriteLine(par.FrameCount);
+            //                }
+            //            }
             var resourceName = modelInfo.mFilePath;
             var modelName = modelInfo.mModelName;
 
@@ -889,7 +1009,7 @@ namespace Fushigi.ui.widgets
             var mat = debugSMat * scaleMat * rotMat * transMat;
 
             //if(actor.mPackName.StartsWith("DV") || actor.mPackName.StartsWith("Cloud"))
-                DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
+            DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
 
             var model = render.Models[modelName];
 
@@ -945,6 +1065,116 @@ namespace Fushigi.ui.widgets
 
             }
         }
+
+        private Camera _staticCamera;
+
+        private void EnsureStaticCamera()
+        {
+            if (_staticCamera == null)
+            {
+                _staticCamera = new Camera
+                {
+                    Width = this.Camera.Width,     // match viewport aspect
+                    Height = this.Camera.Height,
+                    IsOrthographic = true,
+                    Distance = 10,                  // pick whatever framing you want fixed at
+                    Target = Vector3.Zero,
+                    Rotation = Quaternion.Identity,
+                };
+            }
+            else
+            {
+                // keep aspect ratio in sync if the viewport resizes
+                _staticCamera.Width = this.Camera.Width;
+                _staticCamera.Height = this.Camera.Height;
+            }
+
+            _staticCamera.UpdateMatrices();
+        }
+
+        private void RenderActor2(CourseActor actor, ModelInfo modelInfo, Camera camera)
+        {
+           
+            if (modelInfo == null || modelInfo.mFilePath == null)
+                return;
+
+            var resourceName = modelInfo.mFilePath;
+            var modelName = modelInfo.mModelName;
+
+            var render = BfresCache.Load(gl, resourceName);
+
+            if (render == null || !render.Models.TryGetValue(modelName, out BfresRender.BfresModel? value))
+                return;
+
+            var transMat = Matrix4x4.CreateTranslation(actor.mTranslation);
+            var scaleMat = Matrix4x4.CreateScale(actor.mScale);
+            var rotMat = Matrix4x4.CreateRotationX(actor.mRotation.X) *
+                    Matrix4x4.CreateRotationY(actor.mRotation.Y) *
+                    Matrix4x4.CreateRotationZ(actor.mRotation.Z);
+
+            var debugSMat = Matrix4x4.CreateScale(modelInfo.mModelScale != default ? modelInfo.mModelScale : Vector3.One);
+
+            var mat = debugSMat * scaleMat * rotMat * transMat;
+
+            //if(actor.mPackName.StartsWith("DV") || actor.mPackName.StartsWith("Cloud"))
+            //DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
+            DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
+
+            var model = render.Models[modelName];
+
+            if (actor.mActorPack.ModelExpandParamRef != null)
+            {
+                ActorModelExpand(actor, model);
+                ActorModelExpand(actor, model, "Main"); //yeah idk either
+
+                //TODO SubModels
+            }
+            //switch for drawing models with different methods easier
+            if (actor.mActorPack.DrainPipeRef != null && actor.mActorPack.DrainPipeRef.ModelKeyTop != null &&
+            actor.mActorPack.DrainPipeRef.ModelKeyMiddle != null)
+            {
+                var drainRef = actor.mActorPack.DrainPipeRef;
+                var calc = actor.mActorPack.ShapeParams.mCalc;
+                var KeyMats = new Dictionary<string, Matrix4x4>{
+                    {drainRef.ModelKeyTop ?? "Top", debugSMat *
+                        Matrix4x4.CreateScale(actor.mScale.X, actor.mScale.X, actor.mScale.Z) *
+                        Matrix4x4.CreateTranslation(0, (actor.mScale.Y-actor.mScale.X)*(calc.mMax.Y-calc.mMin.Y), 0) *
+                        rotMat *
+                        transMat},
+
+                    {drainRef.ModelKeyMiddle ?? "Middle", debugSMat *
+                        Matrix4x4.CreateScale(actor.mScale.X, (actor.mScale.Y-1)*2, actor.mScale.Z) *
+                        rotMat *
+                        transMat}};
+
+                model.Render(gl, render, KeyMats[modelInfo.SearchModelKey], camera);
+                if ((modelInfo.SubModels?.Count ?? 0) != 0)
+                    render.Models[modelInfo.SubModels[0].FmdbName].Render(gl, render, KeyMats[modelInfo.SubModels[0].SearchModelKey], camera);
+            }
+            else
+            {
+                if (modelInfo.IsUseTilingMode)
+                {
+                    for (int y = 0; y < actor.mScale.Y; y++)
+                    {
+                        for (int x = 0; x < actor.mScale.X; x++)
+                        {
+                            model.Render(gl, render,
+                                Matrix4x4.CreateTranslation(
+                                    -actor.mScale.X / 2 + x + 0.5f,
+                                    -actor.mScale.Y / 2 + y + 0.5f,
+                                    0)
+                                * rotMat * transMat,
+                            camera);
+                        }
+                    }
+                }
+                else
+                {
+                    model.Render(gl, render, mat, camera, actor.mPackName);
+                }
+            }
+        }
         public Vector2 ExpandCalcTypes(string type, Vector2 actScale)
         {
             var result = type switch
@@ -970,6 +1200,47 @@ namespace Fushigi.ui.widgets
                 _ => scale
             };
             return result;
+        }
+
+        public static void Lava(CourseActor actor)
+        {
+            actor.mActorPack.ModelExpandParamRef = new();
+            var param = actor.mActorPack.ModelExpandParamRef;
+
+            param.Settings = new List<ModelExpandParamSettings>
+            {
+                new ModelExpandParamSettings
+                {
+                    mModelKeyName = "",
+                    mMinScale = new Vector2(1.0f, 1.0f),
+                    mBoneSetting = new()
+                    {
+                        BoneInfoList = new()
+                        {
+                            new()
+                            {
+                                mBoneName = "JointRoot",
+                                mCalcType = "ActorScaleDiv4",
+                                mIsCustomCalc = true,
+                                mCustomCalc = new() { A = 0.0f, B = 4.0f },
+                                mScalingType = "XYAxis"
+                            }
+                        }
+                    },
+                    mMatSetting = new()
+                    {
+                        MatInfoList = new()
+                        {
+                            new()
+                            {
+                                mMatNameSuffix = "BoxWallMat",
+                                mCalcType = "ActorScaleMinus2",
+                                mScalingType = "XYAxis"
+                            }
+                        }
+                    }
+                }
+            };
         }
         private void ActorModelExpand(CourseActor actor, BfresRender.BfresModel model, string modelKeyName = "")
         {
@@ -2018,8 +2289,6 @@ namespace Fushigi.ui.widgets
                                 break;
                         }
 
-                        if (Camera.IsOrthographic)
-                        {
                             var posVec = CalcPosVec(StartingTrans);
                             CurrentTrans.X = posVec.X;
                             CurrentTrans.Y = posVec.Y;
@@ -2027,17 +2296,15 @@ namespace Fushigi.ui.widgets
                             if (Course.IsWorldMap || EditorMode.editMode == "Collision")
                                 CurrentTrans.Z = posVec.Z;
 
-
                             foreach (Transformable transformable in mEditContext.GetSelectedObjects<Transformable>())
                                 HandleTranslation(transformable, StartingTrans, CurrentTrans);
-
 
                             CollisionEditor.HandleShapeTranslation(StartingTrans, CurrentTrans, mEditContext);
 
 
                             if (StartingTrans != CurrentTrans)
                                 CommitObjectTranslation = true;
-                        }
+                        
                     }
                     else
                         CommitObjectTranslation = false;

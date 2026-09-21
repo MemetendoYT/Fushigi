@@ -134,15 +134,6 @@ namespace Fushigi.gl.Bfres
                 }
             }
 
-            internal void fart(string param, float value, int meshNumb)
-            {
-                Meshes[meshNumb].MaterialRender.SetParam(param, value);
-            }
-
-            internal object getfart(string name, int meshNumb)
-            {
-                return Meshes[meshNumb].MaterialRender.GetParam(name);
-            }
             internal void Render(GL gl, BfresRender render, Matrix4x4 transform, Camera camera, string name)
             {
                 foreach (var mesh in Meshes)

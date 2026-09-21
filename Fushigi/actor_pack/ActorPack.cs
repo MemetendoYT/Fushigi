@@ -245,7 +245,15 @@ namespace Fushigi
                     break;
                     case "BgUnitControl":
                         this.BgUnitControl = BymlSerialize.Deserialize<BgUnitControl>(data);
-                    break;
+
+                        if (BgUnitControl.UnitType == null)
+                            this.BgUnitControl.UnitType = "FullHitA";
+
+                            var UnitType = BgUnitControl.UnitType.Split("Hit");
+                            this.BgUnitControl.ModelType = UnitType[0] + "Hit";
+                            this.BgUnitControl.UnitField = "Field" + UnitType[1];
+                        
+                            break;
                 }
             }
         }

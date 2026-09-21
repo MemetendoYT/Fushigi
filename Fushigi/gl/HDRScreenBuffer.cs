@@ -17,6 +17,7 @@ namespace Fushigi.gl
 
         private ScreenQuad ScreenQuad;
 
+
         public void Render(GL gl, int width, int height, GLTexture2D input)
         {
             if (Framebuffer == null)

@@ -36,6 +36,7 @@ namespace Fushigi.gl
             return CameraFrustum.CheckIntersection(this, box, radius);
         }
 
+
         public bool UpdateMatrices()
         {
             float tanFOV = MathF.Tan(Fov / 2);
@@ -76,5 +77,6 @@ namespace Fushigi.gl
 
             return true;
         }
+
     }
 }

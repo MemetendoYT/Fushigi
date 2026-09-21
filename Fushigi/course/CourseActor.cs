@@ -179,6 +179,7 @@ namespace Fushigi.course
 
             mActorParameters = new PropertyDict(actorParameters);
         }
+
         internal static void DrawActorCollision(LevelViewport viewport, CourseAreaEditContext mEditContext, CourseArea mArea)
         {
             const float pointSize = 8.0f;
@@ -304,38 +305,8 @@ namespace Fushigi.course
                     Vector2 br = s_actorRectPolygon[2];
                     Vector2 bl = s_actorRectPolygon[3];
 
-                    if (actor.mPackName == "BackgroundAreaLocator")
-                    {
-                        if (CourseScene.backgroundViewport != null)
-                        {
-                            var ba = CourseScene.backgroundViewport;
-                            var fb = ba.DrawBackgroundAreaScene3D(actor, ba.mArea);
-
-                            viewport.mDrawList.AddImageQuad(
-                                (IntPtr)((GLTexture2D)fb.Attachments[0]).ID,
-                                tl, tr, br, bl,
-                                new Vector2(0, 0),
-                                new Vector2(1, 0),
-                                new Vector2(1, 1),
-                                new Vector2(0, 1),
-                                0xFFFFFFFF
-                            );
-                        }
-                    }
-
-                    if (Sprites.OverrideSize.TryGetValue(actor.mPackName, out var size))
-                    {
-                        // Scale relative to center
-                        Vector2 newCenter = (tl + br) * 0.5f;
-
-                        tl = newCenter + (tl - newCenter) * size;
-                        tr = newCenter + (tr - newCenter) * size;
-                        br = newCenter + (br - newCenter) * size;
-                        bl = newCenter + (bl - newCenter) * size;
-                    }
-
-                    uint color = CourseActor.CourseActorColors[CourseActorType.None];
-                    CourseActor.CourseActorColors.TryGetValue(actor.mType, out color);
+                    uint color = CourseActorColors[CourseActorType.None];
+                    CourseActorColors.TryGetValue(actor.mType, out color);
 
                     bool isHovered = viewport.mHoveredObject == actor;
 
@@ -574,6 +545,8 @@ namespace Fushigi.course
             return cloned;
         }
         public string mPackName;
+        public CourseActor backgroundActor;
+        internal LevelViewport backgroundViewport;
         public string mName;
         public string mLayer;
         public WonderViewType mWonderView = WonderViewType.Normal;
@@ -587,6 +560,7 @@ namespace Fushigi.course
         public PropertyDict mActorParameters = PropertyDict.Empty;
         public PropertyDict mSystemParameters = PropertyDict.Empty;
         public string mCalcDistanceParam;
+ 
 
         public ActorPack mActorPack;
 
