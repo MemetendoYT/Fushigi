@@ -81,7 +81,6 @@ namespace Fushigi.ui.widgets
             if (ImGui.Checkbox("Enable Actor Translation", ref enableTranslation))
             {
                 UserSettings.SetEnableTranslation(enableTranslation);
-                CourseScene.refreshTranslation = true;
             }
 
             Tooltip.Show("Translates all the actor names to English.");
@@ -166,7 +165,6 @@ namespace Fushigi.ui.widgets
 
         private static void DrawAdvancedSettings(IPopupModalHost modalHost)
         {
-
             var renderCustomModels = UserSettings.GetRenderCustomModels();
             var useAstcTextureCache = UserSettings.UseAstcTextureCache();
             var hideDeletingLinkedActorsPopup = UserSettings.HideDeletingLinkedActorsPopup();
@@ -179,14 +177,13 @@ namespace Fushigi.ui.widgets
             var UseShaderError = UserSettings.GetUseShaderErrors();
             ImGui.Indent();
 
-            Tooltip.Show("Displays models using the shaders present in the game. This may cause a performance drop but will look more visually accurate.");
 
-            if (ImGui.Checkbox("Render Models from mod RomFS", ref renderCustomModels))
-            {
-                UserSettings.SetRenderCustomModels(renderCustomModels);
-            }
+            //if (ImGui.Checkbox("Render Models from mod RomFS", ref renderCustomModels))
+            //{
+            //    UserSettings.SetRenderCustomModels(renderCustomModels);
+            //}
 
-            Tooltip.Show("Uses the models from the mod directory.");
+            //Tooltip.Show("Uses the models from the mod directory.");
 
             if (ImGui.Checkbox("Use Astc Texture Cache", ref useAstcTextureCache))
             {

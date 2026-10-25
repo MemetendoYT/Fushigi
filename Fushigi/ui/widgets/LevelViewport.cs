@@ -663,7 +663,7 @@ namespace Fushigi.ui.widgets
 
             if (EditorMode.editMode != "Collision")
             {
-                if (!CourseScene.HideWalls)
+                if (!ActorVisibility.HiddenAll.Contains("BgUnits_model"))
                 {
                     //TODO put this somewhere else and maybe cache this
                     TileBfresRender CreateTileRendererForSkin(SkinDivision division, string skinName)
@@ -704,7 +704,6 @@ namespace Fushigi.ui.widgets
                     if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
                     {
                         TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
-
                     }
 
                     if (!hasInitialized)
@@ -742,8 +741,7 @@ namespace Fushigi.ui.widgets
                         !actor.wonderVisible)
                             continue;
 
-
-                        if (!HiddenModels.Contains(actor.mType.ToString()))
+                        if (!HiddenModels.Contains(actor.mType.ToString()) && !actor.isHidden)
                         {
                             RenderActor(actor, actor.mActorPack.ModelInfoRef);
                             RenderActor(actor, actor.mActorPack.DrawArrayModelInfoRef);
@@ -943,6 +941,7 @@ namespace Fushigi.ui.widgets
 
             if (BGUnitRailSceneObj.rebuildTiles)
             {
+                Console.WriteLine("running");
                 if (TileBfresRenderFieldA is not null)
                     TileBfresRenderFieldA.DoLoad(this.mArea.mUnitHolder, this.BgUnits);
 
@@ -1361,9 +1360,6 @@ namespace Fushigi.ui.widgets
         {
             foreach (var unit in mArea.mUnitHolder.mUnits)
             {
-                if (!unit.Visible)
-                    continue;
-
                 foreach (var wall in unit.Walls)
                 {
                     DrawRail(wall.ExternalRail, false);
@@ -1418,6 +1414,9 @@ namespace Fushigi.ui.widgets
                 text += $"Z: {Math.Round(world.Z, 3)}\n";
 
             text += $"FPS: {Math.Round(fps)}";
+
+            text += $"\nActor Count: {this.mArea.mActorHolder.mActors.Count()}";
+            text += $"\nLink Count: {this.mArea.mLinkHolder.mLinks.Count()}";
 
             uint textCol = ImGui.GetColorU32(ImGuiCol.Text);
             drawList.AddText(pos, textCol, text);
@@ -1525,6 +1524,7 @@ namespace Fushigi.ui.widgets
         public void DrawAreaContent()
         {
             mHoveredObject = null;
+            if(!ActorVisibility.HiddenAll.Contains("BgUnits_tag"))
             DrawBGUnits();
             CourseRail.DrawRails(this, mEditContext, mArea);
 
@@ -1795,6 +1795,37 @@ namespace Fushigi.ui.widgets
                     }
                 }
             }
+
+            if (ImGui.GetIO().KeyAlt && ImGui.IsKeyPressed(ImGuiKey.H))
+            {
+                List<CourseActor> selected = area.GetActors().Where(x => x.isHidden).ToList();
+
+                var batch = mEditContext.BeginBatchAction();
+                foreach (var actor in selected)
+                {
+                    mEditContext.CommitAction(new PropertyFieldsSetUndo(
+                    actor, [("isHidden", actor.isHidden)], "Reveal Actor"));
+                    actor.isHidden = true;
+                    actor.isHidden = false;
+                }
+                batch.Commit($"{IconUtil.ICON_EYE} Show Hidden Actor");
+            }
+            else if (ImGui.IsKeyPressed(ImGuiKey.H))
+            {
+                var selected = mEditContext.GetSelectedObjects<CourseActor>().ToList();
+
+                var batch = mEditContext.BeginBatchAction();
+                foreach (var actor in selected)
+                {
+                   mEditContext.CommitAction(new PropertyFieldsSetUndo(
+                   actor, [("isHidden", actor.isHidden)], "Hide Actor"));
+                   actor.isHidden = true;
+                }
+                batch.Commit($"{IconUtil.ICON_EYE_SLASH} Hid Actor");
+            }
+
+          
+
 
 
             if (ImGui.IsKeyPressed(ImGuiKey.Delete) || (ImGui.GetIO().KeyShift && ImGui.IsKeyPressed(ImGuiKey.Backspace)) || deleteContext)

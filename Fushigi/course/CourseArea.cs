@@ -207,7 +207,6 @@ namespace Fushigi.course
             }
         }
 
-
         public BymlArrayNode LoadPrefab(string prefabName, byte[] levelBytes, string objType)
         {
             var byml = new Byml.Byml(new MemoryStream(levelBytes));

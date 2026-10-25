@@ -16,10 +16,8 @@ using SixLabors.ImageSharp.PixelFormats;
 using System.IO;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace Fushigi.ui
 {
@@ -49,7 +47,6 @@ namespace Fushigi.ui
 
             unsafe
             {
-
                 for (int i = 1; i < 10; i++)
                 {
                     using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(Path.Combine("res", $"icon{i}.png"));
@@ -97,6 +94,7 @@ namespace Fushigi.ui
                         iconConfig->RasterizerMultiply = 1f;
                         iconConfig->GlyphOffset = new Vector2(0);
 
+                        uint dpi = 96;
 
                         [DllImport("User32.dll")]
                         static extern uint GetDpiForWindow(IntPtr hWnd);
@@ -106,12 +104,15 @@ namespace Fushigi.ui
 
                         FushigiIcon = GLTexture2D.Load(_gl, "res/icon_menu.png");
                         FushigiLogo = GLTexture2D.Load(_gl, "res/icon1.png");
-                        IntPtr hwnd = native.Win32!.Value.Hwnd;
 
-                        uint dpi = GetDpiForWindow(hwnd);
+                        if (OperatingSystem.IsWindows())
+                        {
+                            dpi = GetDpiForWindow(native.Win32!.Value.Hwnd);
+                        }
                         backupdpiScale = dpi;
 
-                        if(UserSettings.GetDPIOverride()) {
+                        if (UserSettings.GetDPIOverride())
+                        {
                             dpi = (uint)(96 * UserSettings.GetDPIVal());
                         }
 
@@ -191,7 +192,7 @@ namespace Fushigi.ui
                             await LoadCourseWithProgressBar(mCurrentCourseName);
                             BfresCache.Clear();
                             UserSettings.AppendRecentCourse(mCurrentCourseName);
-                            CourseScene.saveStatus = true;
+                            CourseSave.saveStatus = true;
                         }
                     }).ConfigureAwait(false);
                 }
@@ -207,7 +208,7 @@ namespace Fushigi.ui
         public async Task<bool> TryCloseCourse()
         {
             if (mSelectedCourseScene is not null &&
-                mSelectedCourseScene.HasUnsavedChanges())
+                CourseSave.HasUnsavedChanges())
             {
                 var result = await CloseConfirmationDialog.ShowDialog(this);
 
@@ -230,9 +231,7 @@ namespace Fushigi.ui
                 var result = await ResetConfirmationDialog.ShowDialog(this);
 
                 if (result == ResetConfirmationDialog.DialogResult.Yes)
-                {
-                    return true;
-                }
+                    return true;      
                 else
                     return false;
             }
@@ -247,13 +246,11 @@ namespace Fushigi.ui
                 var result = await RemoveAreaConfirmationDialog.ShowDialog(this, "Remove Area", "Do you want to remove this area?\nThis action cannot be undone.");
 
                 if (result == RemoveAreaConfirmationDialog.DialogResult.Yes)
-                {
                     return true;
-                }
+                
                 else
                     return false;
             }
-
             return true;
         }
 
@@ -300,8 +297,7 @@ namespace Fushigi.ui
                         await task;
                     });
         }
-
-        
+ 
         public async Task StartupRoutine()
         {
             await WaitTick();
@@ -378,7 +374,7 @@ namespace Fushigi.ui
                         mModalHost,
                         p);
 
-                    CourseScene.saveStatus = true;
+                    CourseSave.saveStatus = true;
                 });
         }
 
@@ -391,7 +387,7 @@ namespace Fushigi.ui
             if (!await RemoveArea())
                 return;
 
-            CourseScene.saveStatus = false;
+            CourseSave.saveStatus = false;
             var selectedArea = mSelectedCourseScene.selectedArea;
             string areaName = selectedArea.GetName();
             mSelectedCourseScene.DeleteAreaFiles(areaName);
@@ -463,7 +459,6 @@ namespace Fushigi.ui
                 File.WriteAllText(hashPath, remoteHash);
 
                 Console.WriteLine("Translation JSON updated successfully.");
-                CourseScene.refreshTranslation = true;
                 return;
             }
 
@@ -621,7 +616,7 @@ namespace Fushigi.ui
                                         Logger.Logger.LogMessage("MainWindow", $"Selected course {mCurrentCourseName}!");
                                         await LoadCourseWithProgressBar(mCurrentCourseName);
                                         UserSettings.AppendRecentCourse(mCurrentCourseName);
-                                        CourseScene.saveStatus = true;
+                                        CourseSave.saveStatus = true;
                                     }
                                 }).ConfigureAwait(false); //fire and forget
                             }
@@ -639,7 +634,7 @@ namespace Fushigi.ui
                                         Logger.Logger.LogMessage("MainWindow", $"Reload course {mCurrentCourseName}!");
                                         await LoadCourseWithProgressBar(mCurrentCourseName);
                                         UserSettings.AppendRecentCourse(mCurrentCourseName);
-                                        CourseScene.saveStatus = true;
+                                        CourseSave.saveStatus = true;
                                     }
                                 }).ConfigureAwait(false); //fire and forget
                             }
@@ -663,9 +658,9 @@ namespace Fushigi.ui
                             //Ensure the romfs path is set for saving
                             if (!string.IsNullOrEmpty(UserSettings.GetModRomFSPath()))
                             {
-                                if (mSelectedCourseScene.checkForEmptyRails())
-                                    mSelectedCourseScene.deleteEmptyRails();
-                                mSelectedCourseScene.Save(false);
+                                if (CourseRail.checkForEmptyRails(mSelectedCourseScene))
+                                    CourseRail.deleteEmptyRails(mSelectedCourseScene);
+                                CourseSave.Save(false, mSelectedCourseScene.course);
                             }
                             else //Else configure the mod path
                             {
@@ -674,7 +669,7 @@ namespace Fushigi.ui
                                 {
                                     Logger.Logger.LogMessage("MainWindow", $"Setting RomFS path to {dlg.SelectedPath}");
                                     UserSettings.SetModRomFSPath(dlg.SelectedPath);
-                                    mSelectedCourseScene.Save(false);
+                                    CourseSave.Save(false, mSelectedCourseScene.course);
                                 }
                             }
                         }
@@ -684,7 +679,7 @@ namespace Fushigi.ui
                             if (dlg.ShowDialog("Select the romfs directory to save to."))
                             {
                                 UserSettings.SetModRomFSPath(dlg.SelectedPath);
-                                mSelectedCourseScene.Save(false);
+                                CourseSave.Save(false, mSelectedCourseScene.course);
                             }
                         }
 
@@ -786,11 +781,20 @@ namespace Fushigi.ui
 
                 if (ImGui.BeginMenu("Help"))
                 {
+                    if(ImGui.MenuItem("Keyboard Shortcuts")) {
+                        showShortcuts = true;
+                    }
 
                     ImGui.EndMenu();
                 }
                     /* end entire menu bar */
                     ImGui.EndMenuBar();
+            }
+
+
+            if(showShortcuts)
+            {
+                Shortcuts.Draw(ref showShortcuts);
             }
         }
 
@@ -909,5 +913,6 @@ namespace Fushigi.ui
         CollisionEditor? collisionEditor = new CollisionEditor();
         bool mIsShowPreferenceWindow = false;
         public static float backupSize;
+        private bool showShortcuts;
     }
 }

@@ -35,7 +35,6 @@ namespace Fushigi.gl.Bfres
             BgUnitInfo? noHitInfo = ActorPackCache.Load(packNames.NoHit)?.BgUnitInfo;
             BgUnitInfo? bridgeInfo = ActorPackCache.Load(packNames.Bridge)?.BgUnitInfo;
 
-
             if (fullHitInfo is null ||
                 halfHitInfo is null ||
                 noHitInfo is null ||
@@ -53,16 +52,33 @@ namespace Fushigi.gl.Bfres
             SemisolidModel = CreateModel(gl, halfHitInfo);
 
             NoCollisionModel?.Dispose();
-            NoCollisionModel = CreateModel(gl, noHitInfo);
+            NoCollisionModel = CreateModel(gl, noHitInfo, "fart");
 
             BridgeModel?.Dispose();
             BridgeModel = CreateModel(gl, bridgeInfo);
         }
+        private static Model CreateModel(GL gl, BgUnitInfo bgUnitInfo, string fart)
+        {
+            var modelInfo = bgUnitInfo.GetModelInfo();
+            var materialNames = bgUnitInfo.GetMaterialNames();
+
+            var render = new BfresRender(BfresCache.Load(gl, modelInfo.bfresName));
+            var model = render.Models[modelInfo.modelName];
+
+
+            return new Model(gl, render, model, new MaterialNames(
+                    Edge: materialNames.GetValueOrDefault("Edge"),
+                    Wall: materialNames.GetValueOrDefault("Wall"),
+                    Ground: materialNames.GetValueOrDefault("Belt")
+                ));
+        }
+
 
         private static Model CreateModel(GL gl, BgUnitInfo bgUnitInfo)
         {
             var modelInfo = bgUnitInfo.GetModelInfo();
             var materialNames = bgUnitInfo.GetMaterialNames();
+
 
             var render = new BfresRender(BfresCache.Load(gl, modelInfo.bfresName));
             var model = render.Models[modelInfo.modelName];
@@ -78,7 +94,6 @@ namespace Fushigi.gl.Bfres
         {
             foreach (var actor in actors)
             {
-                Console.WriteLine(actor.mActorPack.BgUnitControl.UnitField + " " + this.mSkinDivision.ToString());
                 if (actor.mActorPack.BgUnitControl.UnitField != this.mSkinDivision.ToString())
                     continue;
 
@@ -216,7 +231,6 @@ namespace Fushigi.gl.Bfres
                             else
                             {
                                 model.TileManager.AddEdgeTile(pos, tileIDEdge.GetValueOrDefault());
-                                Console.WriteLine(tileIDEdge.GetValueOrDefault());
 
                                 if (tileIDGround.TryGetValue(out int tileIDGroundValue))
                                     model.TileManager.AddGroundTile(pos, tileIDGroundValue);

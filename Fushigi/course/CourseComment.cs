@@ -33,7 +33,6 @@ namespace Fushigi.course
         }
 
 
-
         public BymlHashTable BuildNode()
         {
             BymlHashTable tbl = new();
@@ -220,34 +219,34 @@ namespace Fushigi.course
             }
         }
         public class CourseCommentHolder
-    {
-        public CourseCommentHolder()
         {
-
-        }
-
-        public CourseCommentHolder(BymlArrayNode commentArray)
-        {
-            foreach (BymlHashTable comment in commentArray.Array)
-                mComments.Add(new CourseComment(comment));
-        }
-   
-            public BymlArrayNode SerializeToArray()
+            public CourseCommentHolder()
             {
-                BymlArrayNode node = new((uint)mComments.Count);
 
-                foreach (var comment in mComments)
-                {
-                    node.AddNodeToArray(comment.BuildNode());
-                }
-
-                return node;
             }
 
+            public CourseCommentHolder(BymlArrayNode commentArray)
+            {
+                foreach (BymlHashTable comment in commentArray.Array)
+                    mComments.Add(new CourseComment(comment));
+            }
+   
+                public BymlArrayNode SerializeToArray()
+                {
+                    BymlArrayNode node = new((uint)mComments.Count);
 
-            public List<CourseComment> mComments = [];
-    }
+                    foreach (var comment in mComments)
+                    {
+                        node.AddNodeToArray(comment.BuildNode());
+                    }
+
+                    return node;
+                }
 
 
-    }
+                public List<CourseComment> mComments = [];
+        }
+
+
+        }
 }

@@ -185,7 +185,7 @@ namespace Fushigi.course
             const float pointSize = 8.0f;
             foreach (CourseActor actor in mArea.GetActors())
             {
-                if (HiddenActors.Contains(actor.mType.ToString()))
+                if (HiddenActors.Contains(actor.mType.ToString()) || actor.isHidden)
                     continue;
 
                 System.Numerics.Vector3 min = new(-.5f);
@@ -560,6 +560,7 @@ namespace Fushigi.course
         public PropertyDict mActorParameters = PropertyDict.Empty;
         public PropertyDict mSystemParameters = PropertyDict.Empty;
         public string mCalcDistanceParam;
+        public bool isHidden = false;
  
 
         public ActorPack mActorPack;

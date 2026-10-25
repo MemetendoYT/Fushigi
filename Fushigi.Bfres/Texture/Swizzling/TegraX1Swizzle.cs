@@ -13,8 +13,8 @@ namespace Fushigi.Bfres
             try
             {
 
-                //Block and bpp format info
-                uint bpp = GetBytesPerPixel(texture.Format);
+            //Block and bpp format info
+            uint bpp = GetBytesPerPixel(texture.Format);
             uint blkWidth = GetBlockWidth(texture.Format);
             uint blkHeight = GetBlockHeight(texture.Format);
             //Tile mode
@@ -29,6 +29,7 @@ namespace Fushigi.Bfres
             var offset = CalculateMipOffset(mip_level, texture.Alignment, width, height, blkWidth, blkHeight, bpp, block_height);
             //Mip data
             var mip_data = texture.TextureData[array_level].Slice((int)offset, (int)size);
+
             //Deswizzle to proper image
             return TegraX1Swizzle.deswizzle(
                 width,
@@ -241,7 +242,7 @@ namespace Fushigi.Bfres
                 surfSize = pitch * round_up(height, block_height * 8);
             }
 
-            byte[] result = new byte[surfSize];
+            byte[] result = new byte[toSwizzle == 0 ? width * height * bpp : surfSize];
 
             for (uint y = 0; y < height; y++)
             {

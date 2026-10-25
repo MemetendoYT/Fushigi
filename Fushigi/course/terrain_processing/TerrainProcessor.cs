@@ -25,6 +25,9 @@ namespace Fushigi.course.terrain_processing
 
             foreach (var wall in courseUnit.Walls)
             {
+                if (!wall.ExternalRail.Visible)
+                    continue;
+
                 var wall2D = WallToWall2D(wall, out BoundingBox3D bb);
 
                 var key = (new Vector2(MathF.IEEERemainder(bb.Min.X, 1),
@@ -40,6 +43,9 @@ namespace Fushigi.course.terrain_processing
 
             foreach (var belt in courseUnit.mBeltRails)
             {
+                if (!belt.Visible)
+                    continue;
+
                 var beltRail2D = RailToPolygon2D(belt, out BoundingBox3D bb);
 
                 var key = (new Vector2(MathF.IEEERemainder(bb.Min.X, 1),

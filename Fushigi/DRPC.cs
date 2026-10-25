@@ -1,5 +1,6 @@
 ﻿using DiscordRPC;
 using DiscordRPC.Logging;
+using Fushigi.ui.widgets;
 using Fushigi.util;
 
 namespace Fushigi
@@ -32,6 +33,27 @@ namespace Fushigi
         {
             mClient?.Dispose();
         }
+
+        internal static void UpdateDRPC(CourseScene cs)
+        {
+            string sCourseID = cs.course.GetName().Split("_")[0].Replace("Course", "");
+            if (int.TryParse(sCourseID, out int courseID))
+            {
+                if (RomFS.CourseNames.TryGetValue(courseID, out string? courseName))
+                {
+                    RomFS.CourseWorlds.TryGetValue(courseID, out int worldID);
+                    DRPC.SetEditingCourse(cs.selectedArea.GetName(), courseName, worldID);
+                    Program.MainWindow.SetWindowIcon(worldID);
+                }
+                else
+                    Logger.Logger.LogWarning("CourseScene", $"Failed to get course name for {cs.course.GetName()}");
+
+                return;
+            }
+
+            Logger.Logger.LogWarning("CourseScene", $"Failed to get course ID for {cs.course.GetName()}");
+        }
+
 
         static void SetPresence(string details, string state, string imageKey)
         {

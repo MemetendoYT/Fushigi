@@ -40,7 +40,7 @@ namespace Fushigi.ui
                 undoStack.Push(new MultiRevertable(name, undoCollection.ToArray()));
                 redoStack.Clear();
             }
-            CourseScene.saveStatus = false;
+            CourseSave.saveStatus = false;
             UndoWindow.scrollToBottom = true;
         }
 
@@ -52,7 +52,7 @@ namespace Fushigi.ui
         {
             undoStack.Push(revertable);
             redoStack.Clear();
-            CourseScene.saveStatus = false;
+            CourseSave.saveStatus = false;
             UndoWindow.scrollToBottom = true;
         }
 
@@ -67,7 +67,7 @@ namespace Fushigi.ui
                 var undoable = undoStack.Pop();
                 var redoable = undoable.Revert();
                 redoStack.Push(new RedoEntry { undoable = undoable, redoable = redoable });
-                CourseScene.saveStatus = false;
+                CourseSave.saveStatus = false;
             }
             UndoWindow.scrollToBottom = true;
             return canUndo;
@@ -84,7 +84,7 @@ namespace Fushigi.ui
                 var entry = redoStack.Pop();
                 entry.redoable.Revert();
                 undoStack.Push(entry.undoable);
-                CourseScene.saveStatus = false;
+                CourseSave.saveStatus = false;
                 UndoWindow.scrollToBottom = true;
             }
             return canRedo;

@@ -2,17 +2,9 @@
 using Fushigi.ui.modal;
 using Fushigi.util;
 using ImGuiNET;
-using Newtonsoft.Json.Linq;
-using Silk.NET.SDL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Silk.NET.Core;
 using System.Numerics;
 using System.Security.AccessControl;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Fushigi.ui.widgets
 {
@@ -22,7 +14,7 @@ namespace Fushigi.ui.widgets
         private static Vector2 icon_size = new Vector2(25 * MainWindow.dpiScale, 25 * MainWindow.dpiScale);
         public static List<string> HiddenAll = new();
 
-        private static readonly Dictionary<string, string> ViewingSettings = new Dictionary<string, string>()
+        public static readonly Dictionary<string, string> ViewingSettings = new Dictionary<string, string>()
         {
             {"Rails", "No Model" },
             {"BgUnits", "" },
@@ -37,6 +29,8 @@ namespace Fushigi.ui.widgets
             {"MapObj", "" },
             {"Enemy", "" },
             {"Object", ""},
+            {"Block", ""},
+            {"Tag", "" }
         };
 
         private static readonly Dictionary<string, string> BackgroundActors = new Dictionary<string, string>()
@@ -115,10 +109,15 @@ namespace Fushigi.ui.widgets
                     case "Actor":
                         AddToList(objectName, visibilityList);
                         break;
+                    case "BgUnits":
+                        if (listToUse == "Model")
+                            AddToList(objectName + "_model", HiddenAll);
+                        else
+                            AddToList(objectName + "_tag", HiddenAll);
+                            break;
                 }
             }
         }
-
         public static void AddToList(string name, List<string> list)
         {
             if (list.Contains(name))
@@ -134,7 +133,7 @@ namespace Fushigi.ui.widgets
             ImGui.Text(name + ":");
         }
 
-        public static void Draw(ref bool continueDisplay, IPopupModalHost modalHost)
+        public static void Draw(ref bool continueDisplay)
         {
             ImGui.SetNextWindowSize(new Vector2(500 * MainWindow.dpiScale, 500 * MainWindow.dpiScale), ImGuiCond.Once);
             if (ImGui.Begin("Visibility Options", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoNavInputs))
@@ -142,7 +141,7 @@ namespace Fushigi.ui.widgets
                 if (ImGui.Button("Close"))
                     continueDisplay = false;
 
-                if(ImGui.BeginTable("ActorVisibility", 3, ImGuiTableFlags.BordersInnerV))
+                if (ImGui.BeginTable("ActorVisibility", 3, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.RowBg))
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
@@ -165,10 +164,10 @@ namespace Fushigi.ui.widgets
                             switch (setting.Key)
                             {
                                 case "ForegroundActors":
-                                    DrawParentIcon(ForegroundActors, "ForegroundActor");
+                                    DrawParentIcon(ForegroundActors, "ForegroundActors");
                                     break;
                                 case "BackgroundActors":
-                                    DrawParentIcon(BackgroundActors, "BackgroundActor");
+                                    DrawParentIcon(BackgroundActors, "BackgroundActors");
                                     break;
 
                             }
@@ -186,7 +185,6 @@ namespace Fushigi.ui.widgets
                                         break;
 
                                 }
-
                                 ImGui.TreePop();
                             }
                             i++;
@@ -209,6 +207,81 @@ namespace Fushigi.ui.widgets
                 }
                 ImGui.End();
             }
+        }
+
+        public static void SimpleOptions(CourseScene courseScene)
+        {
+            if (ImGui.BeginPopup("ActorVisibilityPopup"))
+            {
+                if (ImGui.BeginTable("VisibilityTable", 2))
+                {
+                    foreach (var setting in ViewingSettings)
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
+                        ImGui.Text(setting.Key);
+
+
+                        ImGui.TableSetColumnIndex(1);
+
+                        var visibilityList = HiddenAll;
+
+                        bool contains = visibilityList.Contains(setting.Key) || HiddenAll.Contains(setting.Key + "_tag");
+                        var icon = IconUtil.ICON_EYE;
+
+                        if (contains)
+                            icon = IconUtil.ICON_EYE_SLASH;
+
+                        if (ImGui.Button($"{icon}##{setting}"))
+                            SimpleHide(setting.Key);
+                    }
+                    ImGui.EndTable();
+
+                    ImGui.Separator();
+                    if (ImGui.Button("Advanced", new Vector2(-1, 0)))
+                    {
+                        courseScene.showActorVisibility = true;
+                        ImGui.CloseCurrentPopup();
+                    }
+
+                }
+                ImGui.EndPopup();
+            }
+        }
+        public static void SimpleHide(string objectToHide)
+        {
+            switch (objectToHide)
+            {
+                  case "Rails":
+                    AddToList("Rails", HiddenAll);
+                     CourseRail.ShowRails = !CourseRail.ShowRails;
+                    break;
+                  case "ForegroundActors":
+                    AddToList(objectToHide + "_tag", HiddenAll);
+                    AddToList(objectToHide + "_model", HiddenAll);
+                    foreach (var objects in ForegroundActors)
+                    {
+                        AddToList(objects.Key, CourseActor.HiddenActors);
+                        if(objects.Value != "No Model")
+                            AddToList(objects.Key, LevelViewport.HiddenModels);
+                    }
+                    break;
+                case "BackgroundActors":
+                    AddToList(objectToHide + "_tag", HiddenAll);
+                    AddToList(objectToHide + "_model", HiddenAll);
+                    foreach (var objects in BackgroundActors)
+                    {
+                        AddToList(objects.Key, CourseActor.HiddenActors);
+                        if (objects.Value != "No Model")
+                            AddToList(objects.Key, LevelViewport.HiddenModels);
+                    }
+                    break;
+                case "BgUnits":
+                    AddToList(objectToHide + "_tag", HiddenAll);
+                    AddToList(objectToHide + "_model", HiddenAll);
+                    break;
+            }
+
         }
     }
 }

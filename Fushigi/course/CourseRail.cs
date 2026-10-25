@@ -306,6 +306,46 @@ namespace Fushigi.course
             }
         }
 
+        internal static void deleteEmptyRails(CourseScene cs)
+        {
+            CourseAreaEditContext ctx;
+            var toDelete = new List<(CourseArea area, CourseRail rail)>();
+
+
+            foreach (var area in cs.course.GetAreas())
+            {
+                var rails = area.mRailHolder.mRails;
+                foreach (CourseRail rail in rails)
+                {
+                    if (rail.mPoints.Count == 0)
+                        toDelete.Add((area, rail));
+                }
+            }
+
+
+            foreach (var (area, rail) in toDelete)
+            {
+                ctx = cs.areaScenes[area].EditContext;
+                ctx.DeleteRail(rail);
+            }
+        }
+
+        internal static bool checkForEmptyRails(CourseScene cs)
+        {
+            foreach (var area in cs.course.GetAreas())
+            {
+                var rails = area.mRailHolder.mRails;
+                foreach (CourseRail rail in rails)
+                {
+                    if (rail.mPoints.Count == 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
         internal void addRailPoint(int index, CourseRailPoint newPoint, CourseAreaEditContext mEditContext, LevelViewport viewport)
         {
             System.Numerics.Vector3 posVec = viewport.ScreenToWorld(ImGui.GetMousePos());
@@ -689,7 +729,6 @@ namespace Fushigi.course
             return node;
         }
     
-
         public BymlArrayNode SerializeToArray()
         {
             BymlArrayNode node = new((uint)mRails.Count);
@@ -821,8 +860,6 @@ namespace Fushigi.course
 
             return node;
         }
-
-   
 
         public BymlArrayNode SerializeToArray()
         {

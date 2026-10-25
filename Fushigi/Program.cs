@@ -17,7 +17,15 @@ internal class Program
 
     private static void Main(string[] args)
     {
-        if (TestForNET8())
+        if(RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(".NET 8 found.");
+            Console.ResetColor();
+
+            RunFushigi();
+        }
+        else if (TestForNET8())
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(".NET 8 found.");
