@@ -51,7 +51,18 @@ namespace Fushigi.course
                 return; 
 
             var courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "WorldMapInfo", $"{name}.game__stage__WorldMapInfo.bgyml"));
-            var byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
+
+            Byml.Byml byml;
+
+            if (Ounce.isOunce)
+            {
+                var packPath = $"Stage/WorldMapInfo/{name}.game__stage__WorldMapInfo.bgyml";
+                byml = new Byml.Byml(new MemoryStream(RomFS.GetOrLoadBootUpPack().OpenFile(packPath)));
+            }
+            else
+            {
+                byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
+            }
 
             this.Load((BymlHashTable)byml.Root);
         }
@@ -81,16 +92,16 @@ namespace Fushigi.course
         [Serializable]
         public class CourseTable
         {
-            public bool IsRouteLockCourse { get; set; } = false;
-            [BymlProperty("AfterCourseClearDemoType")]
-            public string CourserDemoType { get; set; } = "";
-            public string Key { get; set; } = "";
-            public string StagePath { get; set; } = "";
-            [BymlProperty("IsAppearGoldenPropellerFlower")]
-            public bool GoldenFlower { get; set; } = false;
-            [BymlProperty("IsEnableGetGrandWonderSeed")]
-            public bool GetGrandSeed { get; set; } = false;
-            public bool ClearFirstStage { get; set; } = false;
+            //public bool IsRouteLockCourse { get; set; } = false;
+            //[BymlProperty("AfterCourseClearDemoType")]
+            //public string CourserDemoType { get; set; } = "";
+            //public string Key { get; set; } = "";
+            //public string StagePath { get; set; } = "";
+            //[BymlProperty("IsAppearGoldenPropellerFlower")]
+            //public bool GoldenFlower { get; set; } = false;
+            //[BymlProperty("IsEnableGetGrandWonderSeed")]
+            //public bool GetGrandSeed { get; set; } = false;
+            //public bool ClearFirstStage { get; set; } = false;
 
         }
 

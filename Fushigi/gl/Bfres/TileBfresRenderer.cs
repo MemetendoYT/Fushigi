@@ -30,6 +30,7 @@ namespace Fushigi.gl.Bfres
 
         private void Load(GL gl, UnitPackNames packNames)
         {
+
             BgUnitInfo? fullHitInfo = ActorPackCache.Load(packNames.FullHit)?.BgUnitInfo;
             BgUnitInfo? halfHitInfo = ActorPackCache.Load(packNames.HalfHit)?.BgUnitInfo;
             BgUnitInfo? noHitInfo = ActorPackCache.Load(packNames.NoHit)?.BgUnitInfo;
@@ -52,7 +53,7 @@ namespace Fushigi.gl.Bfres
             SemisolidModel = CreateModel(gl, halfHitInfo);
 
             NoCollisionModel?.Dispose();
-            NoCollisionModel = CreateModel(gl, noHitInfo, "fart");
+            NoCollisionModel = CreateModel(gl, noHitInfo);
 
             BridgeModel?.Dispose();
             BridgeModel = CreateModel(gl, bridgeInfo);

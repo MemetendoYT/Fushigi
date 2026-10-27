@@ -1,4 +1,5 @@
-﻿using Fushigi.Byml;
+﻿using Fasterflect;
+using Fushigi.Byml;
 using Fushigi.Byml.Serializer;
 using Fushigi.rstb;
 using Fushigi.util;
@@ -13,31 +14,31 @@ namespace Fushigi.course
     [Serializable]
     public class CourseInfo : BymlObject
     {
-        public string CourseDifficulty { get; set; } //
-        public string CourseKind { get; set; } //
-        public string CoursePlayerMorphType { get; set; } //
+        //public object CourseDifficulty { get; set; }
+        //public object CourseKind { get; set; }
+        //public string CoursePlayerMorphType { get; set; } 
         public string CourseNameLabel { get; set; } //
-        public string CourseScreenCaptureMainActor { get; set; } //
-        public string CourseStartXLinkKey { get; set; } //
-        public string CourseThumbnailPath { get; set; } //
-        public int CourseTimer { get; set; } //
-        public string CourseTimerType { get; set; } //
-        public string DemoCourseKind { get; set; } //
-        public string GiveBadgeIdOnCourseClear { get; set; } //
+        //public string CourseScreenCaptureMainActor { get; set; } //
+        //public string CourseStartXLinkKey { get; set; } //
+        //public string CourseThumbnailPath { get; set; } //
+        //public int CourseTimer { get; set; } //
+        //public string CourseTimerType { get; set; } //
+        //public string DemoCourseKind { get; set; } //
+        //public string GiveBadgeIdOnCourseClear { get; set; } //
         public int GlobalCourseId { get; set; } //
-        public bool IsCourseTimerAutoStart { get; set; } //
-        public bool IsDashMiniCourse {  get; set; } //
-        public bool IsExistWonderQuiz { get; set; } //
-        public bool IsInvisibleBadgeSetShadow { get; set; } //
-        public bool IsUseTheEndUI { get; set; } //
-        public string NeedBadgeIdEnterCourse { get; set; } //
-        public bool NoNeedRetrySuggestBadge { get; set; } //
-        public string RaceCourseType { get; set; } //
-        public List<string> SuggestBadgeList { get; set; } //
-        public string SuggestBadgeReplaceLabel { get; set; } //
-        public List<string> TipsTags { get; set; } //
-        public List<TipInfo> TipsInfo { get; set; } //
-        public string UnlockBadgeIdOnCourseClear { get; set; } //
+        //public bool IsCourseTimerAutoStart { get; set; } //
+        //public bool IsDashMiniCourse {  get; set; } //
+        //public bool IsExistWonderQuiz { get; set; } //
+        //public bool IsInvisibleBadgeSetShadow { get; set; } //
+        //public bool IsUseTheEndUI { get; set; } //
+        //public string NeedBadgeIdEnterCourse { get; set; } //
+        //public bool NoNeedRetrySuggestBadge { get; set; } //
+        //public string RaceCourseType { get; set; } //
+        //public List<string> SuggestBadgeList { get; set; } //
+        //public string SuggestBadgeReplaceLabel { get; set; } //
+        //public List<object> TipsTags { get; set; }
+        //public List<TipInfo> TipsInfo { get; set; } //
+        //public string UnlockBadgeIdOnCourseClear { get; set; } //
 
 
         public CourseInfo(string name, bool isWorldMap)
@@ -45,8 +46,19 @@ namespace Fushigi.course
             if (isWorldMap)
                 return;
 
-            var courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "CourseInfo", $"{name}.game__stage__CourseInfo.bgyml"));
-            var byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
+            var courseFilePath = "";
+            Byml.Byml byml;
+
+            if (Ounce.isOunce)
+            {
+                courseFilePath = $"Stage/CourseInfo/{name}.game__stage__CourseInfo.bgyml";
+                byml = new Byml.Byml(new MemoryStream(RomFS.GetOrLoadBootUpPack().OpenFile(courseFilePath)));
+            }
+            else
+            {
+                courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "CourseInfo", $"{name}.game__stage__CourseInfo.bgyml"));
+                byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
+            }
 
             this.Load((BymlHashTable)byml.Root);
         }

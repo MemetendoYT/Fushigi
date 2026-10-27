@@ -343,8 +343,8 @@ public class ActorParams
         if (ImGui.Combo($"##{ActorParam}", ref selected, list.Keys.ToArray(), list.Count))
         {
             actor.mActorParameters[ActorParam] = Convert.ChangeType(list.Values.ToArray()[selected], originalType);
-            if (ActorParam == "MorphPlayerType")
-                CourseScene.course.mCourseInfo.CoursePlayerMorphType = CourseSettings.PlayerMorphTypeReverse[list.Keys.ToArray()[selected]];
+            //if (ActorParam == "MorphPlayerType")
+            //    CourseScene.course.mCourseInfo.CoursePlayerMorphType = CourseSettings.PlayerMorphTypeReverse[list.Keys.ToArray()[selected]];
         }
         ImGui.PopItemWidth();
     }

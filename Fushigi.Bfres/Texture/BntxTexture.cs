@@ -14,6 +14,7 @@ namespace Fushigi.Bfres
         /// 
         /// </summary>
         public string Name { get; set; }
+        public bool isOrin;
 
         /// <summary>
         /// 

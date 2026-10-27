@@ -680,10 +680,11 @@ namespace Fushigi.ui.widgets
                         return render;
                     }
 
-                string? fieldASkin = mArea.mAreaParams.SkinParam?.FieldA;
-                string? fieldBSkin = mArea.mAreaParams.SkinParam?.FieldB;
+                    var skin = mArea.mAreaParams.SkinParam;
+                    string? fieldASkin = skin.Convert(skin?.FieldA);
+                    string? fieldBSkin = skin.Convert(skin?.FieldB);
 
-                if(updateSkinA)
+                    if (updateSkinA)
                 {
                     TileBfresRenderFieldA = null;
                     //BfresCache.Clear();
@@ -905,9 +906,9 @@ namespace Fushigi.ui.widgets
                 render.Load(this.mArea.mUnitHolder);
                 return render;
             }
-
-            string? fieldASkin = mArea.mAreaParams.SkinParam?.FieldA;
-            string? fieldBSkin = mArea.mAreaParams.SkinParam?.FieldB;
+            var skin = mArea.mAreaParams.SkinParam;
+            string? fieldASkin = skin.Convert(skin?.FieldA);
+            string? fieldBSkin = skin.Convert(skin?.FieldB);
 
             if (updateSkinA)
             {

@@ -1,10 +1,13 @@
 ﻿using Fushigi.Bfres;
 using Fushigi.Byml;
+using Fushigi.Byml.Serializer;
+using Fushigi.course;
 using Fushigi.gl.Bfres;
 using Fushigi.Msbt;
+using Fushigi.SARC;
 using Fushigi.util;
 using Silk.NET.OpenGL;
-using Fushigi.course;
+using System.Linq;
 
 namespace Fushigi
 {
@@ -33,6 +36,7 @@ namespace Fushigi
         {
             if (mBootUpPack != null)
                 return mBootUpPack;
+
             byte[] packbytes = FileUtil.DecompressData(GetFileBytes("Pack/Bootup.Nin_NX_NVN.pack.zs"));
             SARC.SARC packSarc = new SARC.SARC(new MemoryStream(packbytes));
 
@@ -63,6 +67,11 @@ namespace Fushigi
             return Directory.Exists(Path.Combine(sRomFSRoot, path));
         }
 
+        public static string[] GetBootupFiles(string path)
+        {
+            return Directory.GetFiles(Path.Combine(sRomFSRoot, path));
+        }
+
         public static string[] GetFiles(string path)
         {
             return Directory.GetFiles(Path.Combine(sRomFSRoot, path));
@@ -70,7 +79,13 @@ namespace Fushigi
 
         public static byte[] GetFileBytes(string path)
         {
-            Logger.Logger.LogMessage("RomFS", $"GetFileBytes() -- {path}");
+            if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs")))
+            {
+                path = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs";
+                Ounce.isOunce = true;
+            }
+
+                Logger.Logger.LogMessage("RomFS", $"GetFileBytes() -- {path}");
             if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), path)))
                 return File.ReadAllBytes(Path.Combine(UserSettings.GetModRomFSPath(), path));
             else
@@ -110,8 +125,18 @@ namespace Fushigi
                 courseNames = new MsbtFile(new MemoryStream(sarc.OpenFile("GameMsg/Name_CourseRemoveLineFeed.msbt"))).Messages;
                 worldNames = new MsbtFile(new MemoryStream(sarc.OpenFile("GameMsg/Name_World.msbt"))).Messages;
             }
+            string[] loadFiles;
 
-            string[] loadFiles = GetFiles(Path.Combine("Stage", "WorldMapInfo"));
+            if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs")))
+            {
+                Ounce.isOunce = true;
+            }
+
+            if (Ounce.isOunce)
+                loadFiles = GetOrLoadBootUpPack().GetFiles("Stage/WorldMapInfo");
+            else
+                loadFiles = GetFiles(Path.Combine("Stage", "WorldMapInfo"));
+
             foreach (string loadFile in loadFiles)
             {
                 string worldName = Path.GetFileName(loadFile).Split(".game")[0];
@@ -131,7 +156,13 @@ namespace Fushigi
                 Logger.Logger.LogMessage("RomFS", worldName);
 
                 Dictionary<string, WorldEntry.CourseEntry> courseLocationList = new();
-                Byml.Byml byml = new(new MemoryStream(File.ReadAllBytes(loadFile)));
+                Byml.Byml byml;
+
+                if (Ounce.isOunce)
+                    byml = new(new MemoryStream(GetOrLoadBootUpPack().OpenFile(loadFile)));
+                else
+                    byml = new(new MemoryStream(File.ReadAllBytes(loadFile)));
+
                 var root = (BymlHashTable)byml.Root;
                 var courseList = (BymlArrayNode)root["CourseTable"];
                 string courseLocation = "";

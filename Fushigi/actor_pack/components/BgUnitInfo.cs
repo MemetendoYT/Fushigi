@@ -17,20 +17,41 @@ namespace Fushigi.actor_pack.components
 
             return (m.Groups[1].Value, m.Groups[2].Value);
         }
-
         public string Fmdb { get; set; }
 
         public string DecoInfo { get; set; }
 
         public List<AttrListEntry> AttrList { get; set; }
 
-        public Dictionary<string, string> GetMaterialNames() => AttrList.ToDictionary(x => x.DrawAttr, x => x.MaterialName);
+        public Dictionary<string, string> GetMaterialNames() => AttrList.ToDictionary(x => x.AttributeConvert(), x => x.MaterialName);
 
+    
         [Serializable]
         public class AttrListEntry
         {
-            public string DrawAttr { get; set; }
+            public object DrawAttr { get; set; }
             public string MaterialName { get; set; }
+
+
+
+            private static readonly Dictionary<uint, string> DrawAttrNames = new()
+            {
+                { 741904279, "Wall" },
+                { 470423374, "Edge" },
+                { 2155127678, "Ground" }
+            };
+
+            public string AttributeConvert()
+            {
+                string attribute = "";
+                if(DrawAttr is uint)
+                    attribute = DrawAttrNames[(uint)DrawAttr];
+                else 
+                    attribute = DrawAttr.ToString();
+
+                return attribute;
+            }
+
         }
 
         public List<string> MaterialPresetList { get; set; }

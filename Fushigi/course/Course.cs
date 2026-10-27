@@ -25,7 +25,9 @@ namespace Fushigi.course
             {
                 mWorldInfo = new WorldMapInfo(mCourseName);
             }
-            mStageLoadInfo = new StageLoadInfo(courseName);
+
+            if (!Ounce.isOunce)
+                mStageLoadInfo = new StageLoadInfo(courseName);
             mAreas = [];
             LoadFromRomFS();
         }
@@ -65,7 +67,17 @@ namespace Fushigi.course
 
             /* grab our course information file */
             Byml.Byml courseInfo = new Byml.Byml(new MemoryStream(FileUtil.DecompressFile(courseFilePath)));
-            Byml.Byml stageParam = new Byml.Byml(new MemoryStream(File.ReadAllBytes(stageParamFilePath)));
+            Byml.Byml stageParam;
+            if (Ounce.isOunce && IsWorldMap)
+            {
+                var packPath = $"Stage/StageParam/{mCourseName}.game__stage__StageParam.bgyml";
+                stageParam = new Byml.Byml(new MemoryStream(RomFS.GetOrLoadBootUpPack().OpenFile(packPath)));
+            }
+            else
+            {
+                stageParam = new Byml.Byml(new MemoryStream(File.ReadAllBytes(stageParamFilePath)));
+            }
+
 
             var stageParamRoot = (BymlHashTable)stageParam.Root;
             var root = (BymlHashTable)courseInfo.Root;

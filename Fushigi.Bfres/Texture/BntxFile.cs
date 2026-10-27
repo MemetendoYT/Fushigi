@@ -38,6 +38,7 @@ namespace Fushigi.Bfres
             stream.Read(Utils.AsSpan(ref Header));
 
             reader.SeekBegin((long)Header.TextureTableOffset);
+            bool isOrin = Header.Target == 1668183375;
 
             ulong[] offsets = new ulong[Header.TextureCount];
             for (int i = 0; i < Header.TextureCount; i++)
@@ -47,6 +48,7 @@ namespace Fushigi.Bfres
             {
                 reader.SeekBegin((long)offsets[i]);
                 var tex = reader.Read<BntxTexture>();
+                tex.isOrin = isOrin;
                 Textures.Add(tex.Name, tex);
             }
         }

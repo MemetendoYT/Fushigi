@@ -50,8 +50,11 @@ public class CourseSave
             }
 
             //Save the StageLoadInfo file
-            Console.WriteLine($"{(backup ? "Backing up" : "Saving")} stage load info for {course.GetName()}...");
-            course.mStageLoadInfo.Save(resource_table, Path.Combine(savePath, "Stage", "StageLoadInfo"), course.GetName());
+            if (course.mStageLoadInfo != null)
+            {
+                Console.WriteLine($"{(backup ? "Backing up" : "Saving")} stage load info for {course.GetName()}...");
+                course.mStageLoadInfo.Save(resource_table, Path.Combine(savePath, "Stage", "StageLoadInfo"), course.GetName());
+            }
 
             foreach (var area in course.GetAreas())
             {

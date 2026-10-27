@@ -586,7 +586,7 @@ namespace Fushigi.ui.widgets
                     EnvPalette.Info.LocationType = "None";
                 }
                 else
-                    value = EnvPalette.Info.LocationType;
+                    value = EnvPalette.Info.LocationType.ToString();
 
                 int index = LocationType.Values.ToList().IndexOf(value);
                 ImGui.Text("Location Type");

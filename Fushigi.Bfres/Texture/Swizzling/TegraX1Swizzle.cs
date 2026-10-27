@@ -13,6 +13,8 @@ namespace Fushigi.Bfres
             try
             {
 
+            // Detect if texture is from Switch 2 edition.
+            bool isOrin = texture.isOrin;
             //Block and bpp format info
             uint bpp = GetBytesPerPixel(texture.Format);
             uint blkWidth = GetBlockWidth(texture.Format);
@@ -35,7 +37,7 @@ namespace Fushigi.Bfres
                 width,
                 height,
                 1, blkWidth, blkHeight, 1, target, bpp, tileMode,
-                block_height, mip_data.ToArray());
+                block_height, mip_data.ToArray(), isOrin);
 
             }
             catch
@@ -217,7 +219,7 @@ namespace Fushigi.Bfres
             return x + 1;
         }
 
-        private static byte[] _swizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int blockHeightLog2, byte[] data, int toSwizzle)
+        private static byte[] _swizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int blockHeightLog2, byte[] data, int toSwizzle, bool isOrin)
         {
             uint block_height = (uint)(1 << blockHeightLog2);
 
@@ -254,7 +256,7 @@ namespace Fushigi.Bfres
                     if (tileMode == 1)
                         pos = y * pitch + x * bpp;
                     else
-                        pos = getAddrBlockLinear(x, y, width, bpp, 0, block_height);
+                        pos = getAddrBlockLinear(x, y, width, bpp, 0, block_height, isOrin);
 
                     pos_ = (y * width + x) * bpp;
 
@@ -270,17 +272,17 @@ namespace Fushigi.Bfres
             return result;
         }
 
-        public static byte[] deswizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int size_range, byte[] data)
+        public static byte[] deswizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int size_range, byte[] data, bool isOrin)
         {
-            return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, data, 0);
+            return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, data, 0, isOrin);
         }
 
-        public static byte[] swizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int size_range, byte[] data)
+        public static byte[] swizzle(uint width, uint height, uint depth, uint blkWidth, uint blkHeight, uint blkDepth, int roundPitch, uint bpp, uint tileMode, int size_range, byte[] data, bool isOrin)
         {
-            return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, data, 1);
+            return _swizzle(width, height, depth, blkWidth, blkHeight, blkDepth, roundPitch, bpp, tileMode, size_range, data, 1, isOrin);
         }
 
-        static uint getAddrBlockLinear(uint x, uint y, uint width, uint bytes_per_pixel, uint base_address, uint block_height)
+        static uint getAddrBlockLinear(uint x, uint y, uint width, uint bytes_per_pixel, uint base_address, uint block_height, bool isOrin)
         {
             /*
               From Tega X1 TRM 
@@ -295,9 +297,23 @@ namespace Fushigi.Bfres
 
             x *= bytes_per_pixel;
 
-            uint Address = (GOB_address + ((x % 64) / 32) * 256 + ((y % 8) / 2) * 64
-                            + ((x % 32) / 16) * 32 + (y % 2) * 16 + (x % 16));
-            return Address;
+            if (isOrin)
+                return GOB_address + GobOffsetOrin(x, y);
+
+            return GOB_address + GobOffset(x, y);
+
         }
+
+        static uint GobOffset(uint x, uint y)
+        {
+            return ((x % 64) / 32) * 256 + ((y % 8) / 2) * 64 + ((x % 32) / 16) * 32 + (y % 2) * 16 + (x % 16);
+        }
+
+        //Kudos of KillzXGaming
+        static uint GobOffsetOrin(uint x, uint y)
+        {
+            return ((x % 64) / 32) * 256 + ((y % 8) / 4) * 128 + ((x % 32) / 16) * 64 + (y % 4) * 16 + (x % 16);
+        }
+
     }
 }

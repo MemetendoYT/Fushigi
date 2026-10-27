@@ -62,17 +62,19 @@ namespace Fushigi.Byml
             {
                 var name = reader.ReadUInt24();
                 var id = Byml.ReadNodeId(stream);
-                if (!id.HasValue)
-                    throw new InvalidDataException($"Invalid BYML node ID!");
-
-                BymlHashPair entry = new()
+                if (id.HasValue)
                 {
-                    Id = id.Value,
-                    Name = by.GetFromHashKeyTable(name),
-                    Value = by.ReadNode(reader, id.Value),
-                };
+                    //throw new InvalidDataException($"Invalid BYML node ID!");
 
-                Pairs.Add(entry);
+                    BymlHashPair entry = new()
+                    {
+                        Id = id.Value,
+                        Name = by.GetFromHashKeyTable(name),
+                        Value = by.ReadNode(reader, id.Value),
+                    };
+
+                    Pairs.Add(entry);
+                }
             }
         }
 

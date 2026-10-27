@@ -233,7 +233,7 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Text("Tileset A");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.FieldA;
+                value = skinParam.Convert(skinParam.FieldA);
                 int index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##FieldA", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
                 {
@@ -245,7 +245,7 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Text("Tileset B");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.FieldB;
+                value = skinParam.Convert(skinParam.FieldB);
                 index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##FieldB", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10)) {
                     skinParam.FieldB = Tilesets.Values.ToArray()[index];
@@ -256,7 +256,7 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Text("Object Appearance");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.Object;
+                value = skinParam.Convert(skinParam.Object);
                 index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##Object", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
                     skinParam.Object = Tilesets.Values.ToArray()[index];
@@ -527,14 +527,14 @@ namespace Fushigi.ui.widgets
 
                     ImGui.TableNextColumn();
 
-                    // DynamicResolutionQuality
-                    ImGui.Text("Dynamic Resolution Quality");
-                    ImGui.TableNextColumn();
-                    var dynamicResolutionQuality = areaParam.DynamicResolutionQuality is null ? "" : areaParam.DynamicResolutionQuality;
-                    if (ImGui.InputText("##DynamicResolutionQuality", ref dynamicResolutionQuality, 1024))
-                        areaParam.DynamicResolutionQuality = dynamicResolutionQuality;
+                    //// DynamicResolutionQuality
+                    //ImGui.Text("Dynamic Resolution Quality");
+                    //ImGui.TableNextColumn();
+                    //var dynamicResolutionQuality = areaParam.DynamicResolutionQuality is null ? "" : areaParam.DynamicResolutionQuality;
+                    //if (ImGui.InputText("##DynamicResolutionQuality", ref dynamicResolutionQuality, 1024))
+                    //    areaParam.DynamicResolutionQuality = dynamicResolutionQuality;
 
-                    ImGui.TableNextColumn();
+                    //ImGui.TableNextColumn();
 
                     // PlayerRhythmJumpTiming
                     ImGui.Text("Player Rhythm Jump Timing");
@@ -592,6 +592,12 @@ namespace Fushigi.ui.widgets
             palette = "Work/Gyml/Gfx/EnvPaletteParam/" + palette + ".game__gfx__EnvPaletteParam.gyml";
             return palette;
         }
+        public static readonly Dictionary<uint, string> BackGroundAreaTypeNames = new()
+        {
+            { 1097715313, "WithScroll" },
+            { 3069107721, "None" },
+        };
+
         private static void DrawMiscSettings(AreaParam areaParam)
         {
             if (ImGui.BeginTable("##MiscSettings", 2))
@@ -611,7 +617,12 @@ namespace Fushigi.ui.widgets
                 // BackGroundAreaType
                 ImGui.Text("Background Area Type");
                 ImGui.TableNextColumn();
-                var backGroundAreaType = areaParam.BackGroundAreaType is null ? "" : areaParam.BackGroundAreaType;
+                var backGroundAreaType = "";
+                if (areaParam.BackGroundAreaType is uint)
+                    backGroundAreaType = BackGroundAreaTypeNames[(uint)areaParam.BackGroundAreaType];
+                else if (areaParam.BackGroundAreaType != null)
+                    backGroundAreaType = areaParam.BackGroundAreaType.ToString();
+
                 if (ImGui.InputText("##BackGroundAreaType", ref backGroundAreaType, 1024))
                     areaParam.BackGroundAreaType = backGroundAreaType;
 

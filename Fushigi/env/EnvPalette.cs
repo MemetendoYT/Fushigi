@@ -605,7 +605,7 @@ namespace Fushigi.env
         }
         public class EnvInfo
         {
-            public string LocationType { get; set; }
+            public object LocationType { get; set; }
 
             public string WeatherType { get; set; }
 

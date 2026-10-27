@@ -13,7 +13,8 @@ namespace Fushigi.course
     [Serializable]
     public class MapAnalysisInfo : BymlObject
     {
-        public string BadgeId { get; set; } //
+
+        public object BadgeId { get; set; }
         public int FinishWonderFlowerNum { get; set; }
         public bool IsExistBigTenLuckyCoin { get; set; }
         public bool IsExistBlockSurprise { get; set; }

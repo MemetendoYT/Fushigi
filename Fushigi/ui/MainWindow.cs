@@ -402,25 +402,32 @@ namespace Fushigi.ui
                     $"Loading {name}",
                     async (p) =>
                     {
-                        p.Report(("Loading course files", null));
-                        await mModalHost.WaitTick();
-                        bool isWorldMap = false;
-                        Course.SetIsWorldMap(false);
-                        if (name.Contains("World00"))
+                        try
                         {
-                            isWorldMap = true;
-                            Course.SetIsWorldMap(true);
-                        }
-                        var course = new Course(name);
-                        p.Report(("Loading other resources (this temporarily freezes the app)", null));
-                        await mModalHost.WaitTick();
+                            p.Report(("Loading course files", null));
+                            await mModalHost.WaitTick();
+                            bool isWorldMap = false;
+                            Course.SetIsWorldMap(false);
+                            if (name.Contains("World0"))
+                            {
+                                isWorldMap = true;
+                                Course.SetIsWorldMap(true);
+                            }
+                            var course = new Course(name);
+                            p.Report(("Loading other resources (this temporarily freezes the app)", null));
+                            await mModalHost.WaitTick();
 
-                        mSelectedCourseScene?.PreventFurtherRendering();
-                        mSelectedCourseScene = await CourseScene.Create(course, mGLTaskScheduler, mModalHost, p);
-                        mCurrentCourseName = name;
-                        //Console.WriteLine(name.Split("_")[0]);
-                        //mCurrentLevelName = RomFS.courseNames[name.Split("_")[0]];
-                        //Console.WriteLine(mCurrentLevelName);
+                            mSelectedCourseScene?.PreventFurtherRendering();
+                            mSelectedCourseScene = await CourseScene.Create(course, mGLTaskScheduler, mModalHost, p);
+                            mCurrentCourseName = name;
+                            //Console.WriteLine(name.Split("_")[0]);
+                            //mCurrentLevelName = RomFS.courseNames[name.Split("_")[0]];
+                            //Console.WriteLine(mCurrentLevelName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to load {name}: {ex}");
+                        }
                     });
         }
         public static async Task UpdateEnglishNamesFromGitHub()

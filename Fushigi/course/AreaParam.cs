@@ -27,14 +27,14 @@ namespace Fushigi.course
         public string EnvironmentSound { get; set; } 
         public string WonderEnvironmentSound { get; set; }
         public bool IsNotCallWaterEnvSE { get; set; }
-        public string BackGroundAreaType { get; set; }
+        public object BackGroundAreaType { get; set; }
         public bool BgmInterlockOfWonder { get; set; }
         public string PlayerRhythmJumpTiming { get; set; }
         public string ExternalSoundAsset { get; set; }
         public string PlayerRhythmJumpBadgeTiming { get; set; }
         public string WonderEnvironmentSoundEfx { get; set; }
         public string EnvironmentSoundEfx { get; set; }
-        public string DynamicResolutionQuality { get; set; }
+        //public string DynamicResolutionQuality { get; set; }
         public bool IsInvisibleDeadLine { get; set; }
         public bool IsWaterArea { get; set; }
         public string WonderSEKeyForTag { get; set; }
@@ -217,22 +217,48 @@ namespace Fushigi.course
         public class AreaSkinParam
         {
             public bool DisableBgUnitDecoA { get; set; }
-            public string FieldA { get; set; } = "";
-            public string FieldB { get; set; } = "";
-            public string Object { get; set; } = "";
+            public object FieldA { get; set; } = "";
+            public object FieldB { get; set; } = "";
+            public object Object { get; set; } = "";
 
+            private static readonly Dictionary<uint, string> SkinNames = new()
+            {
+                { 2735387052, "HajimariSougen" },
+                { 3534951549, "HajimariMori" },
+                { 3279395142, "CommonSora" },
+                { 1686814971, "Savanna" },
+                { 2302139999, "CommonSenkan"},
+                { 189387638,  "CommonToride" },
+                { 125838187, "CommonTorideB" },
+                { 3994172016, "CommonYashiki" },
+                { 276828319, "KinSlime" },
+                { 263342392, "HajimariChika"}
+            };
+
+            public string Convert(object value)
+            {
+                if (value is uint id && SkinNames.TryGetValue(id, out var name))
+                    return name;
+                if (value is uint)
+                    return "NewWorldChika";
+                return value?.ToString() ?? "";
+            }
             public BymlHashTable Serialize()
             {
                 BymlHashTable skinParam = new();
 
-                if (FieldA is not null && FieldA != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(FieldA), "FieldA");
+                string fieldA = Convert(FieldA);
+                string fieldB = Convert(FieldB);
+                string obj = Convert(Object);
 
-                if (FieldB is not null && FieldB != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(FieldB), "FieldB");
+                if (fieldA != "")
+                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(fieldA), "FieldA");
 
-                if (Object is not null && Object != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(Object), "Object");
+                if (fieldB != "")
+                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(fieldB), "FieldB");
+
+                if (obj != "")
+                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(obj), "Object");
 
                 skinParam.AddNode(BymlNodeId.Bool, BymlUtil.CreateNode<bool>(DisableBgUnitDecoA), "DisableBgUnitDecoA");
 

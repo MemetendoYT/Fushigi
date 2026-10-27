@@ -57,7 +57,18 @@ namespace Fushigi.gl.Bfres
         {
             using var stream = await Task.Run<Stream>(() => FileUtil.DecompressAsStream(path));
 
-            BfresRender render = await glScheduler.Schedule(gl => new BfresRender(gl, stream));
+            BfresRender? render = await glScheduler.Schedule(gl =>
+            {
+                try
+                {
+                    return new BfresRender(gl, stream);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to load {path}: {ex.Message}");
+                    return null;
+                }
+            });
             return render;
         }
     }

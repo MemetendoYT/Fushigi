@@ -53,8 +53,13 @@ namespace Fushigi.param
                     "F64" => Convert.ToDouble(jsonValue)!,
                     "Bool" => Convert.ToBoolean(jsonValue)!,
                     "String" => Convert.ToString(jsonValue)!,
-                    _ => throw new Exception($"Invalid param Type {type}")
+                    _ => PrintAndReturn(jsonValue)
                 };
+            }
+
+            private static object PrintAndReturn(object value)
+            {
+                return value;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

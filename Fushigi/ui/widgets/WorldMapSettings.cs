@@ -111,35 +111,35 @@ namespace Fushigi.ui.widgets
                     {
                         if (ImGui.BeginTable($"CourseTable_{i}", 2, ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable))
                         {
-                            DrawText("Is Route Lock Course");
-                            bool RouteLock = course.IsRouteLockCourse;
-                            ImGui.Checkbox($"##Course_{i}_RouteLock", ref RouteLock);
-                            course.IsRouteLockCourse = RouteLock;
+                            //DrawText("Is Route Lock Course");
+                            //bool RouteLock = course.IsRouteLockCourse;
+                            //ImGui.Checkbox($"##Course_{i}_RouteLock", ref RouteLock);
+                            //course.IsRouteLockCourse = RouteLock;
 
-                            DrawText("Get Grand Wonder Seed");
-                            bool GrandSeed = course.GetGrandSeed;
-                            ImGui.Checkbox($"##Course_{i}_GrandSeed", ref RouteLock);
-                            course.GetGrandSeed = GrandSeed;
+                            //DrawText("Get Grand Wonder Seed");
+                            //bool GrandSeed = course.GetGrandSeed;
+                            //ImGui.Checkbox($"##Course_{i}_GrandSeed", ref RouteLock);
+                            //course.GetGrandSeed = GrandSeed;
 
-                            DrawText("Key");
-                            var key = course.Key;
-                            ImGui.InputText($"##Key_{i}", ref key, 256);
-                            course.Key = key;
+                            //DrawText("Key");
+                            //var key = course.Key;
+                            //ImGui.InputText($"##Key_{i}", ref key, 256);
+                            //course.Key = key;
 
-                            DrawText("Stage Path");
-                            var StagePath = parseStage(course.StagePath);
-                            ImGui.InputText($"##StagePath_{i}", ref StagePath, 256);
-                            course.StagePath = revertStage(StagePath);
+                            //DrawText("Stage Path");
+                            //var StagePath = parseStage(course.StagePath);
+                            //ImGui.InputText($"##StagePath_{i}", ref StagePath, 256);
+                            //course.StagePath = revertStage(StagePath);
 
-                            DrawText("Appear Bonus Course");
-                            bool bonus = course.GoldenFlower;
-                            ImGui.Checkbox($"##Course_{i}_Bonus", ref bonus);
-                            course.GoldenFlower = bonus;
+                            //DrawText("Appear Bonus Course");
+                            //bool bonus = course.GoldenFlower;
+                            //ImGui.Checkbox($"##Course_{i}_Bonus", ref bonus);
+                            //course.GoldenFlower = bonus;
 
-                            DrawText("Demo Type");
-                            string DemoType = course.CourserDemoType;
-                            ImGui.InputText($"##DemoType_{i}", ref DemoType, 256);
-                            course.CourserDemoType = DemoType;
+                            //DrawText("Demo Type");
+                            //string DemoType = course.CourserDemoType;
+                            //ImGui.InputText($"##DemoType_{i}", ref DemoType, 256);
+                            //course.CourserDemoType = DemoType;
 
                             ImGui.EndTable();
                         }

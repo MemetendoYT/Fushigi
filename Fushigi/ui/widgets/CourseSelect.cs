@@ -63,6 +63,9 @@ namespace Fushigi.ui.widgets
 
         void DrawCourses(Promise<string> promise)
         {
+            if (selectedWorld == null)
+                selectedWorld = RomFS.GetCourseEntries().Keys.FirstOrDefault();
+
             ImGui.GetFont().Scale = 1.2f;
             ImGui.PushFont(ImGui.GetFont());
             ImGui.Text(RomFS.GetCourseEntries()[selectedWorld!].name);
