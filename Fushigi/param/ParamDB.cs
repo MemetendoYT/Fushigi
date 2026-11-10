@@ -1,21 +1,22 @@
-﻿using Fushigi.util;
+﻿using Fushigi.Byml;
+using Fushigi.SARC;
+using Fushigi.util;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Silk.NET.Core;
+using Silk.NET.Core.Native;
+using Silk.NET.OpenGL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Fushigi.SARC;
-using Silk.NET.OpenGL;
-using Newtonsoft.Json;
-using Fushigi.Byml;
-using Silk.NET.Core;
-using Silk.NET.Core.Native;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.IO;
 
 namespace Fushigi.param
 {
@@ -53,12 +54,14 @@ namespace Fushigi.param
                     "F64" => Convert.ToDouble(jsonValue)!,
                     "Bool" => Convert.ToBoolean(jsonValue)!,
                     "String" => Convert.ToString(jsonValue)!,
-                    _ => PrintAndReturn(jsonValue)
+                    "Vec3f" => ((JObject)jsonValue).ToObject<Vector3>(),
+                    _ => throw new Exception($"Invalid param Type {type}")
                 };
             }
 
-            private static object PrintAndReturn(object value)
+            private static object PrintAndReturn(object value, string type)
             {
+                Console.WriteLine($"[ParamDB] Unknown type '{type}': {value} ({value?.GetType().Name ?? "null"})");
                 return value;
             }
 
@@ -356,10 +359,14 @@ namespace Fushigi.param
                     case "BlackboardParamStringArray":
                         type = "String";
                         break;
+                    case "BlackboardParamVec3fArray":
+                        type = "Vec3f";
+                        break;
                     default:
                         break;
-                }
 
+                }
+    
                 /* if our current node is a BymlNode<string> and *not* a BymlArrayNode, that means we have hit a parent parameter */
                 if (pair.Value is BymlNode<string>)
                 {
@@ -423,6 +430,9 @@ namespace Fushigi.param
                                     break;
                                 case "String":
                                     initialValue = ((BymlNode<string>)ht["InitValConverted"]).Data;
+                                    break;
+                                case "Vec3f":
+                                    initialValue = BymlUtil.GetVector3FromHashTable((BymlHashTable)ht["InitVal"]);
                                     break;
                             }
 

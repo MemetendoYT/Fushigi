@@ -231,13 +231,19 @@ namespace Fushigi.ui.widgets
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
 
+
+                if (Ounce.isOunce)
+                    Tilesets.TryAdd("Bellabel Park (Underground)", "NewWorldChika");
+                
+
+                Console.WriteLine(areaParam.fieldASkin);
                 ImGui.Text("Tileset A");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.Convert(skinParam.FieldA);
+                value = areaParam.fieldASkin;
                 int index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##FieldA", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
                 {
-                    skinParam.FieldA = Tilesets.Values.ToArray()[index];
+                    areaParam.fieldASkin = Tilesets.Values.ToArray()[index];
                     LevelViewport.updateSkinA = true;
                 }
 
@@ -245,10 +251,10 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Text("Tileset B");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.Convert(skinParam.FieldB);
+                value = areaParam.fieldBSkin;
                 index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##FieldB", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10)) {
-                    skinParam.FieldB = Tilesets.Values.ToArray()[index];
+                    areaParam.fieldBSkin = Tilesets.Values.ToArray()[index];
                     LevelViewport.updateSkinB = true;
                         }
 
@@ -256,10 +262,10 @@ namespace Fushigi.ui.widgets
 
                 ImGui.Text("Object Appearance");
                 ImGui.TableSetColumnIndex(1);
-                value = skinParam.Convert(skinParam.Object);
+                value = areaParam.objectSkin;
                 index = Tilesets.Values.ToList().IndexOf(value);
                 if (ImGui.Combo("##Object", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
-                    skinParam.Object = Tilesets.Values.ToArray()[index];
+                    areaParam.objectSkin = Tilesets.Values.ToArray()[index];
 
                 ImGui.TableNextColumn();
 

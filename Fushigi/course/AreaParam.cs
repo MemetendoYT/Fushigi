@@ -1,8 +1,10 @@
-﻿using Fushigi.Bfres;
+﻿using Fushigi.actor_pack.components;
+using Fushigi.Bfres;
 using Fushigi.Byml;
 using Fushigi.Byml.Serializer;
 using Fushigi.env;
 using Fushigi.rstb;
+using Fushigi.SARC;
 using Fushigi.ui.widgets;
 using Fushigi.util;
 using System;
@@ -12,13 +14,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using static Fushigi.gl.Bfres.EnvironmentBlockExtended;
 
 
 namespace Fushigi.course
 {
     [Serializable]
     public class AreaParam : BymlObject
-    {   
+    {
+        [BymlProperty("$parent")]
+        public string parent { get; set; }
+
+        public string fieldASkin;
+
+        public string fieldBSkin;
+
+        public string objectSkin;
         public string EnvSetName { get; set; }
         public string BgmType { get; set; }
         public string WonderBgmType { get; set; }
@@ -56,7 +67,36 @@ namespace Fushigi.course
         public AreaParam(Byml.Byml byml)
         {
             this.Load((BymlHashTable)byml.Root);
-     
+
+            if (!string.IsNullOrEmpty(parent))
+            {
+                var path = FileUtil.FindContentPath(parent.Replace("Work/", "").Replace(".gyml", ".bgyml"));
+                var par = new AreaParam(new Byml.Byml(new MemoryStream(File.ReadAllBytes(path))));
+
+                foreach (var p in GetType().GetProperties())
+                    if (p.CanWrite && p.DeclaringType == typeof(AreaParam) && p.Name != nameof(parent) && !ContainsParam(p.Name))
+                        p.SetValue(this, p.GetValue(par));
+
+                foreach (var p in typeof(AreaSkinParam).GetProperties())
+                    if (string.IsNullOrEmpty(p.GetValue(SkinParam)?.ToString()))
+                        p.SetValue(SkinParam, p.GetValue(par.SkinParam));
+            }
+
+            SkinParam.FieldA = fieldASkin = parseSkin(SkinParam.FieldA);
+            SkinParam.FieldB = fieldBSkin = parseSkin(SkinParam.FieldB);
+            SkinParam.Object = objectSkin = parseSkin(SkinParam.Object);
+        }
+
+        public static string parseSkin(object parsedSkin)
+        {
+            string skin = "";
+
+            if (parsedSkin is uint)
+                skin = Ounce.Convert(parsedSkin, Ounce.SkinNames);
+            else
+                skin = (string)parsedSkin;
+
+            return skin;
         }
 
         public static uint GetDecompressedSize(Byml.Byml byml)
@@ -221,35 +261,20 @@ namespace Fushigi.course
             public object FieldB { get; set; } = "";
             public object Object { get; set; } = "";
 
-            private static readonly Dictionary<uint, string> SkinNames = new()
-            {
-                { 2735387052, "HajimariSougen" },
-                { 3534951549, "HajimariMori" },
-                { 3279395142, "CommonSora" },
-                { 1686814971, "Savanna" },
-                { 2302139999, "CommonSenkan"},
-                { 189387638,  "CommonToride" },
-                { 125838187, "CommonTorideB" },
-                { 3994172016, "CommonYashiki" },
-                { 276828319, "KinSlime" },
-                { 263342392, "HajimariChika"}
-            };
 
-            public string Convert(object value)
-            {
-                if (value is uint id && SkinNames.TryGetValue(id, out var name))
-                    return name;
-                if (value is uint)
-                    return "NewWorldChika";
-                return value?.ToString() ?? "";
-            }
+
+        
             public BymlHashTable Serialize()
             {
                 BymlHashTable skinParam = new();
 
-                string fieldA = Convert(FieldA);
-                string fieldB = Convert(FieldB);
-                string obj = Convert(Object);
+                //string fieldA = Convert(FieldA);
+                //string fieldB = Convert(FieldB);
+                //string obj = Convert(Object);
+
+                string fieldA = "";
+                string fieldB = "";
+                string obj = "";
 
                 if (fieldA != "")
                     skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(fieldA), "FieldA");

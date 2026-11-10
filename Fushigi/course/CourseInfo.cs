@@ -14,31 +14,32 @@ namespace Fushigi.course
     [Serializable]
     public class CourseInfo : BymlObject
     {
-        //public object CourseDifficulty { get; set; }
-        //public object CourseKind { get; set; }
-        //public string CoursePlayerMorphType { get; set; } 
-        public string CourseNameLabel { get; set; } //
-        //public string CourseScreenCaptureMainActor { get; set; } //
-        //public string CourseStartXLinkKey { get; set; } //
-        //public string CourseThumbnailPath { get; set; } //
-        //public int CourseTimer { get; set; } //
-        //public string CourseTimerType { get; set; } //
-        //public string DemoCourseKind { get; set; } //
-        //public string GiveBadgeIdOnCourseClear { get; set; } //
-        public int GlobalCourseId { get; set; } //
-        //public bool IsCourseTimerAutoStart { get; set; } //
-        //public bool IsDashMiniCourse {  get; set; } //
-        //public bool IsExistWonderQuiz { get; set; } //
-        //public bool IsInvisibleBadgeSetShadow { get; set; } //
-        //public bool IsUseTheEndUI { get; set; } //
-        //public string NeedBadgeIdEnterCourse { get; set; } //
-        //public bool NoNeedRetrySuggestBadge { get; set; } //
-        //public string RaceCourseType { get; set; } //
-        //public List<string> SuggestBadgeList { get; set; } //
-        //public string SuggestBadgeReplaceLabel { get; set; } //
-        //public List<object> TipsTags { get; set; }
-        //public List<TipInfo> TipsInfo { get; set; } //
-        //public string UnlockBadgeIdOnCourseClear { get; set; } //
+        [BymlProperty("CourseDifficulty")]
+        public object CourseDifficulty { get; set; }
+        public object CourseKind { get; set; }
+        public object CoursePlayerMorphType { get; set; }
+        public string CourseNameLabel { get; set; }
+        public string CourseScreenCaptureMainActor { get; set; }
+        public string CourseStartXLinkKey { get; set; }
+        public string CourseThumbnailPath { get; set; }
+        public int CourseTimer { get; set; }
+        public object CourseTimerType { get; set; }
+        public object DemoCourseKind { get; set; }
+        public object GiveBadgeIdOnCourseClear { get; set; }
+        public int GlobalCourseId { get; set; }
+        public bool IsCourseTimerAutoStart { get; set; }
+        public bool IsDashMiniCourse { get; set; }
+        public bool IsExistWonderQuiz { get; set; }
+        public bool IsInvisibleBadgeSetShadow { get; set; }
+        public bool IsUseTheEndUI { get; set; }
+        public object NeedBadgeIdEnterCourse { get; set; }
+        public bool NoNeedRetrySuggestBadge { get; set; }
+        public object RaceCourseType { get; set; }
+        public List<object> SuggestBadgeList { get; set; }
+        public string SuggestBadgeReplaceLabel { get; set; }
+        public List<object> TipsTags { get; set; }
+        public List<TipInfo> TipsInfo { get; set; }
+        public object UnlockBadgeIdOnCourseClear { get; set; }
 
 
         public CourseInfo(string name, bool isWorldMap)
@@ -88,7 +89,7 @@ namespace Fushigi.course
         [Serializable]
         public class TipInfo
         {
-            public string Cond { get; set; }
+            public object Cond { get; set; } 
             public string Label { get; set; }
         }
     }

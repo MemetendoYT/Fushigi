@@ -154,13 +154,17 @@ namespace Fushigi
                 var data = sarc.OpenFile(filePath);
 
                 // Get the name of the ChildActorParamFile
-                if(component.Key == "ChildActorRef")
+                if (!string.IsNullOrEmpty((string)component.Value))
                 {
-                    // Should look like "Work/ChildActorParam/[...].game__actor__component__ChildActorParam.gyml"
-                    this.ChildActorParamName = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
-                } else if (component.Key == "CalcDistanceParam")
-                {
-                    this.CalcDistanceParam = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
+                    if (component.Key == "ChildActorRef")
+                    {
+                        // Should look like "Work/ChildActorParam/[...].game__actor__component__ChildActorParam.gyml"
+                        this.ChildActorParamName = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
+                    }
+                    else if (component.Key == "CalcDistanceParam")
+                    {
+                        this.CalcDistanceParam = (((string)component.Value).Split("m/")[1]).Split(".game")[0];
+                    }
                 }
 
                 //Check if the component is present in the pack file.

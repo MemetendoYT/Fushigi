@@ -1,14 +1,7 @@
 ﻿using Fushigi.course;
 using Fushigi.ui.modal;
 using ImGuiNET;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-
 namespace Fushigi.ui.widgets
 {
     internal class CourseSettings
@@ -54,7 +47,7 @@ namespace Fushigi.ui.widgets
             { "PlayableFacility", "Poplin House (Playable)" },
             { "SecretSquare", "Search Party" },
             { "StaffCredit", "Staff Credit" },
-            { "StroyTeller", "Story Teller" },
+            { "StoryTeller", "Story Teller" },
             { "Race", "Wiggler Race" },
             { "WonderPalace", "Wonder Palace" },
         };
@@ -74,7 +67,7 @@ namespace Fushigi.ui.widgets
 
         public static void Draw(ref bool continueDisplay, IPopupModalHost modalHost, CourseInfo courseInfo, MapAnalysisInfo mapAnalysisInfo, StageLoadInfo stageLoadInfo)
         {
-            ImGui.SetNextWindowSize(new Vector2(500 * MainWindow.dpiScale, 500 * MainWindow.dpiScale ), ImGuiCond.Once);
+            ImGui.SetNextWindowSize(new Vector2(500 * MainWindow.dpiScale, 500 * MainWindow.dpiScale), ImGuiCond.Once);
 
             // Window
             if (ImGui.Begin("Course Settings", ImGuiWindowFlags.NoDocking | ImGuiWindowFlags.NoCollapse))
@@ -84,42 +77,41 @@ namespace Fushigi.ui.widgets
                 {
                     continueDisplay = false;
 
-                    /// Remove empty strings from lists
-                    //  from Suggest Badge List
-                //    var suggestBadgeList = courseInfo.SuggestBadgeList;
-                //    if (suggestBadgeList != null)
-                //    {
-                //        for (int i = 0; i < suggestBadgeList.Count; i++)
-                //            if (suggestBadgeList[i] == "") suggestBadgeList.Remove(suggestBadgeList[i]);
+                    // Remove empty strings from lists from Suggest Badge List
+                    var suggestBadgeList = courseInfo.SuggestBadgeList;
+                    if (suggestBadgeList != null)
+                    {
+                        for (int i = 0; i < suggestBadgeList.Count; i++)
+                            if (Ounce.Convert(suggestBadgeList[i], Ounce.CourseInfoNames) == "") suggestBadgeList.Remove(suggestBadgeList[i]);
 
-                //        if (suggestBadgeList.Count == 0) suggestBadgeList = null;
-                //    }
+                        if (suggestBadgeList.Count == 0) suggestBadgeList = null;
+                    }
 
-                //    courseInfo.SuggestBadgeList = suggestBadgeList;
+                    courseInfo.SuggestBadgeList = suggestBadgeList;
 
-                //    //  from Tips Tags
-                //    var tipsTags = courseInfo.TipsTags;
-                //    if (tipsTags != null)
-                //    {
-                //        for (int i = 0; i < tipsTags.Count; i++)
-                //            if (tipsTags[i] == "") tipsTags.Remove(tipsTags[i]);
+                    //  from Tips Tags
+                    var tipsTags = courseInfo.TipsTags;
+                    if (tipsTags != null)
+                    {
+                        for (int i = 0; i < tipsTags.Count; i++)
+                            if (Ounce.Convert(tipsTags[i], Ounce.CourseInfoNames) == "") tipsTags.Remove(tipsTags[i]);
 
-                //        if (tipsTags.Count == 0) tipsTags = null;
-                //    }
+                        if (tipsTags.Count == 0) tipsTags = null;
+                    }
 
-                //    courseInfo.TipsTags = tipsTags;
+                    courseInfo.TipsTags = tipsTags;
 
-                //    //  from Tips Infos
-                //    var tipsInfo = courseInfo.TipsInfo;
-                //    if (tipsInfo != null)
-                //    {
-                //        for (int i = 0; i < tipsInfo.Count; i++)
-                //            if ((tipsInfo[i].Cond == "" || tipsInfo[i].Cond is null) && tipsInfo[i].Label == "" || tipsInfo[i].Label is null) tipsInfo.Remove(tipsInfo[i]);
+                    //  from Tips Infos
+                    var tipsInfo = courseInfo.TipsInfo;
+                    if (tipsInfo != null)
+                    {
+                        for (int i = 0; i < tipsInfo.Count; i++)
+                            if (Ounce.Convert(tipsInfo[i].Cond, Ounce.CourseInfoNames) == "" && string.IsNullOrEmpty(tipsInfo[i].Label)) tipsInfo.Remove(tipsInfo[i]);
 
-                //        if (tipsInfo.Count == 0) tipsInfo = null;
-                //    }
+                        if (tipsInfo.Count == 0) tipsInfo = null;
+                    }
 
-                //    courseInfo.TipsInfo = tipsInfo;
+                    courseInfo.TipsInfo = tipsInfo;
 
                 }
 
@@ -134,7 +126,7 @@ namespace Fushigi.ui.widgets
 
                     if (ImGui.BeginTabItem("World Map Appearance"))
                     {
-                        //DrawWorldMapAppearanceSettings(courseInfo);
+                        DrawWorldMapAppearanceSettings(courseInfo);
                         ImGui.EndTabItem();
                     }
                     ImGui.EndTabBar();
@@ -145,571 +137,573 @@ namespace Fushigi.ui.widgets
 
         }
 
-        //private static void DrawWorldMapAppearanceSettings(CourseInfo courseInfo)
-        //{
-        //    if (ImGui.BeginTable("##WorldMapAppearanceSettings", 2))
-        //    {
-        //        ImGui.TableNextRow();
-        //        ImGui.TableSetColumnIndex(0);
+        private static void DrawWorldMapAppearanceSettings(CourseInfo courseInfo)
+        {
+            if (ImGui.BeginTable("##WorldMapAppearanceSettings", 2))
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
 
-        //        // CourseDifficulty
-        //        {
-        //            ImGui.Text("Course Difficulty");
-        //            ImGui.TableNextColumn();
+                // CourseDifficulty
+                {
+                    ImGui.Text("Course Difficulty");
+                    ImGui.TableNextColumn();
 
-        //            var courseDifficulty = courseInfo.CourseDifficulty is null ? "" : courseInfo.CourseDifficulty;
-        //            int index = Difficulty.Keys.ToList().IndexOf(courseDifficulty);
+                    var courseDifficulty = Ounce.Convert(courseInfo.CourseDifficulty, Ounce.CourseInfoNames);
+                    int index = Difficulty.Keys.ToList().IndexOf(courseDifficulty);
 
-        //            if (ImGui.Combo("##CourseDifficulty", ref index, Difficulty.Values.ToArray(), Difficulty.Count(), 6))
-        //                courseInfo.CourseDifficulty = Difficulty.Keys.ToArray()[index];
+                    if (ImGui.Combo("##CourseDifficulty", ref index, Difficulty.Values.ToArray(), Difficulty.Count(), 6))
+                        courseInfo.CourseDifficulty = Difficulty.Keys.ToArray()[index];
 
-        //            ImGui.SetItemTooltip("Difficulty of the Level.");
+                    ImGui.SetItemTooltip("Difficulty of the Level.");
 
-        //            ImGui.TableNextColumn();
-        //        }
+                    ImGui.TableNextColumn();
+                }
 
-        //        // CourseNameLabel
-        //        {
-        //            ImGui.Text("Course Name Label");
-        //            ImGui.TableNextColumn();
+                // CourseNameLabel
+                {
+                    ImGui.Text("Course Name Label");
+                    ImGui.TableNextColumn();
 
-        //            var courseNameLabel = courseInfo.CourseNameLabel is null ? "" : courseInfo.CourseNameLabel;
+                    var courseNameLabel = courseInfo.CourseNameLabel is null ? "" : courseInfo.CourseNameLabel;
 
-        //            if (ImGui.InputText("##CourseNameLabel", ref courseNameLabel, 1024))
-        //                courseInfo.CourseNameLabel = courseNameLabel;
+                    if (ImGui.InputText("##CourseNameLabel", ref courseNameLabel, 1024))
+                        courseInfo.CourseNameLabel = courseNameLabel;
 
-        //            ImGui.SetItemTooltip("Entry of the MSBT file containing this course's name.");
+                    ImGui.SetItemTooltip("Entry of the MSBT file containing this course's name.");
 
-        //            ImGui.TableNextColumn();
-        //        }
+                    ImGui.TableNextColumn();
+                }
 
-        //        // CourseScreenCaptureMainActor
-        //        {
-        //            ImGui.Text("Main Actor on Thumbnail");
-        //            ImGui.TableNextColumn();
+                // CourseScreenCaptureMainActor
+                {
+                    ImGui.Text("Main Actor on Thumbnail");
+                    ImGui.TableNextColumn();
 
-        //            var courseScreenCaptureMainActor = courseInfo.CourseScreenCaptureMainActor is null ? "" : courseInfo.CourseScreenCaptureMainActor;
+                    var courseScreenCaptureMainActor = courseInfo.CourseScreenCaptureMainActor is null ? "" : courseInfo.CourseScreenCaptureMainActor;
 
-        //            if (ImGui.InputText("##CourseScreenCaptureMainActor", ref courseScreenCaptureMainActor, 1024))
-        //                courseInfo.CourseScreenCaptureMainActor = courseScreenCaptureMainActor;
+                    if (ImGui.InputText("##CourseScreenCaptureMainActor", ref courseScreenCaptureMainActor, 1024))
+                        courseInfo.CourseScreenCaptureMainActor = courseScreenCaptureMainActor;
 
-        //            ImGui.SetItemTooltip("Path to the actor file of one of the actors displayed on the course thumbnail.");
+                    ImGui.SetItemTooltip("Path to the actor file of one of the actors displayed on the course thumbnail.");
 
-        //            ImGui.TableNextColumn();
-        //        }
+                    ImGui.TableNextColumn();
+                }
 
-        //        // CourseThumbnailPath
-        //        {
-        //            ImGui.Text("Thumbnail Path");
-        //            ImGui.TableNextColumn();
+                // CourseThumbnailPath
+                {
+                    ImGui.Text("Thumbnail Path");
+                    ImGui.TableNextColumn();
 
-        //            var courseThumbnailPath = courseInfo.CourseThumbnailPath is null ? "" : courseInfo.CourseThumbnailPath;
+                    var courseThumbnailPath = courseInfo.CourseThumbnailPath is null ? "" : courseInfo.CourseThumbnailPath;
 
-        //            if (ImGui.InputText("##CourseThumbnailPath", ref courseThumbnailPath, 1024))
-        //                courseInfo.CourseThumbnailPath = courseThumbnailPath;
+                    if (ImGui.InputText("##CourseThumbnailPath", ref courseThumbnailPath, 1024))
+                        courseInfo.CourseThumbnailPath = courseThumbnailPath;
 
-        //            ImGui.SetItemTooltip("Path to the course thumbnail.");
+                    ImGui.SetItemTooltip("Path to the course thumbnail.");
 
-        //            ImGui.TableNextColumn();
-        //        }
+                    ImGui.TableNextColumn();
+                }
 
-        //        // SuggestBadgeReplaceLabel
-        //        {
-        //            ImGui.Text("Suggested Badge Replacement Label");
-        //            ImGui.TableNextColumn();
+                // SuggestBadgeReplaceLabel
+                {
+                    ImGui.Text("Suggested Badge Replacement Label");
+                    ImGui.TableNextColumn();
 
-        //            var suggestBadgeReplaceLabel = courseInfo.SuggestBadgeReplaceLabel is null ? "" : courseInfo.SuggestBadgeReplaceLabel;
+                    var suggestBadgeReplaceLabel = courseInfo.SuggestBadgeReplaceLabel is null ? "" : courseInfo.SuggestBadgeReplaceLabel;
 
-        //            if (ImGui.InputText("##SuggestBadgeReplaceLabel", ref suggestBadgeReplaceLabel, 1024))
-        //                courseInfo.SuggestBadgeReplaceLabel = suggestBadgeReplaceLabel;
-        //        }
+                    if (ImGui.InputText("##SuggestBadgeReplaceLabel", ref suggestBadgeReplaceLabel, 1024))
+                        courseInfo.SuggestBadgeReplaceLabel = suggestBadgeReplaceLabel;
+                }
 
-        //        ImGui.EndTable();
-        //    }
+                ImGui.EndTable();
+            }
 
-        //    // SuggestBadgeList
-        //    {
-        //        var suggestBadgeList = courseInfo.SuggestBadgeList;
+            // SuggestBadgeList
+            {
+                var suggestBadgeList = courseInfo.SuggestBadgeList;
 
-        //        if (ImGui.TreeNode("Suggested Badge List"))
-        //        {
-        //            if (ImGui.Button("Add Badge"))
-        //            {
-        //                if (suggestBadgeList is null) suggestBadgeList = new List<string>();
-        //                suggestBadgeList.Add("");
-        //                courseInfo.SuggestBadgeList = suggestBadgeList;
-        //            }
+                if (ImGui.TreeNode("Suggested Badge List"))
+                {
+                    if (ImGui.Button("Add Badge"))
+                    {
+                        if (suggestBadgeList is null) suggestBadgeList = new List<object>();
+                        suggestBadgeList.Add("");
+                        courseInfo.SuggestBadgeList = suggestBadgeList;
+                    }
 
-        //            if (suggestBadgeList is not null)
-        //            {
-        //                for (int i = 0; i < suggestBadgeList.Count; i++)
-        //                {
-        //                    var badge = suggestBadgeList[i];
-        //                    if (ImGui.InputText($"##SuggestBadgeList{i}", ref badge, 1024))
-        //                        suggestBadgeList[i] = badge;
-        //                }
-        //            }
+                    if (suggestBadgeList is not null)
+                    {
+                        for (int i = 0; i < suggestBadgeList.Count; i++)
+                        {
+                            var badge = Ounce.Convert(suggestBadgeList[i], Ounce.CourseInfoNames);
+                            if (ImGui.InputText($"##SuggestBadgeList{i}", ref badge, 1024))
+                                suggestBadgeList[i] = badge;
+                        }
+                    }
 
-        //            ImGui.TreePop();
-        //        }
-        //    }
+                    ImGui.TreePop();
+                }
+            }
 
-        //    // TipTags
-        //    {
-        //        var tipTags = courseInfo.TipsTags;
-        //        if (ImGui.TreeNode("Tip Tags"))
-        //        {
-        //            if (ImGui.Button("Add Tip Tag"))
-        //            {
-        //                if (tipTags is null) tipTags = new List<string>();
-        //                tipTags.Add("");
-        //                courseInfo.TipsTags = tipTags;
-        //            }
+            // TipTags
+            {
+                var tipTags = courseInfo.TipsTags;
+                if (ImGui.TreeNode("Tip Tags"))
+                {
+                    if (ImGui.Button("Add Tip Tag"))
+                    {
+                        if (tipTags is null) tipTags = new List<object>();
+                        tipTags.Add("");
+                        courseInfo.TipsTags = tipTags;
+                    }
 
-        //            if (tipTags is not null)
-        //            {
-        //                for (int i = 0; i < tipTags.Count; i++)
-        //                {
-        //                    var tipTag = tipTags[i];
-        //                    if (ImGui.InputText($"##TipTags{i}", ref tipTag, 1024))
-        //                        tipTags[i] = tipTag;
-        //                }
-        //            }
+                    if (tipTags is not null)
+                    {
+                        for (int i = 0; i < tipTags.Count; i++)
+                        {
+                            var tipTag = Ounce.Convert(tipTags[i], Ounce.CourseInfoNames);
+                            if (ImGui.InputText($"##TipTags{i}", ref tipTag, 1024))
+                                tipTags[i] = tipTag;
+                        }
+                    }
 
-        //            ImGui.TreePop();
-        //        }
-        //    }
+                    ImGui.TreePop();
+                }
+            }
 
-        //    // TipsInfo
-        //    {
-        //        var tipsInfos = courseInfo.TipsInfo;
-        //        if (ImGui.TreeNode("Tip Infos"))
-        //        {
-        //            if (ImGui.Button("Add Tip Info"))
-        //            {
-        //                if (tipsInfos is null) tipsInfos = new List<CourseInfo.TipInfo>();
-        //                tipsInfos.Add(new CourseInfo.TipInfo());
-        //                courseInfo.TipsInfo = tipsInfos;
-        //            }
+            // TipsInfo
+            {
+                var tipsInfos = courseInfo.TipsInfo;
+                if (ImGui.TreeNode("Tip Infos"))
+                {
+                    if (ImGui.Button("Add Tip Info"))
+                    {
+                        if (tipsInfos is null) tipsInfos = new List<CourseInfo.TipInfo>();
+                        tipsInfos.Add(new CourseInfo.TipInfo());
+                        courseInfo.TipsInfo = tipsInfos;
+                    }
 
-        //            if (ImGui.BeginTable("##TipsInfo", 2))
-        //            {
-        //                ImGui.TableNextRow();
-        //                ImGui.TableSetColumnIndex(0);
+                    if (ImGui.BeginTable("##TipsInfo", 2))
+                    {
+                        ImGui.TableNextRow();
+                        ImGui.TableSetColumnIndex(0);
 
-        //                ImGui.Text("Condition");
-        //                ImGui.TableNextColumn();
-        //                ImGui.Text("Label");
+                        ImGui.Text("Condition");
+                        ImGui.TableNextColumn();
+                        ImGui.Text("Label");
 
-        //                if (tipsInfos != null && tipsInfos.Count > 0)
-        //                {
-        //                    for (int i = 0; i < tipsInfos.Count; i++)
-        //                    {
-        //                        ImGui.TableNextColumn();
+                        if (tipsInfos != null && tipsInfos.Count > 0)
+                        {
+                            for (int i = 0; i < tipsInfos.Count; i++)
+                            {
+                                ImGui.TableNextColumn();
 
-        //                        var tipsInfoCond = tipsInfos[i].Cond is null ? "" : tipsInfos[i].Cond;
-        //                        var tipsInfoLabel = tipsInfos[i].Label is null ? "" : tipsInfos[i].Label;
-        //                        if (ImGui.InputText($"##TipsInfoCond{i}", ref tipsInfoCond, 1024))
-        //                            tipsInfos[i].Cond = tipsInfoCond;
+                                var tipsInfoCond = Ounce.Convert(tipsInfos[i].Cond, Ounce.CourseInfoNames);
+                                var tipsInfoLabel = tipsInfos[i].Label is null ? "" : tipsInfos[i].Label;
+                                if (ImGui.InputText($"##TipsInfoCond{i}", ref tipsInfoCond, 1024))
+                                    tipsInfos[i].Cond = tipsInfoCond;
 
-        //                        ImGui.TableNextColumn();
+                                ImGui.TableNextColumn();
 
-        //                        if (ImGui.InputText($"##TipsInfoLabel{i}", ref tipsInfoLabel, 1024))
-        //                            tipsInfos[i].Label = tipsInfoLabel;
-        //                    }
-        //                }
+                                if (ImGui.InputText($"##TipsInfoLabel{i}", ref tipsInfoLabel, 1024))
+                                    tipsInfos[i].Label = tipsInfoLabel;
+                            }
+                        }
 
-        //                ImGui.EndTable();
-        //            }
-        //        }
-        //    }
-        //}
+                        ImGui.EndTable();
+                    }
+                }
+            }
+        }
 
         private static void DrawLevelInfoSettings(CourseInfo courseInfo, MapAnalysisInfo mapAnalysisInfo, StageLoadInfo stageLoadInfo)
         {
-            //if (ImGui.BeginTable("##LevelInfoSettings", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+            if (ImGui.BeginTable("##LevelInfoSettings", 2))
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
 
 
-            //    // Level Name
+                // Level Name
 
-            //    //ImGui.Text("Level Name");
-            //    ImGui.TableNextColumn();
+                //ImGui.Text("Level Name");
+                ImGui.TableNextColumn();
 
-            //    //var levelName = MainWindow.mCurrentLevelName;
+                //var levelName = MainWindow.mCurrentLevelName;
 
-            //    //if (ImGui.InputText("##LevelName", ref levelName, 1024))
-            //    //{
-            //    //    MainWindow.mCurrentLevelName = levelName;
-            //    //    RomFS.courseNames[MainWindow.mCurrentCourseName.Split("_")[0]] = levelName;
-            //    //    Console.WriteLine(RomFS.courseNames[MainWindow.mCurrentCourseName.Split("_")[0]]);
-            //    //}
-                    
-
-            //    ImGui.SetItemTooltip("Name of the level displayed ingame.");
-
-            //    ImGui.TableNextColumn();
-
-            //    // GlobalCourseId
-            //    {
-            //        ImGui.Text("Global Course ID");
-            //        ImGui.TableNextColumn();
-
-            //        var globalCourseId = courseInfo.GlobalCourseId;
-
-            //        if (ImGui.InputInt("##GlobalCourseId", ref globalCourseId))
-            //            courseInfo.GlobalCourseId = globalCourseId;
-
-            //        ImGui.TableNextColumn();
-            //    }
-
-            //    ImGui.EndTable();
-            //}
-
-            //ImGui.Separator();
-
-            //if (ImGui.BeginTable("##LevelInfoSettings2", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+                //if (ImGui.InputText("##LevelName", ref levelName, 1024))
+                //{
+                //    MainWindow.mCurrentLevelName = levelName;
+                //    RomFS.courseNames[MainWindow.mCurrentCourseName.Split("_")[0]] = levelName;
+                //    Console.WriteLine(RomFS.courseNames[MainWindow.mCurrentCourseName.Split("_")[0]]);
+                //}
 
 
-            //    //// CourseKind
-            //    //{
-            //    //    ImGui.Text("Course Type");
-            //    //    ImGui.TableNextColumn();
+                ImGui.SetItemTooltip("Name of the level displayed ingame.");
 
-            //    //    var courseKind = courseInfo.CourseKind is null ? "" : courseInfo.CourseKind;
-            //    //    int indexCourseType = courseKind == "" ? 0 : CourseKind.Keys.ToList().IndexOf(courseKind);
+                ImGui.TableNextColumn();
 
-            //    //    if (ImGui.Combo("##CourseType", ref indexCourseType, CourseKind.Values.ToArray(), CourseKind.Count(), 10))
-            //    //        courseInfo.CourseKind = CourseKind.Keys.ToArray()[indexCourseType];
+                // GlobalCourseId
+                {
+                    ImGui.Text("Global Course ID");
+                    ImGui.TableNextColumn();
 
-            //    //    ImGui.TableNextColumn();
-            //    //}
+                    var globalCourseId = courseInfo.GlobalCourseId;
 
-            //    // DemoCourseKind
-            //    {
-            //        ImGui.Text("Demo Course Type");
-            //        ImGui.TableNextColumn();
+                    if (ImGui.InputInt("##GlobalCourseId", ref globalCourseId))
+                        courseInfo.GlobalCourseId = globalCourseId;
 
-            //        var demoCourseKind = courseInfo.DemoCourseKind is null ? "" : courseInfo.DemoCourseKind;
-            //        int indexDemoCourseType = demoCourseKind == "Invalid" ? 0 : DemoCourseKind.Keys.ToList().IndexOf(demoCourseKind);
+                    ImGui.TableNextColumn();
+                }
 
-            //        if (ImGui.Combo("##DemoCourseKind", ref indexDemoCourseType, DemoCourseKind.Values.ToArray(), DemoCourseKind.Count(), 5))
-            //            courseInfo.DemoCourseKind = DemoCourseKind.Keys.ToArray()[indexDemoCourseType];
+                ImGui.EndTable();
+            }
 
-            //        ImGui.TableNextColumn();
-            //    }
+            ImGui.Separator();
 
-            //    // RaceCourseType
-            //    {
-            //        ImGui.Text("Race Course Type");
-            //        ImGui.TableNextColumn();
-            //        var raceCourseType = courseInfo.RaceCourseType is null ? "" : courseInfo.RaceCourseType;
-            //        if (ImGui.InputText("##RaceCourseType", ref raceCourseType, 1024))
-            //        {
-            //            courseInfo.RaceCourseType = raceCourseType;
-            //        }
+            if (ImGui.BeginTable("##LevelInfoSettings2", 2))
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
+                // CourseKind
+                {
+                    ImGui.Text("Course Type");
+                    ImGui.TableNextColumn();
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    var courseKind = Ounce.Convert(courseInfo.CourseKind, Ounce.CourseInfoNames);
+                    int indexCourseType = courseKind == "" ? 0 : CourseKind.Keys.ToList().IndexOf(courseKind);
 
-            //    // StartEventName
-            //    {
-            //        ImGui.Text("Level Intro Event");
-            //        ImGui.TableNextColumn();
-            //        var startEventName = stageLoadInfo.StartEventName is null ? "" : stageLoadInfo.StartEventName;
-            //        if (ImGui.InputText("##CourseStartXLinkKey", ref startEventName, 1024))
-            //        {
-            //            stageLoadInfo.StartEventName = startEventName;
-            //        }
+                    if (ImGui.Combo("##CourseType", ref indexCourseType, CourseKind.Values.ToArray(), CourseKind.Count(), 10))
+                        courseInfo.CourseKind = CourseKind.Keys.ToArray()[indexCourseType];
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    ImGui.TableNextColumn();
+                }
 
-            //    ImGui.EndTable();
-            //}
+                // DemoCourseKind
+                {
+                    ImGui.Text("Demo Course Type");
+                    ImGui.TableNextColumn();
 
-            //ImGui.Separator();
+                    var demoCourseKind = Ounce.Convert(courseInfo.DemoCourseKind, Ounce.CourseInfoNames);
+                    int indexDemoCourseType = demoCourseKind == "Invalid" ? 0 : DemoCourseKind.Keys.ToList().IndexOf(demoCourseKind);
 
-            //if (ImGui.BeginTable("##LevelInfoSettings4", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+                    if (ImGui.Combo("##DemoCourseKind", ref indexDemoCourseType, DemoCourseKind.Values.ToArray(), DemoCourseKind.Count(), 5))
+                        courseInfo.DemoCourseKind = DemoCourseKind.Keys.ToArray()[indexDemoCourseType];
 
-            //    // CourseTimer
-            //    {
-            //        ImGui.Text("Course Timer");
-            //        ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                }
 
-            //        var courseTimer = courseInfo.CourseTimer;
+                // RaceCourseType
+                {
+                    ImGui.Text("Race Course Type");
+                    ImGui.TableNextColumn();
+                    var raceCourseType = Ounce.Convert(courseInfo.RaceCourseType, Ounce.CourseInfoNames);
+                    if (ImGui.InputText("##RaceCourseType", ref raceCourseType, 1024))
+                    {
+                        courseInfo.RaceCourseType = raceCourseType;
+                    }
 
-            //        if (ImGui.InputInt("##CourseTimer", ref courseTimer))
-            //            courseInfo.CourseTimer = courseTimer;
+                    ImGui.TableNextColumn();
+                }
 
-            //        ImGui.SetItemTooltip("Unused course timer.");
+                // StartEventName
+                if (stageLoadInfo != null)
+                {
+                    {
+                        ImGui.Text("Level Intro Event");
+                        ImGui.TableNextColumn();
+                        var startEventName = stageLoadInfo.StartEventName is null ? "" : stageLoadInfo.StartEventName;
+                        if (ImGui.InputText("##CourseStartXLinkKey", ref startEventName, 1024))
+                        {
+                            stageLoadInfo.StartEventName = startEventName;
+                        }
 
-            //        ImGui.TableNextColumn();
-            //    }
+                        ImGui.TableNextColumn();
+                    }
+                }
 
-            //    // CourseTimerType
-            //    {
-            //        ImGui.Text("Course Timer Type");
-            //        ImGui.TableNextColumn();
+                ImGui.EndTable();
+            }
 
-            //        var courseTimerType = courseInfo.CourseTimerType is null ? "" : courseInfo.CourseTimerType;
-            //        int indexTimerType = courseTimerType == "Invalid" ? 0 : CourseTimerType.Keys.ToList().IndexOf(courseTimerType);
+            ImGui.Separator();
 
-            //        if (ImGui.Combo("##CoursePlayerMorphType", ref indexTimerType, CourseTimerType.Values.ToArray(), CourseTimerType.Count(), 5))
-            //            courseInfo.CourseTimerType = CourseTimerType.Keys.ToArray()[indexTimerType];
-            //    }
+            if (ImGui.BeginTable("##LevelInfoSettings4", 2))
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
 
-            //    ImGui.EndTable();
-            //}
+                // CourseTimer
+                {
+                    ImGui.Text("Course Timer");
+                    ImGui.TableNextColumn();
 
-            //// IsCourseTimerAutoStart
-            //{
-            //    var isCourseTimerAutoStart = courseInfo.IsCourseTimerAutoStart;
+                    var courseTimer = courseInfo.CourseTimer;
 
-            //    if (ImGui.Checkbox("Auto Start Course Timer", ref isCourseTimerAutoStart))
-            //        courseInfo.IsCourseTimerAutoStart = isCourseTimerAutoStart;
-            //}
+                    if (ImGui.InputInt("##CourseTimer", ref courseTimer))
+                        courseInfo.CourseTimer = courseTimer;
 
-            //ImGui.Separator();
+                    ImGui.SetItemTooltip("Unused course timer.");
 
-            //// IsExistBigTenLuckyCoin
-            //{
-            //    var isExistTenLuckyCoin = mapAnalysisInfo.IsExistBigTenLuckyCoin;
+                    ImGui.TableNextColumn();
+                }
 
-            //    if (ImGui.Checkbox("Course has purple 10-Coin", ref isExistTenLuckyCoin))
-            //        mapAnalysisInfo.IsExistBigTenLuckyCoin = isExistTenLuckyCoin;
-            //}
+                // CourseTimerType
+                {
+                    ImGui.Text("Course Timer Type");
+                    ImGui.TableNextColumn();
 
-            //// IsExistBlockSurprise
-            //{
-            //    var isExistBlockSurprise = mapAnalysisInfo.IsExistBlockSurprise;
+                    var courseTimerType = Ounce.Convert(courseInfo.CourseTimerType, Ounce.CourseInfoNames);
+                    int indexTimerType = courseTimerType == "Invalid" ? 0 : CourseTimerType.Keys.ToList().IndexOf(courseTimerType);
 
-            //    if (ImGui.Checkbox("Course has yellow !-Blocks", ref isExistBlockSurprise))
-            //        mapAnalysisInfo.IsExistBlockSurprise = isExistBlockSurprise;
-            //}
+                    if (ImGui.Combo("##CoursePlayerMorphType", ref indexTimerType, CourseTimerType.Values.ToArray(), CourseTimerType.Count(), 5))
+                        courseInfo.CourseTimerType = CourseTimerType.Keys.ToArray()[indexTimerType];
+                }
 
-            //// IsExistGoalPole
-            //{
-            //    var isExistGoalPole = mapAnalysisInfo.IsExistGoalPole;
+                ImGui.EndTable();
+            }
 
-            //    if (ImGui.Checkbox("Course has Goal Pole", ref isExistGoalPole))
-            //        mapAnalysisInfo.IsExistGoalPole = isExistGoalPole;
-            //}
+            // IsCourseTimerAutoStart
+            {
+                var isCourseTimerAutoStart = courseInfo.IsCourseTimerAutoStart;
 
-            //// IsExistTreasureChest
-            //{
-            //    var isExistTreasureChest = mapAnalysisInfo.IsExistTreasureChest;
-
-            //    if (ImGui.Checkbox("Course has Teasure Chest", ref isExistTreasureChest))
-            //        mapAnalysisInfo.IsExistTreasureChest = isExistTreasureChest;
-            //}
-
-            //// IsUnlimitedBadge
-            //{
-            //    var isUnlimitedBadge = mapAnalysisInfo.IsUnlimitedBadge;
-
-            //    if (ImGui.Checkbox("Is Unlimited Badge", ref isUnlimitedBadge))
-            //        mapAnalysisInfo.IsUnlimitedBadge = isUnlimitedBadge;
-
-            //    ImGui.SetItemTooltip("Never enabled.");
-            //}
-
-            //// IsDashMiniCourse
-            //{
-            //    var isDashMiniCourse = courseInfo.IsDashMiniCourse;
-
-            //    if (ImGui.Checkbox("Is Dash Break Time! Course", ref isDashMiniCourse))
-            //        courseInfo.IsDashMiniCourse = isDashMiniCourse;
-            //}
+                if (ImGui.Checkbox("Auto Start Course Timer", ref isCourseTimerAutoStart))
+                    courseInfo.IsCourseTimerAutoStart = isCourseTimerAutoStart;
+            }
 
             //ImGui.Separator();
 
-            //if (ImGui.BeginTable("##LevelInfoSettings5", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+            // IsExistBigTenLuckyCoin
+            {
+                var isExistTenLuckyCoin = mapAnalysisInfo.IsExistBigTenLuckyCoin;
 
-            //    // CoursePlayerMorphType
-            //    {
-            //        ImGui.Text("Player Wonder Morph");
-            //        ImGui.TableNextColumn();
+                if (ImGui.Checkbox("Course has purple 10-Coin", ref isExistTenLuckyCoin))
+                    mapAnalysisInfo.IsExistBigTenLuckyCoin = isExistTenLuckyCoin;
+            }
 
-            //        var coursePlayerMorphType = courseInfo.CoursePlayerMorphType is null ? "" : courseInfo.CoursePlayerMorphType;
-            //        int index = PlayerMorphType.Keys.ToList().IndexOf(coursePlayerMorphType);
+            // IsExistBlockSurprise
+            {
+                var isExistBlockSurprise = mapAnalysisInfo.IsExistBlockSurprise;
 
-            //        if (ImGui.Combo("##CoursePlayerMorphType", ref index, PlayerMorphType.Values.ToArray(), PlayerMorphType.Count(), PlayerMorphType.Count()))
-            //            courseInfo.CoursePlayerMorphType = PlayerMorphType.Keys.ToArray()[index];
+                if (ImGui.Checkbox("Course has yellow !-Blocks", ref isExistBlockSurprise))
+                    mapAnalysisInfo.IsExistBlockSurprise = isExistBlockSurprise;
+            }
 
-            //        ImGui.SetItemTooltip("What the player turns into during the Wonder effect.");
+            // IsExistGoalPole
+            {
+                var isExistGoalPole = mapAnalysisInfo.IsExistGoalPole;
 
-            //        ImGui.TableNextColumn();
-            //    }
+                if (ImGui.Checkbox("Course has Goal Pole", ref isExistGoalPole))
+                    mapAnalysisInfo.IsExistGoalPole = isExistGoalPole;
+            }
 
-            //    // WonderFlowerNum
-            //    {
-            //        ImGui.Text("Number of Wonder Seeds");
-            //        ImGui.TableNextColumn();
+            // IsExistTreasureChest
+            {
+                var isExistTreasureChest = mapAnalysisInfo.IsExistTreasureChest;
 
-            //        var wonderFlowerNum = mapAnalysisInfo.WonderFlowerNum;
+                if (ImGui.Checkbox("Course has Teasure Chest", ref isExistTreasureChest))
+                    mapAnalysisInfo.IsExistTreasureChest = isExistTreasureChest;
+            }
 
-            //        if (ImGui.InputInt("##WonderFlowerNum", ref wonderFlowerNum))
-            //            mapAnalysisInfo.WonderFlowerNum = wonderFlowerNum;
+            // IsUnlimitedBadge
+            {
+                var isUnlimitedBadge = mapAnalysisInfo.IsUnlimitedBadge;
 
-            //        ImGui.TableNextColumn();
-            //    }
+                if (ImGui.Checkbox("Is Unlimited Badge", ref isUnlimitedBadge))
+                    mapAnalysisInfo.IsUnlimitedBadge = isUnlimitedBadge;
 
-            //    // FinishWonderFlowerNum
-            //    {
-            //        ImGui.Text("Number of Wonder Seeds from Wonder Flowers");
-            //        ImGui.TableNextColumn();
+                ImGui.SetItemTooltip("Never enabled.");
+            }
 
-            //        var finishWonderFlowerNum = mapAnalysisInfo.FinishWonderFlowerNum;
+            // IsDashMiniCourse
+            {
+                var isDashMiniCourse = courseInfo.IsDashMiniCourse;
 
-            //        if (ImGui.InputInt("##FinishWonderFlowerNum", ref finishWonderFlowerNum))
-            //            mapAnalysisInfo.FinishWonderFlowerNum = finishWonderFlowerNum;
-
-            //        ImGui.TableNextColumn();
-            //    }
-
-            //    ImGui.EndTable();
-            //}
-
-            //// IsExistWonderFinishFlower
-            //{
-            //    var isExistWonderFinishFlower = mapAnalysisInfo.IsExistWonderFinishFlower;
-
-            //    if (ImGui.Checkbox("Course has Wonder Flower", ref isExistWonderFinishFlower))
-            //        mapAnalysisInfo.IsExistWonderFinishFlower = isExistWonderFinishFlower;
-            //}
-
-            //// IsExistWonderQuiz
-            //{
-            //    var isExistWonderQuiz = courseInfo.IsExistWonderQuiz;
-
-            //    if (ImGui.Checkbox("Course has Quiz Wonder", ref isExistWonderQuiz))
-            //        courseInfo.IsExistWonderQuiz = isExistWonderQuiz;
-            //}
+                if (ImGui.Checkbox("Is Dash Break Time! Course", ref isDashMiniCourse))
+                    courseInfo.IsDashMiniCourse = isDashMiniCourse;
+            }
 
             //ImGui.Separator();
 
-            //if (ImGui.BeginTable("##LevelInfoSettings6", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+            if (ImGui.BeginTable("##LevelInfoSettings5", 2))
+            {
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(0);
 
-            //    // CourseStartXLinkKey
-            //    {
-            //        ImGui.Text("Course Start X Link Key");
-            //        ImGui.TableNextColumn();
-            //        var courseStartXLinkKey = courseInfo.CourseStartXLinkKey is null ? "" : courseInfo.CourseStartXLinkKey;
-            //        if (ImGui.InputText("##CourseStartXLinkKey", ref courseStartXLinkKey, 1024))
-            //        {
-            //            courseInfo.CourseStartXLinkKey = courseStartXLinkKey;
-            //        }
+                // CoursePlayerMorphType
+                {
+                    ImGui.Text("Player Wonder Morph");
+                    ImGui.TableNextColumn();
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    var coursePlayerMorphType = Ounce.Convert(courseInfo.CoursePlayerMorphType, Ounce.CourseInfoNames);
+                    int index = PlayerMorphType.Keys.ToList().IndexOf(coursePlayerMorphType);
 
-            //    ImGui.EndTable();
-            //}
+                    if (ImGui.Combo("##CoursePlayerMorphType", ref index, PlayerMorphType.Values.ToArray(), PlayerMorphType.Count(), PlayerMorphType.Count()))
+                        courseInfo.CoursePlayerMorphType = PlayerMorphType.Keys.ToArray()[index];
 
-            //ImGui.Separator();
+                    ImGui.SetItemTooltip("What the player turns into during the Wonder effect.");
 
-            //if (ImGui.BeginTable("##LevelInfoSettings7", 2))
-            //{
-            //    ImGui.TableNextRow();
-            //    ImGui.TableSetColumnIndex(0);
+                    ImGui.TableNextColumn();
+                }
 
-            //    // BadgeId
-            //    {
-            //        ImGui.Text("Badge ID");
-            //        ImGui.TableNextColumn();
-            //        var badgeId = mapAnalysisInfo.BadgeId?.ToString() ?? "";
-            //        if (ImGui.InputText("##BadgeId", ref badgeId, 1024))
-            //        {
-            //            mapAnalysisInfo.BadgeId = badgeId;
-            //        }
+                // WonderFlowerNum
+                {
+                    ImGui.Text("Number of Wonder Seeds");
+                    ImGui.TableNextColumn();
 
-            //        ImGui.SetItemTooltip("Only used in Course 500 (Badge House) and Course 590 (WONDER?).");
+                    var wonderFlowerNum = mapAnalysisInfo.WonderFlowerNum;
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    if (ImGui.InputInt("##WonderFlowerNum", ref wonderFlowerNum))
+                        mapAnalysisInfo.WonderFlowerNum = wonderFlowerNum;
 
-            //    // NeedBadgeIdEnterCourse
-            //    {
-            //        ImGui.Text("Need Badge ID Enter Course");
-            //        ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                }
 
-            //        var needBadgeIdEnterCourse = courseInfo.NeedBadgeIdEnterCourse is null ? "" : courseInfo.NeedBadgeIdEnterCourse;
+                // FinishWonderFlowerNum
+                {
+                    ImGui.Text("Number of Wonder Seeds from Wonder Flowers");
+                    ImGui.TableNextColumn();
 
-            //        if (ImGui.InputText("##NeedBadgeIdEnterCourse", ref needBadgeIdEnterCourse, 1024))
-            //            courseInfo.NeedBadgeIdEnterCourse = needBadgeIdEnterCourse;
+                    var finishWonderFlowerNum = mapAnalysisInfo.FinishWonderFlowerNum;
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    if (ImGui.InputInt("##FinishWonderFlowerNum", ref finishWonderFlowerNum))
+                        mapAnalysisInfo.FinishWonderFlowerNum = finishWonderFlowerNum;
 
-            //    // GiveBadgeIdOnCourseClear
-            //    {
-            //        ImGui.Text("Give Badge ID on Course Clear");
-            //        ImGui.TableNextColumn();
+                    ImGui.TableNextColumn();
+                }
 
-            //        var giveBadgeIdOnCourseClear = courseInfo.GiveBadgeIdOnCourseClear is null ? "" : courseInfo.GiveBadgeIdOnCourseClear;
+                ImGui.EndTable();
+            }
 
-            //        if (ImGui.InputText("##GiveBadgeIdOnCourseClear", ref giveBadgeIdOnCourseClear, 1024))
-            //            courseInfo.GiveBadgeIdOnCourseClear = giveBadgeIdOnCourseClear;
+            // IsExistWonderFinishFlower
+            {
+                    var isExistWonderFinishFlower = mapAnalysisInfo.IsExistWonderFinishFlower;
 
-            //        ImGui.TableNextColumn();
-            //    }
+                    if (ImGui.Checkbox("Course has Wonder Flower", ref isExistWonderFinishFlower))
+                        mapAnalysisInfo.IsExistWonderFinishFlower = isExistWonderFinishFlower;
+                }
 
-            //    // UnlockBadgeIdOnCourseClear
-            //    {
-            //        ImGui.Text("Unlock Badge ID on Course Clear");
-            //        ImGui.TableNextColumn();
+                // IsExistWonderQuiz
+                {
+                    var isExistWonderQuiz = courseInfo.IsExistWonderQuiz;
 
-            //        var unlockBadgeIdOnCourseClear = courseInfo.UnlockBadgeIdOnCourseClear is null ? "" : courseInfo.UnlockBadgeIdOnCourseClear;
+                    if (ImGui.Checkbox("Course has Quiz Wonder", ref isExistWonderQuiz))
+                        courseInfo.IsExistWonderQuiz = isExistWonderQuiz;
+                }
 
-            //        if (ImGui.InputText("##UnlockBadgeIdOnCourseClear", ref unlockBadgeIdOnCourseClear, 1024))
-            //            courseInfo.UnlockBadgeIdOnCourseClear = unlockBadgeIdOnCourseClear;
+                //ImGui.Separator();
 
-            //        ImGui.TableNextColumn();
-            //    }
+                if (ImGui.BeginTable("##LevelInfoSettings6", 2))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
 
-            //    ImGui.EndTable();
-            //}
+                    // CourseStartXLinkKey
+                    {
+                        ImGui.Text("Course Start X Link Key");
+                        ImGui.TableNextColumn();
+                        var courseStartXLinkKey = courseInfo.CourseStartXLinkKey is null ? "" : courseInfo.CourseStartXLinkKey;
+                        if (ImGui.InputText("##CourseStartXLinkKey", ref courseStartXLinkKey, 1024))
+                        {
+                            courseInfo.CourseStartXLinkKey = courseStartXLinkKey;
+                        }
 
-            //// NoNeedRetrySuggestBadge
-            //{
-            //    var noNeedRetrySuggestBadge = courseInfo.NoNeedRetrySuggestBadge;
+                        ImGui.TableNextColumn();
+                    }
 
-            //    if (ImGui.Checkbox("Don't suggest Badge before Retry", ref noNeedRetrySuggestBadge))
-            //        courseInfo.NoNeedRetrySuggestBadge = noNeedRetrySuggestBadge;
-            //}
+                    ImGui.EndTable();
+                }
 
-            //// IsInvisibleBadgeSetShadow
-            //{
-            //    var isInvisibleBadgeSetShadow = courseInfo.IsInvisibleBadgeSetShadow;
+                ImGui.Separator();
 
-            //    if (ImGui.Checkbox("Set Shadow on Invisibility Badge", ref isInvisibleBadgeSetShadow))
-            //        courseInfo.IsInvisibleBadgeSetShadow = isInvisibleBadgeSetShadow;
-            //}
+                if (ImGui.BeginTable("##LevelInfoSettings7", 2))
+                {
+                    ImGui.TableNextRow();
+                    ImGui.TableSetColumnIndex(0);
 
-            //ImGui.Separator();
+                    // BadgeId
+                    {
+                        ImGui.Text("Badge ID");
+                        ImGui.TableNextColumn();
+                        var badgeId = mapAnalysisInfo.BadgeId?.ToString() ?? "";
+                        if (ImGui.InputText("##BadgeId", ref badgeId, 1024))
+                        {
+                            mapAnalysisInfo.BadgeId = badgeId;
+                        }
 
-            //// IsUseTheEndUI
-            //{
-            //    var isUseTheEndUI = courseInfo.IsUseTheEndUI;
+                        ImGui.SetItemTooltip("Only used in Course 500 (Badge House) and Course 590 (WONDER?).");
 
-            //    if (ImGui.Checkbox("Use The End UI", ref isUseTheEndUI))
-            //        courseInfo.IsUseTheEndUI = isUseTheEndUI;
-            //}
+                        ImGui.TableNextColumn();
+                    }
+
+                    // NeedBadgeIdEnterCourse
+                    {
+                        ImGui.Text("Need Badge ID Enter Course");
+                        ImGui.TableNextColumn();
+
+                        var needBadgeIdEnterCourse = Ounce.Convert(courseInfo.NeedBadgeIdEnterCourse, Ounce.CourseInfoNames);
+
+                        if (ImGui.InputText("##NeedBadgeIdEnterCourse", ref needBadgeIdEnterCourse, 1024))
+                            courseInfo.NeedBadgeIdEnterCourse = needBadgeIdEnterCourse;
+
+                        ImGui.TableNextColumn();
+                    }
+
+                    // GiveBadgeIdOnCourseClear
+                    {
+                        ImGui.Text("Give Badge ID on Course Clear");
+                        ImGui.TableNextColumn();
+
+                        var giveBadgeIdOnCourseClear = Ounce.Convert(courseInfo.GiveBadgeIdOnCourseClear, Ounce.CourseInfoNames);
+
+                        if (ImGui.InputText("##GiveBadgeIdOnCourseClear", ref giveBadgeIdOnCourseClear, 1024))
+                            courseInfo.GiveBadgeIdOnCourseClear = giveBadgeIdOnCourseClear;
+
+                        ImGui.TableNextColumn();
+                    }
+
+                    // UnlockBadgeIdOnCourseClear
+                    {
+                        ImGui.Text("Unlock Badge ID on Course Clear");
+                        ImGui.TableNextColumn();
+
+                        var unlockBadgeIdOnCourseClear = Ounce.Convert(courseInfo.UnlockBadgeIdOnCourseClear, Ounce.CourseInfoNames);
+
+                        if (ImGui.InputText("##UnlockBadgeIdOnCourseClear", ref unlockBadgeIdOnCourseClear, 1024))
+                            courseInfo.UnlockBadgeIdOnCourseClear = unlockBadgeIdOnCourseClear;
+
+                        ImGui.TableNextColumn();
+                    }
+
+                    ImGui.EndTable();
+                }
+
+                // NoNeedRetrySuggestBadge
+                {
+                    var noNeedRetrySuggestBadge = courseInfo.NoNeedRetrySuggestBadge;
+
+                    if (ImGui.Checkbox("Don't suggest Badge before Retry", ref noNeedRetrySuggestBadge))
+                        courseInfo.NoNeedRetrySuggestBadge = noNeedRetrySuggestBadge;
+                }
+
+                // IsInvisibleBadgeSetShadow
+                {
+                    var isInvisibleBadgeSetShadow = courseInfo.IsInvisibleBadgeSetShadow;
+
+                    if (ImGui.Checkbox("Set Shadow on Invisibility Badge", ref isInvisibleBadgeSetShadow))
+                        courseInfo.IsInvisibleBadgeSetShadow = isInvisibleBadgeSetShadow;
+                }
+
+                ImGui.Separator();
+
+                // IsUseTheEndUI
+                {
+                    var isUseTheEndUI = courseInfo.IsUseTheEndUI;
+
+                    if (ImGui.Checkbox("Use The End UI", ref isUseTheEndUI))
+                        courseInfo.IsUseTheEndUI = isUseTheEndUI;
+                }
+            }
         }
     }
-}
+

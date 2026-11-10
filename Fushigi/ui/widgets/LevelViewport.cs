@@ -11,11 +11,11 @@ using Fushigi.ui.SceneObjects.bgunit;
 using Fushigi.ui.undo;
 using Fushigi.util;
 using ImGuiNET;
+using Microsoft.Msagl.Layout.LargeGraphLayout;
 using Silk.NET.OpenGL;
 using System.Data;
 using System.Drawing;
 using System.Numerics;
-using System.Security.AccessControl;
 using static Fushigi.course.CourseUnit;
 
 
@@ -471,6 +471,7 @@ namespace Fushigi.ui.widgets
 
             }
 
+            BGUnitRail.RailPoint.selectRailPoints(ctx);
         }
         public void DrawWM(Vector2 size, double deltaSeconds, IDictionary<string, bool> layersVisibility)
         {
@@ -612,6 +613,8 @@ namespace Fushigi.ui.widgets
                     mEditContext.Select(newSelection);
                     newSelection.Clear();
                 }
+
+                BGUnitRail.RailPoint.selectRailPoints(mEditContext);
             }
 
             if (IsViewportHovered || IsViewportActive)
@@ -680,31 +683,28 @@ namespace Fushigi.ui.widgets
                         return render;
                     }
 
-                    var skin = mArea.mAreaParams.SkinParam;
-                    string? fieldASkin = skin.Convert(skin?.FieldA);
-                    string? fieldBSkin = skin.Convert(skin?.FieldB);
 
                     if (updateSkinA)
-                {
-                    TileBfresRenderFieldA = null;
-                    //BfresCache.Clear();
-                    updateSkinA = false;
-                }
-                
-                if(updateSkinB)
-                {
-                    TileBfresRenderFieldB = null;
-                    //BfresCache.Clear();
-                    updateSkinB = false;
-                }
-
-                    if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
                     {
-                        TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
+                        TileBfresRenderFieldA = null;
+                        //BfresCache.Clear();
+                        updateSkinA = false;
                     }
-                    if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
+                
+                    if(updateSkinB)
                     {
-                        TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
+                        TileBfresRenderFieldB = null;
+                        //BfresCache.Clear();
+                        updateSkinB = false;
+                    }
+
+                    if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldASkin))
+                    {
+                        TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, mArea.mAreaParams.fieldASkin);
+                    }
+                    if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldBSkin))
+                    {
+                        TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, mArea.mAreaParams.fieldBSkin);
                     }
 
                     if (!hasInitialized)
@@ -907,8 +907,6 @@ namespace Fushigi.ui.widgets
                 return render;
             }
             var skin = mArea.mAreaParams.SkinParam;
-            string? fieldASkin = skin.Convert(skin?.FieldA);
-            string? fieldBSkin = skin.Convert(skin?.FieldB);
 
             if (updateSkinA)
             {
@@ -924,13 +922,13 @@ namespace Fushigi.ui.widgets
                 updateSkinB = false;
             }
 
-            if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(fieldASkin))
+            if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldASkin))
             {
-                TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, fieldASkin);
+                TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, mArea.mAreaParams.fieldASkin);
             }
-            if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(fieldBSkin))
+            if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldBSkin))
             {
-                TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, fieldBSkin);
+                TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, mArea.mAreaParams.fieldBSkin);
 
             }
 
@@ -1202,46 +1200,46 @@ namespace Fushigi.ui.widgets
             return result;
         }
 
-        public static void Lava(CourseActor actor)
-        {
-            actor.mActorPack.ModelExpandParamRef = new();
-            var param = actor.mActorPack.ModelExpandParamRef;
+        //public static void Lava(CourseActor actor)
+        //{
+        //    actor.mActorPack.ModelExpandParamRef = new();
+        //    var param = actor.mActorPack.ModelExpandParamRef;
 
-            param.Settings = new List<ModelExpandParamSettings>
-            {
-                new ModelExpandParamSettings
-                {
-                    mModelKeyName = "",
-                    mMinScale = new Vector2(1.0f, 1.0f),
-                    mBoneSetting = new()
-                    {
-                        BoneInfoList = new()
-                        {
-                            new()
-                            {
-                                mBoneName = "JointRoot",
-                                mCalcType = "ActorScaleDiv4",
-                                mIsCustomCalc = true,
-                                mCustomCalc = new() { A = 0.0f, B = 4.0f },
-                                mScalingType = "XYAxis"
-                            }
-                        }
-                    },
-                    mMatSetting = new()
-                    {
-                        MatInfoList = new()
-                        {
-                            new()
-                            {
-                                mMatNameSuffix = "BoxWallMat",
-                                mCalcType = "ActorScaleMinus2",
-                                mScalingType = "XYAxis"
-                            }
-                        }
-                    }
-                }
-            };
-        }
+        //    param.Settings = new List<ModelExpandParamSettings>
+        //    {
+        //        new ModelExpandParamSettings
+        //        {
+        //            mModelKeyName = "",
+        //            mMinScale = new Vector2(1.0f, 1.0f),
+        //            mBoneSetting = new()
+        //            {
+        //                BoneInfoList = new()
+        //                {
+        //                    new()
+        //                    {
+        //                        mBoneName = "JointRoot",
+        //                        mCalcType = "ActorScaleDiv4",
+        //                        mIsCustomCalc = true,
+        //                        mCustomCalc = new() { A = 0.0f, B = 4.0f },
+        //                        mScalingType = "XYAxis"
+        //                    }
+        //                }
+        //            },
+        //            mMatSetting = new()
+        //            {
+        //                MatInfoList = new()
+        //                {
+        //                    new()
+        //                    {
+        //                        mMatNameSuffix = "BoxWallMat",
+        //                        mCalcType = "ActorScaleMinus2",
+        //                        mScalingType = "XYAxis"
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    };
+        //}
         private void ActorModelExpand(CourseActor actor, BfresRender.BfresModel model, string modelKeyName = "")
         {
             //Model Expand Param
@@ -1282,10 +1280,10 @@ namespace Fushigi.ui.widgets
                 }
                 else
                 {
-                    matScale = ExpandCalcTypes(matParam.mCalcType, clampedActorScale);
+                    matScale = ExpandCalcTypes(Ounce.Convert(matParam.mCalcType, Ounce.ActorNames), clampedActorScale);
                 }
 
-                matScale = ExpandScaleTypes(matParam.mScalingType, matScale);
+                matScale = ExpandScaleTypes(Ounce.Convert(matParam.mScalingType, Ounce.ActorNames), matScale);
 
                 matScale.X = Math.Max(matScale.X, 0);
                 matScale.Y = Math.Max(matScale.Y, 0);
@@ -1302,6 +1300,7 @@ namespace Fushigi.ui.widgets
 
             foreach (var boneParam in setting.mBoneSetting?.BoneInfoList ?? [])
             {
+
                 Vector2 boneScale;
                 if (boneParam.mIsCustomCalc)
                 {
@@ -1311,16 +1310,17 @@ namespace Fushigi.ui.widgets
                 }
                 else
                 {
-                    boneScale = ExpandCalcTypes(boneParam.mCalcType, clampedActorScale);
+                    boneScale = ExpandCalcTypes(Ounce.Convert(boneParam.mCalcType, Ounce.ActorNames), clampedActorScale);
                 }
 
-                boneScale = ExpandScaleTypes(boneParam.mScalingType, boneScale);
+                boneScale = ExpandScaleTypes(Ounce.Convert(boneParam.mScalingType, Ounce.ActorNames), boneScale);
 
                 boneScale.X = Math.Max(boneScale.X, 0);
                 boneScale.Y = Math.Max(boneScale.Y, 0);
 
                 boneScaleLookup[boneParam.mBoneName] = new Vector3(boneScale, 1);
             }
+            
 
             var rootMatrix = Matrix4x4.CreateScale(
                 1 / actor.mScale.X,
@@ -1940,8 +1940,7 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginPopup("ViewportContextMenu"))
             {
-                bool showCopyDelete = mEditContext.GetSelectedObjects<CourseActor>().ToArray().Length >= 1;
-                if (showCopyDelete)
+                if (mEditContext.GetSelectedObjects<CourseActor>().ToArray().Length >= 1)
                 {
                     if (ImGui.MenuItem("Copy"))
                         copyContext = true;
@@ -1953,7 +1952,7 @@ namespace Fushigi.ui.widgets
                     pasteContext = true;
 
 
-                if (showCopyDelete)
+                if (mEditContext.IsAnySelected<CourseActor>() || mEditContext.IsAnySelected<CourseRail.CourseRailPoint>())
                 {
                     ImGui.Separator();
                     if (ImGui.MenuItem("Delete"))
@@ -1974,7 +1973,6 @@ namespace Fushigi.ui.widgets
                     mUnitRails = mEditContext.GetSelectedObjects<BGUnitRail>().ToArray();
 
 
-
                 if (mUnitRails != null && mUnitRails.Count() > 0)
                 {
                     ImGui.Separator();
@@ -1990,8 +1988,18 @@ namespace Fushigi.ui.widgets
                         if (ImGui.MenuItem("Delete Unit"))
                             DeleteUnit();
 
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Select All points"))
+                            BGUnitRailSceneObj.SelectAllPoints(mEditContext, mEditContext.GetFirstObjectOfType<BGUnitRail.RailPoint>());
+
                         ImGui.EndMenu();
                     }
+                }
+
+                if(mEditContext.GetObjectCountOfType<CourseRail.CourseRailPoint>() > 0)
+                {
+                    if (ImGui.MenuItem("Select All points"))
+                        CourseRail.SelectAllPoints(mEditContext, mEditContext.GetFirstObjectOfType<CourseRail.CourseRailPoint>());
                 }
 
                 if (mEditContext.GetObjectCountOfType<CourseActor>() > 0 && !mEditContext.IsAnySelected<BGUnitRail>())
@@ -2198,42 +2206,20 @@ namespace Fushigi.ui.widgets
 
         public void DeleteUnit()
         {
-            bool deleteWall = false;
-            var unitToSel = new CourseUnit();
-            CourseUnitHolder unitHolder = mArea.mUnitHolder;
-            foreach (var unit in unitHolder.mUnits)
+            var batchAction = mEditContext.BeginBatchAction();
+            foreach (var unit in mArea.mUnitHolder.mUnits)
             {
+                for (int i = unit.Walls.Count - 1; i >= 0; i--)
+                    if (mEditContext.IsSelected(unit.Walls[i].ExternalRail))
+                        mEditContext.DeleteWall(unit, unit.Walls[i]);
 
-                mEditContext.WithSuspendUpdateDo(() =>
-                {
+                for (int i = unit.mBeltRails.Count - 1; i >= 0; i--)
+                    if (mEditContext.IsSelected(unit.mBeltRails[i]))
+                        mEditContext.DeleteBeltRail(unit, unit.mBeltRails[i]);
 
-                    for (int i = unit.Walls.Count - 1; i >= 0; i--)
-                    {
-                        if (mEditContext.IsSelected(unit.Walls[i].ExternalRail))
-                        {
-                            mEditContext.DeleteWall(unit, unit.Walls[i]);
-                            deleteWall = true;
-                            unitToSel = unit;
-                        }
-
-                    }
-
-                    for (int i = unit.mBeltRails.Count - 1; i >= 0; i--)
-                    {
-                        if (mEditContext.IsSelected(unit.mBeltRails[i]))
-                        {
-                            mEditContext.DeleteBeltRail(unit, unit.mBeltRails[i]);
-                            deleteWall = true;
-                            unitToSel = unit;
-                        }
-                    }
-                });
+                BGUnitRailSceneObj.rebuildUnit(unit);
             }
-            if (deleteWall)
-            {
-                mEditContext.DeselectAll();
-                mEditContext.Select(unitToSel);
-            }
+            batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Rail");
         }
         #endregion
 

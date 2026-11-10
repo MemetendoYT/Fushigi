@@ -79,11 +79,9 @@ namespace Fushigi
 
         public static byte[] GetFileBytes(string path)
         {
-            if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs")))
-            {
+            if (Ounce.isOunce)
                 path = "Pack/Bootup.Nin_Ounce_NVN2.pack.zs";
-                Ounce.isOunce = true;
-            }
+            
 
                 Logger.Logger.LogMessage("RomFS", $"GetFileBytes() -- {path}");
             if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), path)))
@@ -127,13 +125,16 @@ namespace Fushigi
             }
             string[] loadFiles;
 
-            if (Path.Exists(Path.Combine(UserSettings.GetModRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs")))
+            if (Path.Exists(Path.Combine(UserSettings.GetRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs")))
             {
                 Ounce.isOunce = true;
             }
 
             if (Ounce.isOunce)
+            {
                 loadFiles = GetOrLoadBootUpPack().GetFiles("Stage/WorldMapInfo");
+                Array.Reverse(loadFiles);
+            }
             else
                 loadFiles = GetFiles(Path.Combine("Stage", "WorldMapInfo"));
 

@@ -607,9 +607,9 @@ namespace Fushigi.env
         {
             public object LocationType { get; set; }
 
-            public string WeatherType { get; set; }
+            public object WeatherType { get; set; }
 
-            public string WonderType { get; set; }
+            public object WonderType { get; set; }
 
 
             public BymlHashTable Serialize()

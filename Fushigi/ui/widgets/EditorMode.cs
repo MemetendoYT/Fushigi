@@ -49,12 +49,6 @@ namespace Fushigi.ui.widgets
                     editMode = "Collision";
                 }
 
-     
-                if (ImGui.Button("Save Data Editor"))
-                {
-                    editMode = "SaveData";
-                }
-
 
             }
 

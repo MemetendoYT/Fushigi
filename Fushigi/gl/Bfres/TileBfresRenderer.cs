@@ -58,36 +58,23 @@ namespace Fushigi.gl.Bfres
             BridgeModel?.Dispose();
             BridgeModel = CreateModel(gl, bridgeInfo);
         }
-        private static Model CreateModel(GL gl, BgUnitInfo bgUnitInfo, string fart)
-        {
-            var modelInfo = bgUnitInfo.GetModelInfo();
-            var materialNames = bgUnitInfo.GetMaterialNames();
-
-            var render = new BfresRender(BfresCache.Load(gl, modelInfo.bfresName));
-            var model = render.Models[modelInfo.modelName];
-
-
-            return new Model(gl, render, model, new MaterialNames(
-                    Edge: materialNames.GetValueOrDefault("Edge"),
-                    Wall: materialNames.GetValueOrDefault("Wall"),
-                    Ground: materialNames.GetValueOrDefault("Belt")
-                ));
-        }
-
-
+   
         private static Model CreateModel(GL gl, BgUnitInfo bgUnitInfo)
         {
             var modelInfo = bgUnitInfo.GetModelInfo();
-            var materialNames = bgUnitInfo.GetMaterialNames();
-
-
+            var materialNames = bgUnitInfo.GetMaterialNames().ToDictionary(x => Ounce.Convert(x.Key, Ounce.ActorNames), x => x.Value);
+       
             var render = new BfresRender(BfresCache.Load(gl, modelInfo.bfresName));
             var model = render.Models[modelInfo.modelName];
+
+            Console.WriteLine($"[Tile] {modelInfo.modelName} attrs: {string.Join(", ", materialNames.Select(x => $"{x.Key}={x.Value}"))}");
+            Console.WriteLine($"[Tile] {modelInfo.modelName} mats: {string.Join(", ", render.Models[modelInfo.modelName].Meshes.Select(m => m.MaterialRender.Name))}");
+
 
             return new Model(gl, render, model, new MaterialNames(
                     Edge: materialNames.GetValueOrDefault("Edge"),
                     Wall: materialNames.GetValueOrDefault("Wall"),
-                    Ground: materialNames.GetValueOrDefault("Belt")
+                    Ground: materialNames.GetValueOrDefault("Ground") ?? materialNames.GetValueOrDefault("Belt")
                 ));
         }
 

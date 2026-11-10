@@ -68,6 +68,7 @@ namespace Fushigi.course
             /* grab our course information file */
             Byml.Byml courseInfo = new Byml.Byml(new MemoryStream(FileUtil.DecompressFile(courseFilePath)));
             Byml.Byml stageParam;
+
             if (Ounce.isOunce && IsWorldMap)
             {
                 var packPath = $"Stage/StageParam/{mCourseName}.game__stage__StageParam.bgyml";
@@ -77,7 +78,6 @@ namespace Fushigi.course
             {
                 stageParam = new Byml.Byml(new MemoryStream(File.ReadAllBytes(stageParamFilePath)));
             }
-
 
             var stageParamRoot = (BymlHashTable)stageParam.Root;
             var root = (BymlHashTable)courseInfo.Root;

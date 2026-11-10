@@ -600,7 +600,7 @@ namespace Fushigi.ui.widgets
                     EnvPalette.Info.WeatherType = "None";
                 }
                 else
-                    value = EnvPalette.Info.WeatherType;
+                    value = (string)EnvPalette.Info.WeatherType;
 
                 index = WeatherType.Values.ToList().IndexOf(value);
                 ImGui.Text("Weather Type");
@@ -613,7 +613,7 @@ namespace Fushigi.ui.widgets
                     EnvPalette.Info.WonderType = "None";
                 }
                 else
-                    value = EnvPalette.Info.WonderType;
+                    value = (string)EnvPalette.Info.WonderType;
 
 
                 index = WonderType.Values.ToList().IndexOf(value);

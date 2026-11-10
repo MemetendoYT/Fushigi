@@ -1,5 +1,6 @@
 ﻿using Fushigi.Byml;
 using Fushigi.course.terrain_processing;
+using Fushigi.ui;
 using Fushigi.util;
 using System.Numerics;
 using Vector3 = System.Numerics.Vector3;
@@ -252,6 +253,15 @@ namespace Fushigi.course
             {
                 mRail = rail;
                 mTranslation = position;
+            }
+
+            internal static void selectRailPoints(CourseAreaEditContext mEditContext)
+            {
+                foreach (var point in mEditContext.GetSelectedObjects<RailPoint>().ToList())
+                {
+                    if (!mEditContext.IsSelected(point.mRail))
+                        mEditContext.Select(point.mRail);
+                }
             }
         }
     }

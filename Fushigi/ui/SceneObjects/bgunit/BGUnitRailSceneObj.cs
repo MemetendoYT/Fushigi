@@ -180,14 +180,6 @@ namespace Fushigi.ui.SceneObjects.bgunit
         {
             BGUnitRail.RailPoint point = null;
 
-            if (ctx.IsAnySelected<BGUnitRail.RailPoint>())
-            {
-                point = ctx.GetFirstObjectOfType<BGUnitRail.RailPoint>();
-
-                if (point != null)
-                    ctx.Select(point.mRail);
-            }
-
             bool isNewHoveredObj = false;
             addPointPos = EvaluateAddPointPos(ctx, viewport, rail);
 
@@ -348,6 +340,12 @@ namespace Fushigi.ui.SceneObjects.bgunit
         }
 
 
+        public static void SelectAllPoints(CourseAreaEditContext ctx, BGUnitRail.RailPoint point)
+        {
+                foreach (var newPoint in point.mRail.Points)
+                    ctx.Select(newPoint);       
+        }
+
         public static void DrawBGUnitPoints(CourseAreaEditContext ctx, LevelViewport viewport, ImDrawListPtr dl, BGUnitRail.RailPoint point)
         {
             Vector2 pos2D = viewport.WorldToScreen(point.mTranslation);
@@ -379,10 +377,7 @@ namespace Fushigi.ui.SceneObjects.bgunit
             }
 
             if (ImGui.IsKeyPressed(ImGuiKey.A) && ImGui.GetIO().KeyCtrl && ctx.IsSelected(point))
-            {
-                foreach (var newPoint in point.mRail.Points)
-                    ctx.Select(newPoint);
-            }
+                SelectAllPoints(ctx, point);
         }
     }
 }

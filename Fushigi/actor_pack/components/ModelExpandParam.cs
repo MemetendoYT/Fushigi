@@ -60,13 +60,13 @@ namespace Fushigi.actor_pack.components
         public string mBoneName { get; set; }
 
         [BymlProperty("CalcType", DefaultValue = "")]
-        public string mCalcType { get; set; }
+        public object mCalcType { get; set; }
 
         [BymlProperty("CalcType2", DefaultValue = "")]
-        public string mCalcTypeB { get; set; }
+        public object mCalcTypeB { get; set; }
 
         [BymlProperty("ScalingType", DefaultValue = "")]
-        public string mScalingType { get; set; }
+        public object mScalingType { get; set; }
 
         [BymlProperty("CustomCalc")]
         public CustomCalc mCustomCalc { get; set; }
@@ -97,13 +97,13 @@ namespace Fushigi.actor_pack.components
         public string mMatNameSuffix { get; set; }
 
         [BymlProperty("CalcType", DefaultValue = "")]
-        public string mCalcType { get; set; }
+        public object mCalcType { get; set; }
 
         [BymlProperty("CalcType2", DefaultValue = "")]
-        public string mCalcTypeB { get; set; }
+        public object mCalcTypeB { get; set; }
 
         [BymlProperty("ScalingType", DefaultValue = "")]
-        public string mScalingType { get; set; }
+        public object mScalingType { get; set; }
 
         [BymlProperty("CustomCalc")]
         public CustomCalc mCustomCalc { get; set; }

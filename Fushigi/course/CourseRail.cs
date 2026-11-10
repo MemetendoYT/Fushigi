@@ -404,6 +404,11 @@ namespace Fushigi.course
             viewport.mHoveredObject = newPoint;
         }
 
+        internal static void SelectAllPoints(CourseAreaEditContext ctx, CourseRailPoint point)
+        {
+            foreach (var newPoint in point.mParent.mPoints)
+                ctx.Select(newPoint);
+        }
         public void RegenerateParameters()
         {
             this.mParameters = new Dictionary<string, object>();

@@ -770,16 +770,8 @@ namespace Fushigi.ui.widgets
                         ImGui.SameLine();
 
                         if (ImGui.Button("Remove Wall") || (ImGui.IsKeyPressed(ImGuiKey.Delete) && ImGui.GetIO().KeyShift))
-                        {
-                            var batchAction = mEditContext.BeginBatchAction();
-                            foreach (var rail in mEditContext.GetSelectedObjects<BGUnitRail>())
-                            {
-                                mEditContext.CommitAction(new TileRebuildRevertable(rail.mCourseUnit));
-                                editContext.DeleteWall(unit, unit.Walls[rail.mIndex]);
-                                BGUnitRailSceneObj.rebuildUnit(rail.mCourseUnit);
-                            }
-                            batchAction.Commit($"{IconUtil.ICON_TRASH} Delete Wall");
-                        }
+                            activeViewport.DeleteUnit();
+                        
 
                         for (int iWall = 0; iWall < unit.Walls.Count; iWall++)
                         {
@@ -873,12 +865,7 @@ namespace Fushigi.ui.widgets
                         }
                         ImGui.SameLine();
                         if (ImGui.Button("Remove Belt"))
-                        {
-                            foreach (var rail in mEditContext.GetSelectedObjects<BGUnitRail>())
-                            {
-                                editContext.DeleteBeltRail(unit, unit.mBeltRails[rail.mIndex]);
-                            }
-                        }
+                            activeViewport.DeleteUnit();
 
                         for (int iBeltRail = 0; iBeltRail < unit.mBeltRails.Count; iBeltRail++)
                         {
@@ -2234,8 +2221,8 @@ namespace Fushigi.ui.widgets
                 SelectedActor(mSelectedActor);
             else if (editContext.IsSingleObjectSelected(out CourseUnit? mSelectedUnit))
                 SelectedUnit(mSelectedUnit);
-            else if (editContext.IsSingleObjectSelected(out BGUnitRail? mSelectedUnitRail))
-                SelectedUnitRail(mSelectedUnitRail);
+            else if (CanSelectUnitRail())
+                SelectedUnitRail(editContext.GetFirstObjectOfType<BGUnitRail>());
             else if (editContext.IsSingleObjectSelected(out CourseRail? mSelectedRail))
                 SelectedRail(mSelectedRail);
             else if (editContext.IsSingleObjectSelected(out CourseRail.CourseRailPoint? mSelectedRailPoint) ||
@@ -2248,6 +2235,13 @@ namespace Fushigi.ui.widgets
 
             if (status)
                 ImGui.End();
+        }
+
+        public bool CanSelectUnitRail()
+        {
+            return mEditContext.IsSingleObjectSelected(out BGUnitRail? _) ||
+            (mEditContext.GetObjectCountOfType<BGUnitRail>() == 1 &&
+            mEditContext.GetObjectCountOfType<BGUnitRail.RailPoint>() == 1);
         }
 
         private void SelectedMultiple()
