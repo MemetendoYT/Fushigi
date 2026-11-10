@@ -24,12 +24,6 @@ namespace Fushigi.course
     {
         [BymlProperty("$parent")]
         public string parent { get; set; }
-
-        public string fieldASkin;
-
-        public string fieldBSkin;
-
-        public string objectSkin;
         public string EnvSetName { get; set; }
         public string BgmType { get; set; }
         public string WonderBgmType { get; set; }
@@ -82,9 +76,10 @@ namespace Fushigi.course
                         p.SetValue(SkinParam, p.GetValue(par.SkinParam));
             }
 
-            SkinParam.FieldA = fieldASkin = parseSkin(SkinParam.FieldA);
-            SkinParam.FieldB = fieldBSkin = parseSkin(SkinParam.FieldB);
-            SkinParam.Object = objectSkin = parseSkin(SkinParam.Object);
+            Console.WriteLine(SkinParam.FieldA);
+            SkinParam.FieldA = parseSkin(SkinParam.FieldA);
+            SkinParam.FieldB = parseSkin(SkinParam.FieldB);
+            SkinParam.Object = parseSkin(SkinParam.Object);
         }
 
         public static string parseSkin(object parsedSkin)
@@ -261,34 +256,6 @@ namespace Fushigi.course
             public object FieldB { get; set; } = "";
             public object Object { get; set; } = "";
 
-
-
-        
-            public BymlHashTable Serialize()
-            {
-                BymlHashTable skinParam = new();
-
-                //string fieldA = Convert(FieldA);
-                //string fieldB = Convert(FieldB);
-                //string obj = Convert(Object);
-
-                string fieldA = "";
-                string fieldB = "";
-                string obj = "";
-
-                if (fieldA != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(fieldA), "FieldA");
-
-                if (fieldB != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(fieldB), "FieldB");
-
-                if (obj != "")
-                    skinParam.AddNode(BymlNodeId.String, BymlUtil.CreateNode<string>(obj), "Object");
-
-                skinParam.AddNode(BymlNodeId.Bool, BymlUtil.CreateNode<bool>(DisableBgUnitDecoA), "DisableBgUnitDecoA");
-
-                return skinParam;
-            }
         }
     }
 }

@@ -698,13 +698,13 @@ namespace Fushigi.ui.widgets
                         updateSkinB = false;
                     }
 
-                    if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldASkin))
+                    if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty((string)mArea.mAreaParams.SkinParam.FieldA))
                     {
-                        TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, mArea.mAreaParams.fieldASkin);
+                        TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, (string)mArea.mAreaParams.SkinParam.FieldA);
                     }
-                    if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldBSkin))
+                    if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty((string)mArea.mAreaParams.SkinParam.FieldB))
                     {
-                        TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, mArea.mAreaParams.fieldBSkin);
+                        TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, (string)mArea.mAreaParams.SkinParam.FieldB);
                     }
 
                     if (!hasInitialized)
@@ -922,14 +922,13 @@ namespace Fushigi.ui.widgets
                 updateSkinB = false;
             }
 
-            if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldASkin))
+            if (TileBfresRenderFieldA == null && !string.IsNullOrEmpty((string)mArea.mAreaParams.SkinParam.FieldA))
             {
-                TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, mArea.mAreaParams.fieldASkin);
+                TileBfresRenderFieldA = CreateTileRendererForSkin(SkinDivision.FieldA, (string)mArea.mAreaParams.SkinParam.FieldA);
             }
-            if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty(mArea.mAreaParams.fieldBSkin))
+            if (TileBfresRenderFieldB == null && !string.IsNullOrEmpty((string)mArea.mAreaParams.SkinParam.FieldB))
             {
-                TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, mArea.mAreaParams.fieldBSkin);
-
+                TileBfresRenderFieldB = CreateTileRendererForSkin(SkinDivision.FieldB, (string)mArea.mAreaParams.SkinParam.FieldB);
             }
 
             if (!hasInitialized)
