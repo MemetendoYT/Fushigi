@@ -323,8 +323,6 @@ namespace Fushigi.ui.widgets
             {
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-
-
                 // Level Name
 
                 //ImGui.Text("Level Name");

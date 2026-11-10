@@ -76,7 +76,6 @@ namespace Fushigi.course
                         p.SetValue(SkinParam, p.GetValue(par.SkinParam));
             }
 
-            Console.WriteLine(SkinParam.FieldA);
             SkinParam.FieldA = parseSkin(SkinParam.FieldA);
             SkinParam.FieldB = parseSkin(SkinParam.FieldB);
             SkinParam.Object = parseSkin(SkinParam.Object);

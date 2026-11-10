@@ -49,18 +49,23 @@ namespace Fushigi.course
 
             var courseFilePath = "";
             Byml.Byml byml;
-
+            var test = "";
             if (Ounce.isOunce)
             {
                 courseFilePath = $"Stage/CourseInfo/{name}.game__stage__CourseInfo.bgyml";
                 byml = new Byml.Byml(new MemoryStream(RomFS.GetOrLoadBootUpPack().OpenFile(courseFilePath)));
+                test = "A";
             }
             else
             {
                 courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "CourseInfo", $"{name}.game__stage__CourseInfo.bgyml"));
                 byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
+                test = "B";
             }
 
+            Console.WriteLine(Ounce.isOunce + " " + test);
+            Console.WriteLine(name);
+            Console.WriteLine(courseFilePath);
             this.Load((BymlHashTable)byml.Root);
         }
 
