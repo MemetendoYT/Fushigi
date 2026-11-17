@@ -9,6 +9,21 @@ namespace Fushigi.util
 {
     public class FileUtil
     {
+        public static void SaveSarc(SARC.SARC sarc, string path)
+        {
+            var output = new MemoryStream();
+            sarc.Write(output);
+            byte[] data = output.ToArray();
+
+            if (path.EndsWith(".zs"))
+            {
+                data = CompressData(data, 3);
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            File.WriteAllBytes(path, data);
+        }
+
         public static string FindContentPath(string path)
         {
             //Check for mod folder, then fall to romfs path
@@ -94,11 +109,11 @@ namespace Fushigi.util
             }
         }
 
-        public static byte[] CompressData(byte[] fileBytes)
+        public static byte[] CompressData(byte[] fileBytes, int compressAmount = 19)
         {
             byte[] compressedData;
             
-            using (var compressor = new ZstdSharp.Compressor(19))
+            using (var compressor = new ZstdSharp.Compressor(compressAmount))
             {
                 compressedData = compressor.Wrap(new System.Span<byte>(fileBytes)).ToArray();
             }

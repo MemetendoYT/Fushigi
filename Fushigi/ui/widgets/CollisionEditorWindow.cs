@@ -853,7 +853,6 @@ namespace Fushigi.ui.widgets
 
             if (ImGui.BeginTable("##ActorsAndLayers", 1))
             {
-                int i = 0;
                 foreach (string actor in filteredActors)
                 {
                     ImGui.TableNextRow();

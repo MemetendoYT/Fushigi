@@ -2,6 +2,7 @@
 using Fushigi.Byml;
 using Fushigi.Byml.Serializer;
 using Fushigi.rstb;
+using Fushigi.SARC;
 using Fushigi.util;
 using System;
 using System.Collections.Generic;
@@ -54,18 +55,13 @@ namespace Fushigi.course
             {
                 courseFilePath = $"Stage/CourseInfo/{name}.game__stage__CourseInfo.bgyml";
                 byml = new Byml.Byml(new MemoryStream(RomFS.GetOrLoadBootUpPack().OpenFile(courseFilePath)));
-                test = "A";
             }
             else
             {
                 courseFilePath = FileUtil.FindContentPath(Path.Combine("Stage", "CourseInfo", $"{name}.game__stage__CourseInfo.bgyml"));
                 byml = new Byml.Byml(new MemoryStream(File.ReadAllBytes(courseFilePath)));
-                test = "B";
             }
 
-            Console.WriteLine(Ounce.isOunce + " " + test);
-            Console.WriteLine(name);
-            Console.WriteLine(courseFilePath);
             this.Load((BymlHashTable)byml.Root);
         }
 
@@ -84,7 +80,20 @@ namespace Fushigi.course
 
             //Compress and save the course area           
             string levelPath = Path.Combine(folder, $"{courseName}.game__stage__CourseInfo.bgyml");
-            File.WriteAllBytes(levelPath, mem.ToArray());
+
+            if (Ounce.isOunce)
+            {
+                string fileName = $"Stage/CourseInfo/{courseName}.game__stage__CourseInfo.bgyml";
+                string packPath = Path.Combine(UserSettings.GetModRomFSPath(), "Pack/Bootup.Nin_Ounce_NVN2.pack.zs");
+
+                SARC.SARC pack = RomFS.GetOrLoadBootUpPack();
+                pack.SetFile(fileName, mem.ToArray());
+                FileUtil.SaveSarc(pack, packPath);
+            }
+            else
+            {
+                File.WriteAllBytes(levelPath, mem.ToArray());
+            }
 
             //Update resource table
             // filePath is a key not an actual path so we cannot use Path.Combine

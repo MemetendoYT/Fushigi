@@ -132,6 +132,10 @@ namespace Fushigi.ui.widgets
                     ImGui.EndTabBar();
                 }
 
+                if (ImGui.IsAnyItemActive() && ImGui.IsWindowFocused(ImGuiFocusedFlags.RootAndChildWindows))                
+                    CourseSave.saveStatus = false;
+
+
                 ImGui.End();
             }
 
