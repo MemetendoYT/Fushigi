@@ -39,7 +39,8 @@ namespace Fushigi.course
         public string PlayerRhythmJumpBadgeTiming { get; set; }
         public string WonderEnvironmentSoundEfx { get; set; }
         public string EnvironmentSoundEfx { get; set; }
-        //public string DynamicResolutionQuality { get; set; }
+        
+        public string DynamicResolutionQuality { get; set; }
         public bool IsInvisibleDeadLine { get; set; }
         public bool IsWaterArea { get; set; }
         public string WonderSEKeyForTag { get; set; }

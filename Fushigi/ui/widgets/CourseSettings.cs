@@ -1,4 +1,5 @@
 ﻿using Fushigi.course;
+using Fushigi.ui.helpers;
 using Fushigi.ui.modal;
 using ImGuiNET;
 using System.Numerics;
@@ -383,7 +384,6 @@ namespace Fushigi.ui.widgets
                 }
 
                 // DemoCourseKind
-                {
                     ImGui.Text("Demo Course Type");
                     ImGui.TableNextColumn();
 
@@ -394,35 +394,18 @@ namespace Fushigi.ui.widgets
                         courseInfo.DemoCourseKind = DemoCourseKind.Keys.ToArray()[indexDemoCourseType];
 
                     ImGui.TableNextColumn();
-                }
 
                 // RaceCourseType
-                {
-                    ImGui.Text("Race Course Type");
-                    ImGui.TableNextColumn();
                     var raceCourseType = Ounce.Convert(courseInfo.RaceCourseType, Ounce.CourseInfoNames);
-                    if (ImGui.InputText("##RaceCourseType", ref raceCourseType, 1024))
-                    {
+                    if (ImguiHelper.DrawDropdown("Race Course Type", ref raceCourseType, StringParamList.RaceCourseType))
                         courseInfo.RaceCourseType = raceCourseType;
-                    }
-
-                    ImGui.TableNextColumn();
-                }
 
                 // StartEventName
                 if (stageLoadInfo != null)
                 {
-                    {
-                        ImGui.Text("Level Intro Event");
-                        ImGui.TableNextColumn();
-                        var startEventName = stageLoadInfo.StartEventName is null ? "" : stageLoadInfo.StartEventName;
-                        if (ImGui.InputText("##CourseStartXLinkKey", ref startEventName, 1024))
-                        {
-                            stageLoadInfo.StartEventName = startEventName;
-                        }
-
-                        ImGui.TableNextColumn();
-                    }
+                    string startEventName = stageLoadInfo.StartEventName ?? "";
+                    if (ImguiHelper.DrawDropdown("Level Intro Event", ref startEventName, StringParamList.StartEventName))
+                        stageLoadInfo.StartEventName = startEventName == "" ? null : startEventName;
                 }
 
                 ImGui.EndTable();
@@ -436,7 +419,6 @@ namespace Fushigi.ui.widgets
                 ImGui.TableSetColumnIndex(0);
 
                 // CourseTimer
-                {
                     ImGui.Text("Course Timer");
                     ImGui.TableNextColumn();
 
@@ -448,10 +430,8 @@ namespace Fushigi.ui.widgets
                     ImGui.SetItemTooltip("Unused course timer.");
 
                     ImGui.TableNextColumn();
-                }
 
                 // CourseTimerType
-                {
                     ImGui.Text("Course Timer Type");
                     ImGui.TableNextColumn();
 
@@ -460,70 +440,53 @@ namespace Fushigi.ui.widgets
 
                     if (ImGui.Combo("##CoursePlayerMorphType", ref indexTimerType, CourseTimerType.Values.ToArray(), CourseTimerType.Count(), 5))
                         courseInfo.CourseTimerType = CourseTimerType.Keys.ToArray()[indexTimerType];
-                }
 
                 ImGui.EndTable();
             }
 
             // IsCourseTimerAutoStart
-            {
                 var isCourseTimerAutoStart = courseInfo.IsCourseTimerAutoStart;
 
                 if (ImGui.Checkbox("Auto Start Course Timer", ref isCourseTimerAutoStart))
                     courseInfo.IsCourseTimerAutoStart = isCourseTimerAutoStart;
-            }
-
-            //ImGui.Separator();
 
             // IsExistBigTenLuckyCoin
-            {
                 var isExistTenLuckyCoin = mapAnalysisInfo.IsExistBigTenLuckyCoin;
 
                 if (ImGui.Checkbox("Course has purple 10-Coin", ref isExistTenLuckyCoin))
                     mapAnalysisInfo.IsExistBigTenLuckyCoin = isExistTenLuckyCoin;
-            }
 
             // IsExistBlockSurprise
-            {
                 var isExistBlockSurprise = mapAnalysisInfo.IsExistBlockSurprise;
 
                 if (ImGui.Checkbox("Course has yellow !-Blocks", ref isExistBlockSurprise))
                     mapAnalysisInfo.IsExistBlockSurprise = isExistBlockSurprise;
-            }
 
             // IsExistGoalPole
-            {
                 var isExistGoalPole = mapAnalysisInfo.IsExistGoalPole;
 
                 if (ImGui.Checkbox("Course has Goal Pole", ref isExistGoalPole))
                     mapAnalysisInfo.IsExistGoalPole = isExistGoalPole;
-            }
 
             // IsExistTreasureChest
-            {
                 var isExistTreasureChest = mapAnalysisInfo.IsExistTreasureChest;
 
                 if (ImGui.Checkbox("Course has Teasure Chest", ref isExistTreasureChest))
                     mapAnalysisInfo.IsExistTreasureChest = isExistTreasureChest;
-            }
 
             // IsUnlimitedBadge
-            {
                 var isUnlimitedBadge = mapAnalysisInfo.IsUnlimitedBadge;
 
                 if (ImGui.Checkbox("Is Unlimited Badge", ref isUnlimitedBadge))
                     mapAnalysisInfo.IsUnlimitedBadge = isUnlimitedBadge;
 
                 ImGui.SetItemTooltip("Never enabled.");
-            }
 
             // IsDashMiniCourse
-            {
                 var isDashMiniCourse = courseInfo.IsDashMiniCourse;
 
                 if (ImGui.Checkbox("Is Dash Break Time! Course", ref isDashMiniCourse))
                     courseInfo.IsDashMiniCourse = isDashMiniCourse;
-            }
 
             //ImGui.Separator();
 
@@ -533,7 +496,6 @@ namespace Fushigi.ui.widgets
                 ImGui.TableSetColumnIndex(0);
 
                 // CoursePlayerMorphType
-                {
                     ImGui.Text("Player Wonder Morph");
                     ImGui.TableNextColumn();
 
@@ -546,10 +508,8 @@ namespace Fushigi.ui.widgets
                     ImGui.SetItemTooltip("What the player turns into during the Wonder effect.");
 
                     ImGui.TableNextColumn();
-                }
 
                 // WonderFlowerNum
-                {
                     ImGui.Text("Number of Wonder Seeds");
                     ImGui.TableNextColumn();
 
@@ -559,10 +519,8 @@ namespace Fushigi.ui.widgets
                         mapAnalysisInfo.WonderFlowerNum = wonderFlowerNum;
 
                     ImGui.TableNextColumn();
-                }
 
                 // FinishWonderFlowerNum
-                {
                     ImGui.Text("Number of Wonder Seeds from Wonder Flowers");
                     ImGui.TableNextColumn();
 
@@ -572,26 +530,21 @@ namespace Fushigi.ui.widgets
                         mapAnalysisInfo.FinishWonderFlowerNum = finishWonderFlowerNum;
 
                     ImGui.TableNextColumn();
-                }
 
                 ImGui.EndTable();
             }
 
             // IsExistWonderFinishFlower
-            {
-                    var isExistWonderFinishFlower = mapAnalysisInfo.IsExistWonderFinishFlower;
+                var isExistWonderFinishFlower = mapAnalysisInfo.IsExistWonderFinishFlower;
 
-                    if (ImGui.Checkbox("Course has Wonder Flower", ref isExistWonderFinishFlower))
-                        mapAnalysisInfo.IsExistWonderFinishFlower = isExistWonderFinishFlower;
-                }
+                if (ImGui.Checkbox("Course has Wonder Flower", ref isExistWonderFinishFlower))
+                    mapAnalysisInfo.IsExistWonderFinishFlower = isExistWonderFinishFlower;
 
                 // IsExistWonderQuiz
-                {
                     var isExistWonderQuiz = courseInfo.IsExistWonderQuiz;
 
                     if (ImGui.Checkbox("Course has Quiz Wonder", ref isExistWonderQuiz))
                         courseInfo.IsExistWonderQuiz = isExistWonderQuiz;
-                }
 
                 //ImGui.Separator();
 
@@ -600,20 +553,12 @@ namespace Fushigi.ui.widgets
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
 
-                    // CourseStartXLinkKey
-                    {
-                        ImGui.Text("Course Start X Link Key");
-                        ImGui.TableNextColumn();
-                        var courseStartXLinkKey = courseInfo.CourseStartXLinkKey is null ? "" : courseInfo.CourseStartXLinkKey;
-                        if (ImGui.InputText("##CourseStartXLinkKey", ref courseStartXLinkKey, 1024))
-                        {
-                            courseInfo.CourseStartXLinkKey = courseStartXLinkKey;
-                        }
+                // CourseStartXLinkKey
+                    string courseStartXLinkKey = courseInfo.CourseStartXLinkKey ?? "";
+                    if (ImguiHelper.DrawDropdown("Course Start X Link Key", ref courseStartXLinkKey, StringParamList.CourseStartXLinkKey))
+                        courseInfo.CourseStartXLinkKey = courseStartXLinkKey == "" ? null : courseStartXLinkKey;
 
-                        ImGui.TableNextColumn();
-                    }
-
-                    ImGui.EndTable();
+                ImGui.EndTable();
                 }
 
                 ImGui.Separator();
@@ -638,73 +583,56 @@ namespace Fushigi.ui.widgets
                         ImGui.TableNextColumn();
                     }
 
-                    // NeedBadgeIdEnterCourse
-                    {
-                        ImGui.Text("Need Badge ID Enter Course");
-                        ImGui.TableNextColumn();
+                // NeedBadgeIdEnterCourse
+                    ImGui.Text("Need Badge ID Enter Course");
+                    ImGui.TableNextColumn();
+                    var needBadgeIdEnterCourse = Ounce.Convert(courseInfo.NeedBadgeIdEnterCourse, Ounce.CourseInfoNames);
 
-                        var needBadgeIdEnterCourse = Ounce.Convert(courseInfo.NeedBadgeIdEnterCourse, Ounce.CourseInfoNames);
+                    if (ImGui.InputText("##NeedBadgeIdEnterCourse", ref needBadgeIdEnterCourse, 1024))
+                        courseInfo.NeedBadgeIdEnterCourse = needBadgeIdEnterCourse;
+                    ImGui.TableNextColumn();
 
-                        if (ImGui.InputText("##NeedBadgeIdEnterCourse", ref needBadgeIdEnterCourse, 1024))
-                            courseInfo.NeedBadgeIdEnterCourse = needBadgeIdEnterCourse;
+                // GiveBadgeIdOnCourseClear
+                    ImGui.Text("Give Badge ID on Course Clear");
+                    ImGui.TableNextColumn();
+                    var giveBadgeIdOnCourseClear = Ounce.Convert(courseInfo.GiveBadgeIdOnCourseClear, Ounce.CourseInfoNames);
 
-                        ImGui.TableNextColumn();
-                    }
+                    if (ImGui.InputText("##GiveBadgeIdOnCourseClear", ref giveBadgeIdOnCourseClear, 1024))
+                        courseInfo.GiveBadgeIdOnCourseClear = giveBadgeIdOnCourseClear;
+                    ImGui.TableNextColumn();
 
-                    // GiveBadgeIdOnCourseClear
-                    {
-                        ImGui.Text("Give Badge ID on Course Clear");
-                        ImGui.TableNextColumn();
+                // UnlockBadgeIdOnCourseClear
+                    ImGui.Text("Unlock Badge ID on Course Clear");
+                    ImGui.TableNextColumn();
+                    var unlockBadgeIdOnCourseClear = Ounce.Convert(courseInfo.UnlockBadgeIdOnCourseClear, Ounce.CourseInfoNames);
 
-                        var giveBadgeIdOnCourseClear = Ounce.Convert(courseInfo.GiveBadgeIdOnCourseClear, Ounce.CourseInfoNames);
+                    if (ImGui.InputText("##UnlockBadgeIdOnCourseClear", ref unlockBadgeIdOnCourseClear, 1024))
+                        courseInfo.UnlockBadgeIdOnCourseClear = unlockBadgeIdOnCourseClear;
+                    ImGui.TableNextColumn();
 
-                        if (ImGui.InputText("##GiveBadgeIdOnCourseClear", ref giveBadgeIdOnCourseClear, 1024))
-                            courseInfo.GiveBadgeIdOnCourseClear = giveBadgeIdOnCourseClear;
-
-                        ImGui.TableNextColumn();
-                    }
-
-                    // UnlockBadgeIdOnCourseClear
-                    {
-                        ImGui.Text("Unlock Badge ID on Course Clear");
-                        ImGui.TableNextColumn();
-
-                        var unlockBadgeIdOnCourseClear = Ounce.Convert(courseInfo.UnlockBadgeIdOnCourseClear, Ounce.CourseInfoNames);
-
-                        if (ImGui.InputText("##UnlockBadgeIdOnCourseClear", ref unlockBadgeIdOnCourseClear, 1024))
-                            courseInfo.UnlockBadgeIdOnCourseClear = unlockBadgeIdOnCourseClear;
-
-                        ImGui.TableNextColumn();
-                    }
-
-                    ImGui.EndTable();
-                }
+                ImGui.EndTable();
+            }
 
                 // NoNeedRetrySuggestBadge
-                {
                     var noNeedRetrySuggestBadge = courseInfo.NoNeedRetrySuggestBadge;
 
                     if (ImGui.Checkbox("Don't suggest Badge before Retry", ref noNeedRetrySuggestBadge))
                         courseInfo.NoNeedRetrySuggestBadge = noNeedRetrySuggestBadge;
-                }
 
                 // IsInvisibleBadgeSetShadow
-                {
                     var isInvisibleBadgeSetShadow = courseInfo.IsInvisibleBadgeSetShadow;
 
                     if (ImGui.Checkbox("Set Shadow on Invisibility Badge", ref isInvisibleBadgeSetShadow))
                         courseInfo.IsInvisibleBadgeSetShadow = isInvisibleBadgeSetShadow;
-                }
+                
 
                 ImGui.Separator();
 
                 // IsUseTheEndUI
-                {
-                    var isUseTheEndUI = courseInfo.IsUseTheEndUI;
+                var isUseTheEndUI = courseInfo.IsUseTheEndUI;
 
-                    if (ImGui.Checkbox("Use The End UI", ref isUseTheEndUI))
-                        courseInfo.IsUseTheEndUI = isUseTheEndUI;
-                }
+                if (ImGui.Checkbox("Use The End UI", ref isUseTheEndUI))
+                    courseInfo.IsUseTheEndUI = isUseTheEndUI;
             }
         }
     }

@@ -1,4 +1,7 @@
-﻿using ImGuiNET;
+﻿using Fushigi.course;
+using Fushigi.ui.widgets;
+using ImGuiNET;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,6 +25,24 @@ namespace Fushigi.ui.helpers
             ImGui.PopStyleColor();
 
             return pressed;
+        }
+
+        public static bool DrawDropdown(string text, ref string param, Dictionary<string, string> dict)
+        {
+            bool returnVal = false;
+            ImGui.Text(text);
+            ImGui.TableSetColumnIndex(1);
+            string value = param;
+            int index = dict.Values.ToList().IndexOf(value);
+            if (ImGui.Combo($"##{text}_dropdown", ref index, dict.Keys.ToArray(), dict.Count(), 10))
+            {
+                param = dict.Values.ToArray()[index];
+
+                returnVal = true;
+            }
+
+            ImGui.TableNextColumn();
+            return returnVal;
         }
     }
 }

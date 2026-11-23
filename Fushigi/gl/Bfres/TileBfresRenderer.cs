@@ -131,7 +131,7 @@ namespace Fushigi.gl.Bfres
 
                     foreach (var (tileIDEdge, tileIDGround, position) in subUnit.GetTiles(clipMin - origin2D, clipMax - origin2D))
                     {
-                        var pos = subUnit.mOrigin + new Vector3(position, subUnit.mOrigin.Z);
+                        var pos = subUnit.mOrigin + new Vector3(position, 0);
 
                         if (tileIDEdge == 0)
                         {
@@ -207,7 +207,7 @@ namespace Fushigi.gl.Bfres
 
                         foreach (var (tileIDEdge, tileIDGround, position) in subUnit.GetTiles(clipMin - origin2D, clipMax - origin2D))
                         {
-                            var pos = subUnit.mOrigin + new Vector3(position, subUnit.mOrigin.Z);
+                            var pos = subUnit.mOrigin + new Vector3(position, 0);
                             if (tileIDEdge == 0)
                             {
                                 model.TileManager.AddWallTile(pos, 0);
@@ -478,7 +478,7 @@ namespace Fushigi.gl.Bfres
             {
                 TileBuffer.Add(new Tile()
                 {
-                    Position = new Vector3(0, 0, 2), //We tranform per quad atm
+                    Position = new Vector3(0, 0, 0), //We tranform per quad atm
                     CameraDistance = 0,
                     TileTextureID = i, //Unique texture id per quad
                 });

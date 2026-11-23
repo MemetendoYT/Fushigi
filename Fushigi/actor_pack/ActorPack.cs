@@ -47,6 +47,7 @@ namespace Fushigi
         public ShapeParamList ShapeParams;
         public BgUnitInfo BgUnitInfo;
         public BgUnitControl BgUnitControl;
+        public ModelSkin ModelSkin;
         public string ChildActorParamName;
         public string CalcDistanceParam;
 
@@ -228,6 +229,20 @@ namespace Fushigi
                             this.ModelInfoRef.parent = par.parent;
                         }
                     break;
+                    case "ModelSkin":
+                        var list = BymlSerialize.Deserialize<ModelSkin>(data);
+                        foreach (var e in list.ModelInfoList ?? new())
+                        {
+                            if (string.IsNullOrEmpty(e.Value.ModelInfoPath)) continue;
+
+                            var skinInfo = LoadModelInfo(sarc, e.Value.ModelInfoPath);   
+                            list.Models[e.Key] = skinInfo;
+
+                            if (skinInfo.ModelVariationAnims != null)
+                                list.Anims[e.Key] = Path.GetFileNameWithoutExtension(skinInfo.ModelVariationAnims[0].Fmab);
+                        }
+                        this.ModelSkin = list;  
+                        break;
                     case "ModelExpandRef":
                         this.ModelExpandParamRef ??= BymlSerialize.Deserialize<ModelExpandParam>(data);
                         this.ModelExpandParamRef.LoadParentIfExists(filePath =>
@@ -261,7 +276,20 @@ namespace Fushigi
                 }
             }
         }
-
+        private ModelInfo LoadModelInfo(SARC.SARC sarc, string path)
+        {
+            var info = BymlSerialize.Deserialize<ModelInfo>(sarc.OpenFile(GetPathGyml(path)));
+            while (!string.IsNullOrEmpty(info.parent))
+            {
+                var par = BymlSerialize.Deserialize<ModelInfo>(sarc.OpenFile(GetPathGyml(info.parent)));
+                foreach (var v in info.GetType().GetProperties())
+                    if (v.GetValue(info) == null ||
+                       (v.PropertyType == typeof(Vector3) && (Vector3)(v.GetValue(info) ?? Vector3.Zero) == Vector3.Zero))
+                        v.SetValue(info, v.GetValue(par));
+                info.parent = par.parent;
+            }
+            return info;
+        }
         public void updateCollisionFile(string path)
         {
             var stream = new MemoryStream(FileUtil.DecompressFile(sarcPath));

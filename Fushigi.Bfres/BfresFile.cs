@@ -14,6 +14,7 @@ namespace Fushigi.Bfres
         /// 
         /// </summary>
         public ResDict<EmbeddedFile> EmbeddedFiles { get; set; } = new ResDict<EmbeddedFile>();
+        public ResDict<MaterialAnim> MaterialAnims { get; set; } = new ResDict<MaterialAnim>();
 
         /// <summary>
         /// 
@@ -61,6 +62,7 @@ namespace Fushigi.Bfres
 
             Models = reader.ReadDictionary<Model>(Header.ModelDictionaryOffset, Header.ModelOffset);
             EmbeddedFiles = reader.ReadDictionary<EmbeddedFile>(Header.EmbeddedFilesDictionaryOffset, Header.EmbeddedFilesOffset);
+            MaterialAnims = reader.ReadDictionary<MaterialAnim>(Header.MaterialAnimDictionarymOffset, Header.MaterialAnimOffset);
 
             Init(reader);
 

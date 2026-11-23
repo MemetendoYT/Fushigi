@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Fushigi.SARC
 {
@@ -32,6 +33,13 @@ namespace Fushigi.SARC
             public uint Offs;
             public uint Size;
             public string FileName;
+        }
+
+        Dictionary<string, byte[]> ChangedFiles = new Dictionary<string, byte[]>();
+
+        public void SetFile(string path, byte[] data)
+        {
+            ChangedFiles[path] = data;
         }
 
         SARCHeader Header;
@@ -77,10 +85,67 @@ namespace Fushigi.SARC
             }
         }
 
-
-        public void Save()
+        public void Write(MemoryStream Stream)
         {
+            var writer = new BinaryWriter(Stream);
 
+            writer.Write("SARC"u8);
+            writer.Write((ushort)0x14);
+            writer.Write((ushort)0xFEFF);
+            writer.Write(0xFFFFFFFFu);
+            writer.Write(0xFFFFFFFFu);
+            writer.Write((ushort)0x100);
+            writer.Write((ushort)0);
+
+            var sorted_hashes = Files.Keys.OrderBy(name => Files[name].NameHash).ToList();
+
+            writer.Write("SFAT"u8);
+            writer.Write((ushort)0xC);
+            writer.Write((ushort)Files.Count);
+            writer.Write(SFAT_Header.HashKey);
+
+            uint string_offset = 0;
+            uint data_offset = 0;
+            foreach (var name in sorted_hashes)
+            {
+                writer.Write(Files[name].NameHash);
+                writer.Write(0x01000000 | (string_offset >> 2));
+                data_offset = AlignUp(data_offset, 8);
+                writer.Write(data_offset);
+                byte[] fileData = OpenFile(name);
+                data_offset += (uint)fileData.Length;
+                writer.Write(data_offset);
+                string_offset += AlignUp((uint)name.Length + 1, 4);
+            }
+
+            writer.Write("SFNT"u8);
+            writer.Write((ushort)8);
+            writer.Write((ushort)0);
+
+            foreach (var name in sorted_hashes)
+            {
+                writer.Write(Encoding.ASCII.GetBytes(name));
+                writer.Write((byte)0);
+                Stream.Position = AlignUp((uint)Stream.Position, 4);
+            }
+
+            Stream.Position = AlignUp((uint)Stream.Position, 8);
+            uint data_start = (uint)Stream.Position;
+            foreach (var name in sorted_hashes)
+            {
+                Stream.Position = AlignUp((uint)Stream.Position, 8);
+                writer.Write(OpenFile(name));
+            }
+
+            Stream.Position = 0x08;
+            writer.Write((uint)Stream.Length);
+            Stream.Position = 0x0C;
+            writer.Write(data_start);
+        }
+
+        public static uint AlignUp(uint n, uint alignment)
+        {
+            return (n + alignment - 1) & ~(alignment - 1);
         }
 
         public bool DirectoryExists(string path)
@@ -126,6 +191,11 @@ namespace Fushigi.SARC
 
         public byte[] OpenFile(string path)
         {
+            if (ChangedFiles.ContainsKey(path))
+            {
+                return ChangedFiles[path];
+            }
+
             if (!FileExists(path))
             {
                 return null;

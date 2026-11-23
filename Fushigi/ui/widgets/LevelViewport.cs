@@ -141,11 +141,13 @@ namespace Fushigi.ui.widgets
             {
                 tokenSource.Cancel();
                 mObjectPickingRequest = null;
+                objectPickingRequest.promise.TrySetResult((null, KeyboardModifier.None));
             }
             if (mPositionPickingRequest.TryGetValue(out var positionPickingRequest))
             {
                 tokenSource.Cancel();
                 mPositionPickingRequest = null;
+                positionPickingRequest.promise.TrySetResult((null, KeyboardModifier.None)); 
             }
         }
         #endregion
@@ -976,17 +978,10 @@ namespace Fushigi.ui.widgets
                     return;
             }
 
-            //if (modelInfo.ModelVariationAnims != null)
-            //{
-            //                if(modelInfo.ModelVariationAnims.Count > 0)
-            //                {
-            //                    byte[] data = File.ReadAllBytes(
-            //                    Path.Combine(UserSettings.GetRomFSPath(), modelInfo.ModelVariationAnims[0].Fmab)
-            //                    );
-            //                    var par = BymlSerialize.Deserialize<MaterialAnimation>(data);
-            //                    Console.WriteLine(par.FrameCount);
-            //                }
-            //            }
+            string skin = (string)mArea.mAreaParams.SkinParam.Object ?? "";
+            if (actor.mActorPack.ModelSkin != null && actor.mActorPack.ModelSkin.Models.TryGetValue(skin, out var skinModel))
+                modelInfo = skinModel;
+
             var resourceName = modelInfo.mFilePath;
             var modelName = modelInfo.mModelName;
 
@@ -995,7 +990,12 @@ namespace Fushigi.ui.widgets
             if (render == null || !render.Models.TryGetValue(modelName, out BfresRender.BfresModel? value))
                 return;
 
-            var transMat = Matrix4x4.CreateTranslation(actor.mTranslation);
+            var renderPos = actor.mTranslation;
+            if (actor.mPackName.Contains("Dokan") && !actor.mPackName.Contains("MapObj"))
+                renderPos.Z -= 2;
+
+            var transMat = Matrix4x4.CreateTranslation(renderPos);
+
             var scaleMat = Matrix4x4.CreateScale(actor.mScale);
             var rotMat = Matrix4x4.CreateRotationX(actor.mRotation.X) *
                     Matrix4x4.CreateRotationY(actor.mRotation.Y) *
@@ -1008,6 +1008,32 @@ namespace Fushigi.ui.widgets
             //if(actor.mPackName.StartsWith("DV") || actor.mPackName.StartsWith("Cloud"))
             DistantViewScrollManager.UpdateMatrix(actor.mLayer, ref mat);
 
+            string bbKey = modelInfo.ModelVariationAnims?.FirstOrDefault()?.BBKey;
+            if (bbKey != null && actor.mActorParameters.ContainsKey(bbKey))
+            {
+                string fmab = modelInfo.ModelVariationAnims[0].Fmab;
+
+                // default anim from the actor's own ModelInfo
+                string ShaderParamAnm = Path.GetFileNameWithoutExtension(fmab);
+
+                // if the actor has a ModelSkin and this area's skin is in it, use that instead
+                if (actor.mActorPack.ModelSkin != null && actor.mActorPack.ModelSkin.Anims.TryGetValue(skin, out var skinAnm))
+                    ShaderParamAnm = skinAnm;
+
+                // load the anim from the bfres named in the Fmab path (e.g. MapObjCommonColorBoxAnm)
+                var animSource = BfresCache.Load(gl, Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(fmab)))) ?? render;
+
+                render.SetAnim(animSource.MaterialAnims.GetValueOrDefault(ShaderParamAnm), (int)actor.mActorParameters[bbKey]);
+            }
+
+            //string bbKey = modelInfo.ModelVariationAnims?.FirstOrDefault()?.BBKey;
+            //if (actor.mActorParameters.ContainsKey(bbKey) && actor.mActorPack.ModelSkin != null)
+            //{
+            //    if (!actor.mActorPack.ModelSkin.Anims.TryGetValue(skin, out var ShaderParamAnm))
+            //        ShaderParamAnm = "PatternColor";
+
+            //    render.SetAnim(render.MaterialAnims.GetValueOrDefault(ShaderParamAnm), (int)actor.mActorParameters[bbKey]);
+            //}
             var model = render.Models[modelName];
 
             if (actor.mActorPack.ModelExpandParamRef != null)
@@ -1034,6 +1060,9 @@ namespace Fushigi.ui.widgets
                         Matrix4x4.CreateScale(actor.mScale.X, (actor.mScale.Y-1)*2, actor.mScale.Z) *
                         rotMat *
                         transMat}};
+
+                foreach (var mesh in render.Models[modelInfo.SubModels[0].FmdbName].Meshes)
+                    mesh.MaterialRender.SetParam("tex_srt0", new ShaderParam.TexSrt { Scaling = new Vector2(1, actor.mScale.Y - 1) });
 
                 model.Render(gl, render, KeyMats[modelInfo.SearchModelKey], this.Camera);
                 if ((modelInfo.SubModels?.Count ?? 0) != 0)
@@ -1064,29 +1093,15 @@ namespace Fushigi.ui.widgets
         }
 
         private Camera _staticCamera;
-
-        private void EnsureStaticCamera()
+        static string GetThemeAnim(string appearance)
         {
-            if (_staticCamera == null)
-            {
-                _staticCamera = new Camera
-                {
-                    Width = this.Camera.Width,     // match viewport aspect
-                    Height = this.Camera.Height,
-                    IsOrthographic = true,
-                    Distance = 10,                  // pick whatever framing you want fixed at
-                    Target = Vector3.Zero,
-                    Rotation = Quaternion.Identity,
-                };
-            }
-            else
-            {
-                // keep aspect ratio in sync if the viewport resizes
-                _staticCamera.Width = this.Camera.Width;
-                _staticCamera.Height = this.Camera.Height;
-            }
-
-            _staticCamera.UpdateMatrices();
+            if (string.IsNullOrEmpty(appearance)) return null;
+            if (appearance == "SavannaChitei") return "Nettai";
+            if (appearance.Contains("Senkan")) return "KoopaSenkan";
+            if (appearance.Contains("Toride")) return "Toride";
+            foreach (var t in new[] { "Kin", "Nettai", "Sabaku", "Wa", "Yama" })
+                if (appearance.StartsWith(t)) return t;
+            return null;
         }
 
         private void RenderActor2(CourseActor actor, ModelInfo modelInfo, Camera camera)
@@ -1138,6 +1153,7 @@ namespace Fushigi.ui.widgets
                         Matrix4x4.CreateTranslation(0, (actor.mScale.Y-actor.mScale.X)*(calc.mMax.Y-calc.mMin.Y), 0) *
                         rotMat *
                         transMat},
+
 
                     {drainRef.ModelKeyMiddle ?? "Middle", debugSMat *
                         Matrix4x4.CreateScale(actor.mScale.X, (actor.mScale.Y-1)*2, actor.mScale.Z) *
@@ -1930,7 +1946,7 @@ namespace Fushigi.ui.widgets
         }
         public void RightClickMenu()
         {
-            if ((ImGui.IsMouseClicked(ImGuiMouseButton.Right) || ImGui.IsKeyPressed(ImGuiKey.Menu)) && IsViewportHovered)
+            if ((ImGui.IsMouseClicked(ImGuiMouseButton.Right) || ImGui.IsKeyPressed(ImGuiKey.Menu)) && IsViewportHovered && !ImGui.IsMouseDown(ImGuiMouseButton.Left))
             {
                 backupSelection = mEditContext.GetSelectedObjects<CourseActor>().ToList();
                 storedMousePos = ImGui.GetMousePos();

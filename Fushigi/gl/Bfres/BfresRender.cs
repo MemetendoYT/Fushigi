@@ -1,12 +1,7 @@
 ﻿using Fushigi.Bfres;
-using Fushigi.ui;
 using Fushigi.util;
-using Silk.NET.Input;
 using Silk.NET.OpenGL;
-using System.IO;
 using System.Numerics;
-using System.Reflection;
-using System.Xml.Linq;
 
 namespace Fushigi.gl.Bfres
 {
@@ -15,6 +10,7 @@ namespace Fushigi.gl.Bfres
         public Dictionary<string, GLTexture> Textures = new Dictionary<string, GLTexture>();
         public Dictionary<string, BfresModel> Models = new Dictionary<string, BfresModel>();
         public static string[] VanillaActors = File.ReadAllLines("res/VanillaNames.txt");
+        public Dictionary<string, MaterialAnim> MaterialAnims = new();
         public BfresRender(GL gl, string filePath)
         {
             Init(gl, File.OpenRead(filePath));
@@ -28,6 +24,7 @@ namespace Fushigi.gl.Bfres
         //Cached
         public BfresRender(BfresRender render)
         {
+            MaterialAnims = render.MaterialAnims;
             foreach (var model in render.Models)
                 Models.Add(model.Key, new BfresModel(model.Value));
             foreach (var texture in render.Textures)
@@ -37,10 +34,22 @@ namespace Fushigi.gl.Bfres
         private void Init(GL gl, Stream stream)
         {
             BfresFile file = new BfresFile(stream);
+            MaterialAnims = file.MaterialAnims;  
+
             foreach (var model in file.Models.Values)
                 Models.Add(model.Name, new BfresModel(gl, model));
             foreach (var texture in file.TryGetTextureBinary().Textures)
                 Textures.Add(texture.Key, new BfresTextureRender(gl, texture.Value));
+        }
+
+        public void SetAnim(MaterialAnim anim, int frame)
+        {
+            foreach (var model in Models.Values)
+                foreach (var mesh in model.Meshes)
+                {
+                    mesh.MaterialRender.CurrentAnim = anim;
+                    mesh.MaterialRender.CurrentFrame = frame;
+                }
         }
 
         internal void Render(GL gl, Matrix4x4 transform, Camera camera)
@@ -49,6 +58,7 @@ namespace Fushigi.gl.Bfres
                 model.Render(gl, this, transform, camera);
         }
 
+  
         public void Dispose()
         {
             foreach (var model in Models.Values)
@@ -161,7 +171,7 @@ namespace Fushigi.gl.Bfres
 
                     if (this.Skeleton.Bones[mesh.BoneIndex].Name == "Bonecap_Model")
                         continue;
-
+                    
                     if (UserSettings.UseGameShaders())
                         mesh.RenderGameShaders(gl, render, this, transform, camera);
                     else

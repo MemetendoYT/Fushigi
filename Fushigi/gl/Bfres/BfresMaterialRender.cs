@@ -26,6 +26,10 @@ namespace Fushigi.gl.Bfres
 
         private Material Material;
 
+        public MaterialAnim CurrentAnim;
+
+        public int CurrentFrame;
+
         public void Init(GL gl, BfresRender.BfresModel modelRender, BfresRender.BfresMesh meshRender, Shape shape, Material material) {
             Material = material;
             Name = material.Name;
@@ -38,40 +42,11 @@ namespace Fushigi.gl.Bfres
             GsysShaderRender.Init(gl, modelRender, meshRender, shape, material);
         }
 
-        //internal BfresMaterialRender GetMaterial(string materialName)
-        //{
-        //    foreach (var mesh in Meshes)
-        //    {
-        //        if (mesh.MaterialRender.Name == materialName)
-        //            return mesh.MaterialRender;
-        //    }
-        //    return null;
-        //}
-
-        public object GetParam(string name)
+        public void SetParam(string name, object value)
         {
-            if (this.Material.ShaderParams.ContainsKey(name))
+            if (Material.ShaderParams.ContainsKey(name))
             {
-                return this.Material.ShaderParams[name].DataValue;
-            }
-
-            return null;
-        }
-
-        public void SetParam(string name, float value)
-        {
-            if (this.Material.ShaderParams.ContainsKey(name))
-            {
-                this.Material.ShaderParams[name].DataValue = value;
-                GsysShaderRender.ReloadMaterialBlock();
-            }
-        }
-
-        public void SetParam(string name, ShaderParam.TexSrt value)
-        {
-            if (this.Material.ShaderParams.ContainsKey(name))
-            {
-                this.Material.ShaderParams[name].DataValue = value;
+                Material.ShaderParams[name].DataValue = value;
                 GsysShaderRender.ReloadMaterialBlock();
             }
         }
@@ -85,6 +60,17 @@ namespace Fushigi.gl.Bfres
 
         public void RenderGameShaders(GL gl, BfresRender renderer, BfresRender.BfresModel model, System.Numerics.Matrix4x4 transform, Camera camera)
         {
+            if (CurrentAnim != null && CurrentAnim.MaterialConfigs.ContainsKey(Name))
+            {
+                var animMat = CurrentAnim.MaterialConfigs[Name];
+
+                if (CurrentFrame <= CurrentAnim.FrameCount && CurrentFrame >= 0)
+                {
+                    foreach (var c in animMat.Colors)
+                        SetParam(c.Key, c.Value[CurrentFrame]);
+                }
+            }
+
             gl.Enable(EnableCap.TextureCubeMapSeamless);
             GsysShaderRender.Render(gl, renderer, model, transform, camera);
         }

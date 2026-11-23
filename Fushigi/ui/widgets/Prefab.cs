@@ -380,8 +380,10 @@ public class Prefab
         using var tokenSource = new CancellationTokenSource();
         {
             ImGui.SetWindowFocus(area.mAreaName);
-            (pos, modifier) = await viewport.PickPosition(
-                $"Placing Prefab", mSelectedLayer, tokenSource);
+            do
+            {
+                (pos, modifier) = await viewport.PickPosition(
+                $"Placing Prefab -- Hold SHIFT to add multiple", mSelectedLayer, tokenSource);
 
             if (!pos.TryGetValue(out var posVec))
             {
@@ -429,6 +431,8 @@ public class Prefab
                     ctx.AddRail(rail);
             }
             batch.Commit($"{IconUtil.ICON_PASTE} Added {prefab} Prefab");
+
+            } while ((modifier & KeyboardModifier.Shift) > 0);
         }
 
     }

@@ -1,150 +1,13 @@
-﻿using Fushigi.Byml;
-using Fushigi.course;
-using Fushigi.env;
-using Fushigi.gl;
-using Fushigi.gl.Bfres.AreaData;
-using Fushigi.param;
+﻿using Fushigi.course;
+using Fushigi.ui.helpers;
 using Fushigi.ui.modal;
-using Fushigi.util;
 using ImGuiNET;
-using Newtonsoft.Json.Linq;
-using Silk.NET.Input;
-using Silk.NET.SDL;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Fushigi.ui.widgets
 {
     class AreaSettings
     {
-        private static readonly Dictionary<string, string> Tilesets = new Dictionary<string, string>()
-        {
-            { "None", "" },
-            { "Undefined", "Undefined" },
-            { "Pipe-Rock Plateau (Grassy Overworld)", "HajimariSougen" },
-            { "Pipe-Rock Plateau (Forest)", "HajimariMori" },
-            { "Pipe-Rock Plateau (Grassy Savanna)", "Savanna" },
-            { "Pipe-Rock Plateau (Rocky Savanna)", "SavannaSabaku" },
-            { "Pipe-Rock Plateau (Mossy Underground)", "SavannaChitei" },
-            { "Pipe-Rock Plateau (Puffy Sky)", "CommonSora" },
-            { "Petal Isles (Sandy Overworld)", "HajimariKaigan" },
-            { "Petal Isles (Rocky Underground)", "HajimariChika" },
-            { "Petal Isles (Candy Overworld)", "MushiMachi" },
-            { "Petal Isles (Candy Underground)", "MushiChika" },
-            { "Fluff-Puff Peaks (Icy Overworld)", "YamaDokutu" },
-            { "Fluff-Puff Peaks (Snowy Overworld (Purple))", "YamaTijyo" },
-            { "Fluff-Puff Peaks (Snowy Overworld (Green))", "YamaJyoku" },
-            { "Shining Falls (Overworld)", "WaKaigan" },
-            { "Sunbaked Desert (Overworld)", "SabakuChijou" },
-            { "Sunbaked Desert (Crystal Underground)", "SabakuChika" },
-            { "Sunbaked Desert (Mansion)", "SabakuIseki" },
-            { "Fungi Mines (Orange Forest)", "KinMoriAkarui" },
-            { "Fungi Mines (Forest)", "KinMori" },
-            { "Fungi Mines (Ghost Mansion)", "CommonYashiki" },
-            { "Fungi Mines (Ruins)", "KinSlime" },
-            { "Deep Magma Bog (Normal)", "NettaiYogan" },
-            { "Deep Magma Bog (Glowing)", "NettaiResort" },
-            { "Deep Magma Bog (Glowing Dark)", "NettaiResortDark" },
-            { "Palace (Variation A)", "CommonToride" },
-            { "Palace (Variation B)", "CommonTorideB" },
-            { "Castle", "CastleSiro" },
-            { "Factory", "CastleFactory" },
-            { "Battleship", "CommonSenkan" },
-            { "Search Party", "MiniCourseA" },
-            { "Petal Isles (Underwater; Sandy Overworld Duplicate)", "CommonSuityuAsase" },
-            { "Shining Falls (Underwater?; Grassy Savanna Duplicate) (Unused)", "WaAsase" },
-            { "Petal Isles (Candy Overworld?; Grassy Savanna Duplicate) (Unused)", "MushiJyoku" },
-            { "Bonus? (Has No Models) (Unused)", "CommonBonus" },
-        };
-
-        private static readonly Dictionary<string, string> BgmTypes = new Dictionary<string, string>()
-        {
-            { "None", "None" },
-            { "Silent", "Silent" },
-            { "Overworld", "Course14" },
-            { "Underground", "Course02" },
-            { "Athletic", "Course04" },
-            { "Beach", "Course08" },
-            { "Underwater", "Course03" },
-            { "Shining Falls Overworld", "Course06" },
-            { "Forest", "Course12" },
-            { "Savanna", "Course01" },
-            { "Desert", "Course16" },
-            { "Snow", "Course20" },
-            { "Lava", "Course15" },
-            { "Poisonous Swamp/Ghost House", "Course05" },
-            { "Fungi Mines/Dark Forest", "Course21" },
-            { "Palace", "Course09" },
-            { "Airship", "Course19" },
-            { "Factory", "Course18" },
-            { "Ninji Disco", "Course17" },
-            { "Poplin House", "Course40" },
-            { "Wiggler Race", "Course44" },
-            { "Badge Challenge", "Course45" },
-            { "KO Arena", "Course47" },
-            { "Break Time!: Puzzle/Search Party", "Course11" },
-            { "Break Time!: Action", "Course13" },
-            { "Break Time!: SMW Bonus", "Course41" },
-            { "Break Time!: SMB Theme", "Course48" },
-            { "Break Time!: SMB3 Enemy Ambush", "Course46" },
-            { "Break Time!: Isle Delfino", "Course42" },
-            { "Coin Bonus Ship", "Course43" },
-            { "AreaBGM", "AreaBGM" },
-            { "Music Track 1", "MusicTrack01" },
-            { "Music Track 2", "MusicTrack02" },
-            { "Music Track 3", "MusicTrack03" },
-            { "Music Track 4", "MusicTrack04" },
-            { "Music Track 5", "MusicTrack05" },
-            {"Wonder Flower: Default", "Delete" },
-            { "Wonder Flower: Course Mania", "Wonder08" },
-            { "Wonder Flower: Singing Piranha Plants", "Wonder05" },
-            { "Wonder Flower: Super Star", "Wonder18" },
-            { "Wonder Flower: Bulrush Stampede", "Wonder02" },
-            { "Wonder Flower: Spike Dance", "Wonder16" },
-            { "Wonder Flower: Strange Happenings", "Wonder07" },
-            { "Wonder Flower: Space", "Wonder24" },
-            { "Wonder Flower: Shadow Mario", "Wonder12" },
-            { "Wonder Flower: Transformation", "Wonder22" },
-            { "Wonder Flower: Jump! Jump! Jump!", "Wonder14" },
-            { "Wonder Flower: Danger", "Wonder20" },
-            { "Wonder Flower: Ninji Jump Party", "Wonder15" },
-            { "Wonder Flower: Halloween", "Wonder17" },
-            { "Wonder Flower: Quiz", "Wonder09" },
-            { "Wonder Flower: King Boo's Opera", "Wonder10" },
-            { "Wonder Flower: Wubba Transformation", "Wonder06" },
-            { "Wonder Flower: Dragons", "Wonder26" },
-            { "Wonder Flower: Metal Mario", "Wonder11" },
-            { "Wonder Flower: Knuckel Fest", "Wonder04" },
-            { "Wonder Flower: Rage Stage", "Wonder21" },
-            { "Wonder Flower: Piranha Plant Reprise", "Wonder23" },
-            { "Wonder Flower: Wonder Gauntlet", "Wonder25" },
-            { "After Wonder", "AfterWonder" },
-            { "Demo: Title", "Demo01" },
-            { "Demo: Party", "Demo02" },
-            { "Demo: Goal Pole", "Demo03" },
-            { "Demo: World Clear", "Demo04" },
-            { "Demo: Demo_ED_1 (?)", "Demo05" },
-            { "Demo: Demo_ED_2 (?)", "Demo07" },
-            { "Demo: Staff Credits", "Demo06" },
-            { "Wonder Set By Area Param", "WonderSetByAreaParam" },
-            { "World Map: Pipe-Rock Plateau", "World01" },
-            { "World Map: Petal Isles", "World02" },
-            { "World Map: Fluff-Puff Peaks", "World03" },
-            { "World Map: Shining Falls", "World04" },
-            { "World Map: Sunbaked Desert", "World05" },
-            { "World Map: Fungi Mines", "World06" },
-            { "World Map: Deep Magma Bog", "World07" },
-            { "World Map: Castle Bowser", "World08" },
-            { "World Map: Special World", "World09" },
-        };
-
         static LevelViewport Viewport;
         public static void Draw(ref bool continueDisplay, IPopupModalHost modalHost, AreaParam areaParam, LevelViewport viewport)
         {
@@ -236,39 +99,25 @@ namespace Fushigi.ui.widgets
 
 
                 if (Ounce.isOunce)
-                    Tilesets.TryAdd("Bellabel Park (Underground)", "NewWorldChika");
-                
-                ImGui.Text("Tileset A");
-                ImGui.TableSetColumnIndex(1);
-                value = (string)areaParam.SkinParam.FieldA;
-                int index = Tilesets.Values.ToList().IndexOf(value);
-                if (ImGui.Combo("##FieldA", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
+                   StringParamList.Tilesets.TryAdd("Bellabel Park (Underground)", "NewWorldChika");
+
+                string fieldA = (string)skinParam.FieldA ?? "";
+                if (ImguiHelper.DrawDropdown("Tileset A", ref fieldA, StringParamList.Tilesets))
                 {
-                    areaParam.SkinParam.FieldA = Tilesets.Values.ToArray()[index];
+                    skinParam.FieldA = fieldA;
                     LevelViewport.updateSkinA = true;
                 }
 
-                ImGui.TableNextColumn();
-
-                ImGui.Text("Tileset B");
-                ImGui.TableSetColumnIndex(1);
-                value = (string)areaParam.SkinParam.FieldB;
-                index = Tilesets.Values.ToList().IndexOf(value);
-                if (ImGui.Combo("##FieldB", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10)) {
-                    areaParam.SkinParam.FieldB = Tilesets.Values.ToArray()[index];
+                string fieldB = (string)skinParam.FieldB ?? "";
+                if (ImguiHelper.DrawDropdown("Tileset B", ref fieldB, StringParamList.Tilesets))
+                {
+                    skinParam.FieldB = fieldB;
                     LevelViewport.updateSkinB = true;
-                        }
+                }
 
-                ImGui.TableNextColumn();
-
-                ImGui.Text("Object Appearance");
-                ImGui.TableSetColumnIndex(1);
-                value = (string)areaParam.SkinParam.Object;
-                index = Tilesets.Values.ToList().IndexOf(value);
-                if (ImGui.Combo("##Object", ref index, Tilesets.Keys.ToArray(), Tilesets.Count(), 10))
-                    areaParam.SkinParam.Object = Tilesets.Values.ToArray()[index];
-
-                ImGui.TableNextColumn();
+                string objectField = (string)skinParam.Object ?? "";
+                if (ImguiHelper.DrawDropdown("Object Appearance", ref objectField, StringParamList.Tilesets))
+                    skinParam.Object = objectField;
 
                 bool disableBgUnitDecoA = skinParam.DisableBgUnitDecoA;
                 if (ImGui.Checkbox("Disable Decorations on Field A", ref disableBgUnitDecoA))
@@ -397,30 +246,18 @@ namespace Fushigi.ui.widgets
                     ImGui.TableSetColumnIndex(0);
 
                     // BgmType
-                    ImGui.Text("Background Track");
-                    ImGui.TableNextColumn();
-                    var bgmType = areaParam.BgmType is null ? "" : areaParam.BgmType;
-                    int index = BgmTypes.Values.ToList().IndexOf(bgmType);
-                    if (index < 0) index = 0;
-                    if (ImGui.Combo("##BgmType", ref index, BgmTypes.Keys.ToArray(), BgmTypes.Count(), 10))
-                        areaParam.BgmType = BgmTypes.Values.ToArray()[index];
-
-                    ImGui.TableNextColumn();
+                    string bgmType = areaParam.BgmType ?? "";
+                    if (ImguiHelper.DrawDropdown("Background Track", ref bgmType, StringParamList.BgmType))
+                        areaParam.BgmType = bgmType;
 
                     // EnvironmentSound
-                    ImGui.Text("Environment Sound");
-                    ImGui.TableNextColumn();
-                    var environmentSound = areaParam.EnvironmentSound is null ? "" : areaParam.EnvironmentSound;
-                    if (ImGui.InputText("##EnvironmentSound", ref environmentSound, 1024))
+                    string environmentSound = areaParam.EnvironmentSound ?? "";
+                    if (ImguiHelper.DrawDropdown("Environment Sound", ref environmentSound, StringParamList.EnvironmentSound))
                         areaParam.EnvironmentSound = environmentSound;
 
-                    ImGui.TableNextColumn();
-
                     // EnvironmentSoundEfx
-                    ImGui.Text("Environment Sound Effects");
-                    ImGui.TableNextColumn();
-                    var environmentSoundEfx = areaParam.EnvironmentSoundEfx is null ? "" : areaParam.EnvironmentSoundEfx;
-                    if (ImGui.InputText("##EnvironmentSoundEfx", ref environmentSoundEfx, 1024))
+                    string environmentSoundEfx = areaParam.EnvironmentSoundEfx ?? "";
+                    if (ImguiHelper.DrawDropdown("Environment Sound Effects", ref environmentSoundEfx, StringParamList.EnvironmentSoundEfx))
                         areaParam.EnvironmentSoundEfx = environmentSoundEfx;
 
                     ImGui.EndTable();
@@ -440,22 +277,9 @@ namespace Fushigi.ui.widgets
                     ImGui.TableSetColumnIndex(0);
 
                     // WonderBgmType
-                    ImGui.Text("Wonder Background Track");
-                    ImGui.TableNextColumn();
-                    var wonderBgmType = areaParam.WonderBgmType is null ? "Delete" : areaParam.WonderBgmType;
-                    int index = BgmTypes.Values.ToList().IndexOf(wonderBgmType);
-                    string bgm = "";
-                    if (index < 0) index = 0;
-                    if (ImGui.Combo("##WonderBgmType", ref index, BgmTypes.Keys.ToArray(), BgmTypes.Count(), 10))
-                    {
-                        bgm = BgmTypes.Values.ToArray()[index];
-                        if (bgm == "Delete")
-                            areaParam.WonderBgmType = null;
-                        else
-                            areaParam.WonderBgmType = BgmTypes.Values.ToArray()[index];
-                    }
-
-                    ImGui.TableNextColumn();
+                    string wonderBgmType = areaParam.WonderBgmType ?? "Delete";
+                    if (ImguiHelper.DrawDropdown("Wonder Background Track", ref wonderBgmType, StringParamList.WonderBgmType))
+                        areaParam.WonderBgmType = wonderBgmType;
 
                     // WonderBgmStartOffset
                     ImGui.Text("Wonder Background Track Starting Delay");
@@ -466,38 +290,24 @@ namespace Fushigi.ui.widgets
 
                     ImGui.TableNextColumn();
 
-                    // WonderBgmStartOffset
-                    ImGui.Text("Wonder Environment Sound");
-                    ImGui.TableNextColumn();
-                    var wonderEnvironmentSound = areaParam.WonderEnvironmentSound is null ? "" : areaParam.WonderEnvironmentSound;
-                    if (ImGui.InputText("##WonderEnvironmentSound", ref wonderEnvironmentSound, 1024))
+                    // WonderEnvironmentSound
+                    string wonderEnvironmentSound = areaParam.WonderEnvironmentSound ?? "";
+                    if (ImguiHelper.DrawDropdown("Wonder Environment Sound", ref wonderEnvironmentSound, StringParamList.WonderEnvironmentSound))
                         areaParam.WonderEnvironmentSound = wonderEnvironmentSound;
 
-                    ImGui.TableNextColumn();
-
-                    // WonderBgmStartOffset
-                    ImGui.Text("Wonder Environment Sound Effects");
-                    ImGui.TableNextColumn();
-                    var wonderEnvironmentSoundEfx = areaParam.WonderEnvironmentSoundEfx is null ? "" : areaParam.WonderEnvironmentSoundEfx;
-                    if (ImGui.InputText("##WonderEnvironmentSoundEfx", ref wonderEnvironmentSoundEfx, 1024))
+                    // WonderEnvironmentSoundEfx
+                    string wonderEnvironmentSoundEfx = areaParam.WonderEnvironmentSoundEfx ?? "";
+                    if (ImguiHelper.DrawDropdown("Wonder Environment Sound Effects", ref wonderEnvironmentSoundEfx, StringParamList.WonderEnvironmentSoundEfx))
                         areaParam.WonderEnvironmentSoundEfx = wonderEnvironmentSoundEfx;
 
-                    ImGui.TableNextColumn();
-
                     // WonderBgmEfx
-                    ImGui.Text("Wonder Environment Sound");
-                    ImGui.TableNextColumn();
-                    var wonderBgmEfx = areaParam.WonderBgmEfx is null ? "" : areaParam.WonderBgmEfx;
-                    if (ImGui.InputText("##WonderBgmEfx", ref wonderBgmEfx, 1024))
-                        areaParam.WonderBgmEfx = wonderBgmEfx;
-
-                    ImGui.TableNextColumn();
+                    string wonderBgmEfx = areaParam.WonderBgmEfx ?? "";
+                    if (ImguiHelper.DrawDropdown("Wonder Background Music Effect", ref wonderBgmEfx, StringParamList.WonderBgmEfx))
+                        areaParam.WonderBgmEfx = wonderBgmEfx == "" ? null : wonderBgmEfx;
 
                     // WonderSEKeyForTag
-                    ImGui.Text("Wonder Sound Effect Key for Tag");
-                    ImGui.TableNextColumn();
-                    var wonderSEKeyForTag = areaParam.WonderSEKeyForTag is null ? "" : areaParam.WonderSEKeyForTag;
-                    if (ImGui.InputText("##WonderSEKeyForTag", ref wonderSEKeyForTag, 1024))
+                    string wonderSEKeyForTag = areaParam.WonderSEKeyForTag ?? "";
+                    if (ImguiHelper.DrawDropdown("Wonder Sound Effect Key for Tag", ref wonderSEKeyForTag, StringParamList.WonderSEKeyForTag))
                         areaParam.WonderSEKeyForTag = wonderSEKeyForTag;
 
                     ImGui.EndTable();
@@ -517,56 +327,34 @@ namespace Fushigi.ui.widgets
                     ImGui.TableSetColumnIndex(0);
 
                     // BgmString
-                    ImGui.Text("Background Music Settings String");
-                    ImGui.TableNextColumn();
-                    var bgmString = areaParam.BgmString is null ? "" : areaParam.BgmString;
-                    if (ImGui.InputText("##BgmString", ref bgmString, 1024))
+                    string bgmString = areaParam.BgmString ?? "";
+                    if (ImguiHelper.DrawDropdown("Background Music Settings String", ref bgmString, StringParamList.BgmString))
                         areaParam.BgmString = bgmString;
 
-                    ImGui.TableNextColumn();
-
                     // ExternalSoundAsset
-                    ImGui.Text("External Sound Asset");
-                    ImGui.TableNextColumn();
-                    var externalSoundAsset = areaParam.ExternalSoundAsset is null ? "" : areaParam.ExternalSoundAsset;
-                    if (ImGui.InputText("##ExternalSoundAsset", ref externalSoundAsset, 1024))
+                    string externalSoundAsset = areaParam.ExternalSoundAsset ?? "";
+                    if (ImguiHelper.DrawDropdown("External Sound Asset", ref externalSoundAsset, StringParamList.ExternalSoundAsset))
                         areaParam.ExternalSoundAsset = externalSoundAsset;
 
-                    ImGui.TableNextColumn();
-
-                    //// DynamicResolutionQuality
-                    //ImGui.Text("Dynamic Resolution Quality");
-                    //ImGui.TableNextColumn();
-                    //var dynamicResolutionQuality = areaParam.DynamicResolutionQuality is null ? "" : areaParam.DynamicResolutionQuality;
-                    //if (ImGui.InputText("##DynamicResolutionQuality", ref dynamicResolutionQuality, 1024))
-                    //    areaParam.DynamicResolutionQuality = dynamicResolutionQuality;
-
-                    //ImGui.TableNextColumn();
+                    // DynamicResolutionQuality
+                    string dynamicResolutionQuality = areaParam.DynamicResolutionQuality ?? "";
+                    if (ImguiHelper.DrawDropdown("Dynamic Resolution Quality", ref dynamicResolutionQuality, StringParamList.DynamicResolutionQuality))
+                        areaParam.DynamicResolutionQuality = dynamicResolutionQuality;
 
                     // PlayerRhythmJumpTiming
-                    ImGui.Text("Player Rhythm Jump Timing");
-                    ImGui.TableNextColumn();
-                    var playerRhythmJumpTiming = areaParam.PlayerRhythmJumpTiming is null ? "" : areaParam.PlayerRhythmJumpTiming;
-                    if (ImGui.InputText("##PlayerRhythmJumpTiming", ref playerRhythmJumpTiming, 1024))
+                    string playerRhythmJumpTiming = areaParam.PlayerRhythmJumpTiming ?? "";
+                    if (ImguiHelper.DrawDropdown("Player Rhythm Jump Timing", ref playerRhythmJumpTiming, StringParamList.PlayerRhythmJumpTiming))
                         areaParam.PlayerRhythmJumpTiming = playerRhythmJumpTiming;
 
-                    ImGui.TableNextColumn();
-
                     // PlayerRhythmJumpBadgeTiming
-                    ImGui.Text("Player Rhythm Jump Badge Timing");
-                    ImGui.TableNextColumn();
-                    var playerRhythmJumpBadgeTiming = areaParam.PlayerRhythmJumpBadgeTiming is null ? "" : areaParam.PlayerRhythmJumpBadgeTiming;
-                    if (ImGui.InputText("##PlayerRhythmJumpBadgeTiming", ref playerRhythmJumpBadgeTiming, 1024))
+                    string playerRhythmJumpBadgeTiming = areaParam.PlayerRhythmJumpBadgeTiming ?? "";
+                    if (ImguiHelper.DrawDropdown("Player Rhythm Jump Badge Timing", ref playerRhythmJumpBadgeTiming, StringParamList.PlayerRhythmJumpBadgeTiming))
                         areaParam.PlayerRhythmJumpBadgeTiming = playerRhythmJumpBadgeTiming;
 
-                    ImGui.TableNextColumn();
-
                     // ExternalRhythmPatternSet
-                    ImGui.Text("External Rhythm Pattern Set");
-                    ImGui.TableNextColumn();
-                    var externalRhythmPatternSet = areaParam.ExternalRhythmPatternSet is null ? "" : areaParam.ExternalRhythmPatternSet;
-                    if (ImGui.InputText("##ExternalRhythmPatternSet", ref externalRhythmPatternSet, 1024))
-                        areaParam.ExternalRhythmPatternSet = externalRhythmPatternSet;
+                    string externalRhythmPatternSet = areaParam.ExternalRhythmPatternSet ?? "";
+                    if (ImguiHelper.DrawDropdown("External Rhythm Pattern Set", ref externalRhythmPatternSet, StringParamList.ExternalRhythmPatternSet))
+                        areaParam.ExternalRhythmPatternSet = externalRhythmPatternSet == "" ? null : externalRhythmPatternSet;
 
                     ImGui.EndTable();
                 }
@@ -613,33 +401,23 @@ namespace Fushigi.ui.widgets
                 ImGui.TableSetColumnIndex(0);
 
                 // BadgeMedleyEquipBadgeId
-                ImGui.Text("Badge Medley Equip Badge ID");
-                ImGui.TableNextColumn();
-                var badgeMedleyEquipBadgeId = areaParam.BadgeMedleyEquipBadgeId is null ? "" : areaParam.BadgeMedleyEquipBadgeId;
-                if (ImGui.InputText("##BadgeMedleyEquipBadgeId", ref badgeMedleyEquipBadgeId, 1024))
+                string badgeMedleyEquipBadgeId = areaParam.BadgeMedleyEquipBadgeId ?? "";
+                if (ImguiHelper.DrawDropdown("Badge Medley Equip Badge ID", ref badgeMedleyEquipBadgeId, StringParamList.BadgeMedleyEquipBadgeId))
                     areaParam.BadgeMedleyEquipBadgeId = badgeMedleyEquipBadgeId;
 
-                ImGui.TableNextColumn();
-
                 // BackGroundAreaType
-                ImGui.Text("Background Area Type");
-                ImGui.TableNextColumn();
                 var backGroundAreaType = "";
                 if (areaParam.BackGroundAreaType is uint)
                     backGroundAreaType = BackGroundAreaTypeNames[(uint)areaParam.BackGroundAreaType];
                 else if (areaParam.BackGroundAreaType != null)
                     backGroundAreaType = areaParam.BackGroundAreaType.ToString();
 
-                if (ImGui.InputText("##BackGroundAreaType", ref backGroundAreaType, 1024))
+                if (ImguiHelper.DrawDropdown("Background Area Type", ref backGroundAreaType, StringParamList.BackGroundAreaType))
                     areaParam.BackGroundAreaType = backGroundAreaType;
 
-                ImGui.TableNextColumn();
-
                 // EnvSetName
-                ImGui.Text("Environment Set Name");
-                ImGui.TableNextColumn();
-                var envSetName = areaParam.EnvSetName is null ? "" : areaParam.EnvSetName;
-                if (ImGui.InputText("##EnvSetName", ref envSetName, 1024))
+                string envSetName = areaParam.EnvSetName ?? "";
+                if (ImguiHelper.DrawDropdown("Environment Set Name", ref envSetName, StringParamList.EnvSetName))
                     areaParam.EnvSetName = envSetName;
 
                 ImGui.EndTable();
